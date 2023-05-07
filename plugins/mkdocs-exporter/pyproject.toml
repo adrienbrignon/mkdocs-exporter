@@ -1,0 +1,35 @@
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "mkdocs-exporter"
+version = "0.1.0"
+description = "Lorem ipsum dolor sit amet..."
+authors = ["Adrien Brignon <adrien@brignon.dev>"]
+readme = "README.md"
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Environment :: Web Environment",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: JavaScript",
+  "Programming Language :: Python",
+  "Topic :: Documentation",
+  "Topic :: Software Development :: Documentation",
+  "Topic :: Text Processing :: Markup :: HTML",
+]
+
+[tool.poetry.dependencies]
+python = ">=3.7"
+mkdocs = ">=1.4"
+playwright = ">=1.33"
+beautifulsoup4 = ">=4.12.2"
+weasyprint = ">=50.0"
+lxml = ">=4.9"
+libsass = ">=0.22.0"
+mkdocs-material-extensions = ">=1.1"
+
+[tool.poetry.plugins."mkdocs.plugins"]
+"mkdocs/exporter" = "mkdocs_exporter.plugin:Plugin"
+"mkdocs/exporter/pdf" = "mkdocs_exporter.plugins.pdf.plugin:Plugin"
+"mkdocs/exporter/extras" = "mkdocs_exporter.plugins.extras.plugin:Plugin"

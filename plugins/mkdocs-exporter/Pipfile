@@ -1,0 +1,18 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+playwright = "*"
+beautifulsoup4 = "*"
+weasyprint = "*"
+lxml = "*"
+libsass = "*"
+mkdocs-material-extensions = "*"
+
+[dev-packages]
+mkdocs = "*"
+
+[requires]
+python_version = "3.11"
