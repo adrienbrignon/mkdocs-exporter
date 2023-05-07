@@ -1,5 +1,16 @@
-.md-grid {
-  * {
-    color: red;
+@page {
+  margin: 0.75in;
+}
+
+.md-main .md-main__inner {
+  margin: 0;
+}
+
+.md-content .md-content__inner {
+  margin: 0;
+  padding: 0;
+
+  &::before {
+    height: 0;
   }
 }
