@@ -15,10 +15,10 @@ class Preprocessor():
     self.preprocess(html)
 
 
-  def button(self, title: str, href: str, download: bool | str, icon: str) -> Self:
+  def button(self, title: str, href: str, icon: str, **kwargs) -> Self:
     """Adds a button at the top of the page."""
 
-    button = self.html.new_tag('a', title=title, href=href, download=download, attrs={'class': 'md-content__button md-icon'})
+    button = self.html.new_tag('a', title=title, href=href, **kwargs, attrs={'class': 'md-content__button md-icon'})
     svg = BeautifulSoup(icon, 'lxml')
 
     button.append(svg)

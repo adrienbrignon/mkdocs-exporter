@@ -87,7 +87,7 @@ class Plugin(BasePlugin[Config]):
       for i in range(0, len(list), n):
         yield [self.loop.create_task(task) for task in list[i:i + n]]
 
-    for tasks in partition(self.tasks, 12):
+    for tasks in partition(self.tasks, self.config.concurrency or 1):
       self.loop.run_until_complete(asyncio.gather(*tasks))
 
     self.loop.close()
