@@ -4,7 +4,7 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-mkdocs-exporter = {path = "./plugins/mkdocs-exporter"}
+mkdocs-exporter = {path = "./plugins/mkdocs-exporter", editable = true}
 mkdocs-material = "*"
 pymdown-extensions = "*"
 

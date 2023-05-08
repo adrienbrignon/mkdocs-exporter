@@ -9,6 +9,11 @@ from playwright.async_api import async_playwright
 class Browser:
   """A web browser instance."""
 
+  args = [
+    '--allow-file-access-from-files'
+  ]
+  """The browser's arguments..."""
+
 
   def __init__(self):
     """The constructor."""
@@ -20,19 +25,32 @@ class Browser:
   async def launch(self) -> Self:
     """Launches the browser."""
 
+    if self.launched:
+      return self
+
     async with self.lock:
       if self.launched:
         return self
 
-      logger.info('Launching browser...')
+      logger.info('[PDF] Launching browser...')
 
       self.playwright = await async_playwright().start()
-      self.browser = await self.playwright.chromium.launch()
+      self.browser = await self.playwright.chromium.launch(headless=True, args=self.args)
       self.context = await self.browser.new_context()
       self._launched = True
 
     return self
 
+
+  async def close(self) -> Self:
+    """Closes the browser."""
+
+    if self.browser:
+      await self.browser.close()
+    if self.playwright:
+      await self.playwright.stop()
+
+    return self
 
   @property
   def launched(self):
@@ -51,10 +69,10 @@ class Browser:
       file.flush()
 
       await page.goto('file://' + file.name, wait_until='networkidle')
-      await page.locator('.md-content > .md-content__inner').wait_for(timeout=30000)
+      await page.locator('.pagedjs_pages').wait_for(timeout=30000)
 
-    bytes = await page.pdf(width='21cm', height='29.7cm', prefer_css_page_size=True, print_background=True)
+    pdf = await page.pdf(prefer_css_page_size=True, print_background=True, display_header_footer=False)
 
     await page.close()
 
-    return bytes
+    return pdf

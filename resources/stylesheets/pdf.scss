@@ -1,5 +1,38 @@
+:root {
+  --margin: 0.5in;
+}
+
 @page {
-  margin: 0.75in;
+  size: A4;
+  margin: 0.5in;
+
+  @top-center {
+    content: 'Hello world!';
+  }
+}
+
+@page :first {
+  margin: 0;
+  background: #2e4954;
+
+  @top-center {
+    content: '';
+  }
+}
+
+.front-page {
+  margin: var(--margin);
+  height: calc(29.7cm - (var(--margin) * 2));
+  page-break-after: always;
+  border: 1px solid #fff;
+}
+
+h1, h2, h3 {
+  string-set: chapter content();
+}
+
+body {
+  print-color-adjust: exact;
 }
 
 .md-main .md-main__inner {

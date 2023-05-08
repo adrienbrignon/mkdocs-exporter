@@ -15,6 +15,14 @@ class Preprocessor():
     self.preprocess(html)
 
 
+  def preprocess(self, html: str) -> Self:
+    """Gives the preprocessor some HTML to work on."""
+
+    self.html = BeautifulSoup(html, 'lxml') if isinstance(html, str) else None
+
+    return self
+
+
   def button(self, title: str, href: str, icon: str, **kwargs) -> Self:
     """Adds a button at the top of the page."""
 
@@ -27,22 +35,33 @@ class Preprocessor():
     return self
 
 
-  def stylesheet(self, stylesheet: str) -> Self:
+  def script(self, script: str = None, type: str = 'text/javascript', **kwargs):
+    """Appends a script to the document's body."""
+
+    element = self.html.new_tag('script', type=type, **kwargs)
+
+    element.string = script
+
+    self.html.body.append(element)
+
+
+  def stylesheet(self, stylesheet: str, **kwargs) -> Self:
     """Appends a stylesheet to the document's head."""
 
-    element = self.html.new_tag('style', type='text/css', rel='stylesheet')
+    css = sass.compile(string=stylesheet, output_style='compressed')
+    element = self.html.new_tag('style', type='text/css', rel='stylesheet', **kwargs)
 
-    element.string = sass.compile(string=stylesheet)
+    element.string = css
 
     self.html.head.append(element)
 
 
-  def preprocess(self, html: str) -> Self:
-    """Gives the preprocessor some HTML to work on."""
+  def remove(self, selectors: list[str]) -> Self:
+    """Removes some elements."""
 
-    self.html = BeautifulSoup(html, 'lxml') if isinstance(html, str) else None
-
-    return self
+    for selector in selectors:
+      for element in self.html.select(selector):
+        element.decompose()
 
 
   def remove_scripts(self, predicate: Callable[[Any], bool] = lambda _: True) -> Self:
