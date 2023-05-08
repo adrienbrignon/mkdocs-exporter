@@ -40,7 +40,7 @@ class Browser:
       if self.launched:
         return self
 
-      logger.info('[PDF] Launching browser...')
+      logger.info('Launching browser...')
 
       self.playwright = await async_playwright().start()
       self.browser = await self.playwright.chromium.launch(headless=True, args=self.args)

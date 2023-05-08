@@ -33,7 +33,7 @@ class Preprocessor():
     svg = BeautifulSoup(icon, 'lxml')
 
     button.append(svg)
-    self.html.find('article', { 'class': 'md-content__inner' }).insert(0, button)
+    self.html.find('article', {'class': 'md-content__inner'}).insert(0, button)
 
     return self
 

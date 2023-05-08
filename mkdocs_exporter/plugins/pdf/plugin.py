@@ -6,7 +6,6 @@ from weasyprint import urls
 from typing import Optional
 from mkdocs.plugins import BasePlugin
 from mkdocs_exporter.page import Page
-from mkdocs.structure.pages import Page
 from mkdocs.plugins import event_priority
 from mkdocs_exporter.logging import logger
 from mkdocs.livereload import LiveReloadServer
@@ -111,7 +110,7 @@ class Plugin(BasePlugin[Config]):
       return html
 
     async def render(page: Page) -> None:
-      logger.info('[PDF] Rendering %s...', page.file.src_path)
+      logger.info('Rendering PDF for %s...', page.file.src_path)
 
       pdf = await self.renderer.render(page, polyfills=self.config['polyfills'])
       fullpath = os.path.join(config['site_dir'], page.formats['pdf'])
@@ -119,7 +118,7 @@ class Plugin(BasePlugin[Config]):
       with open(fullpath, 'wb+') as file:
         file.write(pdf)
 
-      logger.info('[PDF] File written to %s!', fullpath)
+      logger.info('File written to %s!', fullpath)
 
     self.tasks.append(render(page))
 
