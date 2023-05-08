@@ -4,15 +4,16 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "mkdocs-exporter"
-version = "0.1.0"
-description = "Lorem ipsum dolor sit amet..."
+version = "0.0.1"
+repository = "https://github.com/adrienbrignon/mkdocs-exporter"
+keywords = ["mkdocs", "pdf", "exporter"]
+description = "A highly-configurable plugin for MkDocs that exports your pages to PDF files."
 authors = ["Adrien Brignon <adrien@brignon.dev>"]
 readme = "README.md"
 classifiers = [
-  "Development Status :: 5 - Production/Stable",
-  "Environment :: Web Environment",
   "License :: OSI Approved :: MIT License",
-  "Programming Language :: Python",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
   "Topic :: Documentation",
   "Topic :: Software Development :: Documentation",
   "Topic :: Text Processing :: Markup :: HTML",
@@ -31,3 +32,6 @@ libsass = ">=0.22.0"
 "mkdocs/exporter" = "mkdocs_exporter.plugin:Plugin"
 "mkdocs/exporter/pdf" = "mkdocs_exporter.plugins.pdf.plugin:Plugin"
 "mkdocs/exporter/extras" = "mkdocs_exporter.plugins.extras.plugin:Plugin"
+
+[tool.poetry.urls]
+"Bug Tracker" = "https://github.com/adrienbrignon/mkdocs-exporter/issues"
