@@ -2,8 +2,9 @@ import os
 import sass
 
 from weasyprint import urls
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 from typing import Any, Callable, Self
+from mkdocs_exporter.logging import logger
 
 
 class Preprocessor():
@@ -35,6 +36,29 @@ class Preprocessor():
     return self
 
 
+  def teleport(self) -> Self:
+    """Teleport elements to their destination."""
+
+    for element in self.html.select('*[data-teleport]'):
+      selector = element.attrs['data-teleport']
+      destination = self.html.select_one(selector)
+      tag = Tag(None, name=element.name, attrs=element.attrs)
+
+      if destination is None:
+        if element.string:
+          tag.string = '...'
+
+        logger.warn('Failed to teleport element `%s`: destination `%s` was not found', tag, selector)
+
+        continue
+
+      element.attrs['data-teleport'] = None
+
+      destination.append(element)
+
+    return self
+
+
   def script(self, script: str = None, type: str = 'text/javascript', **kwargs):
     """Appends a script to the document's body."""
 
@@ -56,8 +80,11 @@ class Preprocessor():
     self.html.head.append(element)
 
 
-  def remove(self, selectors: list[str]) -> Self:
+  def remove(self, selectors: str | list[str]) -> Self:
     """Removes some elements."""
+
+    if isinstance(selectors, str):
+      selectors = [selectors]
 
     for selector in selectors:
       for element in self.html.select(selector):
@@ -74,13 +101,13 @@ class Preprocessor():
     return self
 
 
-  def update_links(self, base: str) -> Self:
+  def update_links(self, base: str, root: str = None) -> Self:
     """Updates links to their new base location."""
 
     for element in self.html.find_all('link', href=True):
-      element['href'] = self._resolve_link(element['href'], base)
+      element['href'] = self._resolve_link(element['href'], base, root)
     for element in self.html.find_all(src=True):
-      element['src'] = self._resolve_link(element['src'], base)
+      element['src'] = self._resolve_link(element['src'], base, root)
 
     return self
 
@@ -95,10 +122,12 @@ class Preprocessor():
     return result
 
 
-  def _resolve_link(self, url: str, base: str):
+  def _resolve_link(self, url: str, base: str, root: str = None):
     """Resolves a link to its new base location."""
 
     if urls.url_is_absolute(url):
       return url
+    if root is not None and os.path.isabs(url):
+      return 'file://' + os.path.abspath(os.path.join(root, url.strip('/')))
 
     return 'file://' + os.path.abspath(os.path.join(base, url.strip('/')))

@@ -1,4 +1,5 @@
 import os
+from textwrap import dedent
 
 from typing import Self
 from mkdocs_exporter.page import Page
@@ -36,10 +37,12 @@ class Renderer(BaseRenderer):
     return self
 
 
-  def set_front_cover(self, template: str) -> Self:
-    """Sets the front cover."""
+  def cover(self, template: str) -> Self:
+    """Renders a cover."""
 
-    self.front_cover = template
+    content = template.strip('\n')
+
+    return f'<div data-decompose="true">{content}</div>' + '\n'
 
 
   async def render(self, page: Page) -> bytes:
@@ -50,13 +53,13 @@ class Renderer(BaseRenderer):
 
     preprocessor = Preprocessor()
     base = os.path.dirname(page.file.abs_dest_path)
-
-    os.makedirs(base, exist_ok=True)
+    root = base.replace(page.url.rstrip('/'), '').rstrip('/')
 
     preprocessor.preprocess(page.html)
     preprocessor.remove(['.md-sidebar.md-sidebar--primary', '.md-sidebar.md-sidebar--secondary', 'header.md-header', '.md-container > nav'])
     preprocessor.remove_scripts()
-    preprocessor.update_links(base)
+    preprocessor.update_links(base, root)
+    preprocessor.teleport()
 
     for stylesheet in self.stylesheets:
       with open(stylesheet, 'r') as file:

@@ -15,6 +15,13 @@ class Browser:
   """The browser's arguments..."""
 
 
+  @property
+  def launched(self):
+    """Has the browser been launched?"""
+
+    return self._launched
+
+
   def __init__(self):
     """The constructor."""
 
@@ -37,6 +44,7 @@ class Browser:
       self.playwright = await async_playwright().start()
       self.browser = await self.playwright.chromium.launch(headless=True, args=self.args)
       self.context = await self.browser.new_context()
+
       self._launched = True
 
     return self
@@ -45,18 +53,14 @@ class Browser:
   async def close(self) -> Self:
     """Closes the browser."""
 
+    if self.context:
+      await self.context.close()
     if self.browser:
       await self.browser.close()
     if self.playwright:
       await self.playwright.stop()
 
     return self
-
-  @property
-  def launched(self):
-    """Has the browser been launched?"""
-
-    return self._launched
 
 
   async def print(self, html: str) -> bytes:

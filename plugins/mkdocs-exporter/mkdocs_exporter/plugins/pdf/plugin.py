@@ -1,14 +1,12 @@
 import os
 import types
 import asyncio
-from typing import Optional
-from mkdocs.config.defaults import MkDocsConfig
-from mkdocs.structure.files import Files
-from mkdocs.structure.pages import Page
 
 from weasyprint import urls
 from mkdocs.plugins import BasePlugin
 from mkdocs_exporter.page import Page
+from mkdocs.structure.pages import Page
+from mkdocs.plugins import event_priority
 from mkdocs_exporter.logging import logger
 from mkdocs.livereload import LiveReloadServer
 from mkdocs_exporter.plugins.pdf.config import Config
@@ -25,6 +23,23 @@ class Plugin(BasePlugin[Config]):
     self.renderer: None | Renderer = None
     self.tasks: list[types.CoroutineType] = []
     self.loop: None | asyncio.AbstractEventLoop = None
+
+
+  def on_config(self, config: dict) -> None:
+    """Invoked when the configuration has been validated."""
+
+    def resolve(path: str) -> str:
+      if path is None:
+        return None
+      if urls.url_is_absolute(path):
+        return path
+
+      return os.path.join(os.path.dirname(config['config_file_path']), path)
+
+    self.config.covers.front = resolve(self.config.covers.front)
+    self.config.covers.back = resolve(self.config.covers.back)
+    self.config.scripts = [resolve(path) for path in self.config.scripts]
+    self.config.stylesheets = [resolve(path) for path in self.config.stylesheets]
 
 
   def on_serve(self, server: LiveReloadServer, **kwargs) -> LiveReloadServer:
@@ -45,29 +60,12 @@ class Plugin(BasePlugin[Config]):
 
     if self.config.covers.front:
       with open(self.config.covers.front, 'r') as file:
-        content = file.read() + '\n\n' + content
+        content = self.renderer.cover(file.read()) + content
     if self.config.covers.back:
       with open(self.config.covers.back, 'r') as file:
-        content = content + '\n\n' + file.read()
+        content = content + self.renderer.cover(file.read())
 
     return content
-
-
-  def on_config(self, config: dict) -> None:
-    """Invoked when the configuration has been validated."""
-
-    def resolve(path: str) -> str:
-      if path is None:
-        return None
-      if urls.url_is_absolute(path):
-        return path
-
-      return os.path.join(os.path.dirname(config['config_file_path']), path)
-
-    self.config.covers.front = resolve(self.config.covers.front)
-    self.config.covers.back = resolve(self.config.covers.back)
-    self.config.scripts = [resolve(path) for path in self.config.scripts]
-    self.config.stylesheets = [resolve(path) for path in self.config.stylesheets]
 
 
   def on_pre_build(self, **kwargs) -> None:
@@ -102,6 +100,7 @@ class Plugin(BasePlugin[Config]):
       page.formats['pdf'] = os.path.relpath(fullpath, config['site_dir'])
 
 
+  @event_priority(-75)
   def on_post_page(self, html: str, page: Page, config: dict) -> None | str:
     """Invoked after a page has been built."""
 

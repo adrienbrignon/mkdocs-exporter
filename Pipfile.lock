@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "e85a8ba8ecc97d47dd80989eb3a2eb2237dad8824b6b7565e23216fda4407760"
+            "sha256": "b459a6fde03f4bd3143c8f2de0afdd6f918c17d77d60ff2b1590774055e169be"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -579,6 +579,14 @@
             "editable": true,
             "path": "./plugins/mkdocs-exporter"
         },
+        "mkdocs-macros-plugin": {
+            "hashes": [
+                "sha256:96bdabeb98b96139544f0048ea2f5cb80c7befde6b21e94c6d4596c22774cbcf",
+                "sha256:9e64e1cabcf6925359de29fe54f62d5847fb455c2528c440b87f8f1240650608"
+            ],
+            "index": "pypi",
+            "version": "==0.7.0"
+        },
         "mkdocs-material": {
             "hashes": [
                 "sha256:74d8da1371ab3a326868fe47bae3cbc4aa22e93c048b4ca5117e6817b88bd734",
@@ -913,6 +921,14 @@
             ],
             "markers": "python_version >= '3.7'",
             "version": "==2.4.1"
+        },
+        "termcolor": {
+            "hashes": [
+                "sha256:3afb05607b89aed0ffe25202399ee0867ad4d3cb4180d98aaf8eefa6a5f7d475",
+                "sha256:b5b08f68937f138fe92f6c089b99f1e2da0ae56c52b78bf7075fd95420fd9a5a"
+            ],
+            "markers": "python_version >= '3.7'",
+            "version": "==2.3.0"
         },
         "tinycss2": {
             "hashes": [
