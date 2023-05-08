@@ -1,5 +1,4 @@
 from mkdocs.structure.pages import Page as BasePage
-from mkdocs_exporter.documents.document import Document
 
 
 class Page(BasePage):
