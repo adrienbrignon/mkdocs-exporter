@@ -9,7 +9,6 @@ beautifulsoup4 = "*"
 weasyprint = "*"
 lxml = "*"
 libsass = "*"
-mkdocs-material-extensions = "*"
 
 [dev-packages]
 mkdocs = "*"

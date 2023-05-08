@@ -27,7 +27,6 @@ beautifulsoup4 = ">=4.12.2"
 weasyprint = ">=50.0"
 lxml = ">=4.9"
 libsass = ">=0.22.0"
-mkdocs-material-extensions = ">=1.1"
 
 [tool.poetry.plugins."mkdocs.plugins"]
 "mkdocs/exporter" = "mkdocs_exporter.plugin:Plugin"
