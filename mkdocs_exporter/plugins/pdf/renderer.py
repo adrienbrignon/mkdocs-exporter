@@ -1,7 +1,8 @@
-import os
-import importlib.resources
+from __future__ import annotations
 
-from typing import Self
+import os
+import importlib_resources
+
 from mkdocs_exporter.page import Page
 from mkdocs_exporter.resources import js
 from mkdocs_exporter.browser import Browser
@@ -22,7 +23,7 @@ class Renderer(BaseRenderer):
     self.browser = browser or Browser()
 
 
-  def add_stylesheet(self, path: str) -> Self:
+  def add_stylesheet(self, path: str) -> Renderer:
     """Adds a stylesheet to the renderer."""
 
     self.stylesheets.append(path)
@@ -30,7 +31,7 @@ class Renderer(BaseRenderer):
     return self
 
 
-  def add_script(self, path: str) -> Self:
+  def add_script(self, path: str) -> Renderer:
     """Adds a script to the renderer."""
 
     self.scripts.append(path)
@@ -38,7 +39,7 @@ class Renderer(BaseRenderer):
     return self
 
 
-  def cover(self, template: str) -> Self:
+  def cover(self, template: str) -> Renderer:
     """Renders a cover."""
 
     content = template.strip('\n')
@@ -70,14 +71,14 @@ class Renderer(BaseRenderer):
         preprocessor.script(file.read())
 
     if kwargs.get('polyfills', True):
-      preprocessor.script(importlib.resources.files(js).joinpath('pagedjs.min.js').read_text())
+      preprocessor.script(importlib_resources.files(js).joinpath('pagedjs.min.js').read_text())
 
     html = preprocessor.done()
 
     return await self.browser.print(html)
 
 
-  async def dispose(self):
+  async def dispose(self) -> None:
     """Dispose of the renderer."""
 
     if self.browser:

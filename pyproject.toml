@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "mkdocs-exporter"
-version = "0.0.1"
+version = "0.0.2"
 repository = "https://github.com/adrienbrignon/mkdocs-exporter"
 keywords = ["mkdocs", "pdf", "exporter"]
 description = "A highly-configurable plugin for MkDocs that exports your pages to PDF files."
@@ -27,6 +27,7 @@ beautifulsoup4 = ">=4.12.2"
 weasyprint = ">=50.0"
 lxml = ">=4.9"
 libsass = ">=0.22.0"
+importlib-resources = "*"
 
 [tool.poetry.plugins."mkdocs.plugins"]
 "mkdocs/exporter" = "mkdocs_exporter.plugin:Plugin"

@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 import asyncio
 
-from typing import Self
 from tempfile import NamedTemporaryFile
 from mkdocs_exporter.logging import logger
 from playwright.async_api import async_playwright
@@ -29,7 +30,7 @@ class Browser:
     self.lock = asyncio.Lock()
 
 
-  async def launch(self) -> Self:
+  async def launch(self) -> Browser:
     """Launches the browser."""
 
     if self.launched:
@@ -50,15 +51,15 @@ class Browser:
     return self
 
 
-  async def close(self) -> Self:
+  async def close(self) -> Browser:
     """Closes the browser."""
 
     if self.context:
       await self.context.close()
     if self.browser:
       await self.browser.close()
-    if self.playwright:
-      await self.playwright.stop()
+
+    self._launched = False
 
     return self
 

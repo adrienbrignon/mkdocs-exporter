@@ -1,3 +1,4 @@
+from typing import Optional
 from mkdocs.plugins import BasePlugin
 from mkdocs_exporter.page import Page
 from mkdocs_exporter.preprocessor import Preprocessor
@@ -8,7 +9,7 @@ class Plugin(BasePlugin[Config]):
   """The plugin."""
 
 
-  def on_post_page(self, html: str, page: Page, **kwargs) -> None | str:
+  def on_post_page(self, html: str, page: Page, **kwargs) -> Optional[str]:
     """Invoked after a page has been built."""
 
     preprocessor = Preprocessor()

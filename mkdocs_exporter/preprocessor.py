@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 import os
 import sass
 
 from weasyprint import urls
 from bs4 import BeautifulSoup, Tag
-from typing import Any, Callable, Self
+from typing import Any, Callable, Union
 from mkdocs_exporter.logging import logger
 
 
@@ -16,7 +18,7 @@ class Preprocessor():
     self.preprocess(html)
 
 
-  def preprocess(self, html: str) -> Self:
+  def preprocess(self, html: str) -> Preprocessor:
     """Gives the preprocessor some HTML to work on."""
 
     self.html = BeautifulSoup(html, 'lxml') if isinstance(html, str) else None
@@ -24,7 +26,7 @@ class Preprocessor():
     return self
 
 
-  def button(self, title: str, href: str, icon: str, **kwargs) -> Self:
+  def button(self, title: str, href: str, icon: str, **kwargs) -> Preprocessor:
     """Adds a button at the top of the page."""
 
     button = self.html.new_tag('a', title=title, href=href, **kwargs, attrs={'class': 'md-content__button md-icon'})
@@ -36,7 +38,7 @@ class Preprocessor():
     return self
 
 
-  def teleport(self) -> Self:
+  def teleport(self) -> Preprocessor:
     """Teleport elements to their destination."""
 
     for element in self.html.select('*[data-teleport]'):
@@ -59,7 +61,7 @@ class Preprocessor():
     return self
 
 
-  def script(self, script: str = None, type: str = 'text/javascript', **kwargs):
+  def script(self, script: str = None, type: str = 'text/javascript', **kwargs) -> Preprocessor:
     """Appends a script to the document's body."""
 
     element = self.html.new_tag('script', type=type, **kwargs)
@@ -68,8 +70,10 @@ class Preprocessor():
 
     self.html.body.append(element)
 
+    return self
 
-  def stylesheet(self, stylesheet: str, **kwargs) -> Self:
+
+  def stylesheet(self, stylesheet: str, **kwargs) -> Preprocessor:
     """Appends a stylesheet to the document's head."""
 
     css = sass.compile(string=stylesheet, output_style='compressed')
@@ -79,8 +83,10 @@ class Preprocessor():
 
     self.html.head.append(element)
 
+    return self
 
-  def remove(self, selectors: str | list[str]) -> Self:
+
+  def remove(self, selectors: Union[str, list[str]]) -> Preprocessor:
     """Removes some elements."""
 
     if isinstance(selectors, str):
@@ -90,8 +96,10 @@ class Preprocessor():
       for element in self.html.select(selector):
         element.decompose()
 
+    return self
 
-  def remove_scripts(self, predicate: Callable[[Any], bool] = lambda _: True) -> Self:
+
+  def remove_scripts(self, predicate: Callable[[Any], bool] = lambda _: True) -> Preprocessor:
     """Remove all script tags."""
 
     for element in self.html.find_all('script'):
@@ -101,7 +109,7 @@ class Preprocessor():
     return self
 
 
-  def update_links(self, base: str, root: str = None) -> Self:
+  def update_links(self, base: str, root: str = None) -> Preprocessor:
     """Updates links to their new base location."""
 
     for element in self.html.find_all('link', href=True):
@@ -122,7 +130,7 @@ class Preprocessor():
     return result
 
 
-  def _resolve_link(self, url: str, base: str, root: str = None):
+  def _resolve_link(self, url: str, base: str, root: str = None) -> str:
     """Resolves a link to its new base location."""
 
     if urls.url_is_absolute(url):

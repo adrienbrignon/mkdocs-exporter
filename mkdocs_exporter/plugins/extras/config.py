@@ -6,16 +6,16 @@ from mkdocs.config.base import Config as BaseConfig
 class ButtonConfig(BaseConfig):
   """The configuration of a button."""
 
-  title = c.Type(str | Callable)
+  title = c.Type((str, Callable))
   """The button's title."""
 
-  icon = c.Type(str | Callable)
+  icon = c.Type((str, Callable))
   """The button's icon (typically, an SVG element)."""
 
-  href = c.Type(str | Callable)
+  href = c.Type((str, Callable))
   """The button's 'href' attribute."""
 
-  download = c.Optional(c.Type(bool | str | Callable))
+  download = c.Optional(c.Type((bool, str, Callable)))
   """The button's 'download' attribute."""
 
   target = c.Optional(c.Choice(('_blank', '_self', '_parent', '_top')))

@@ -1,3 +1,4 @@
+from typing import Optional
 from mkdocs.structure.pages import Page as BasePage
 
 
@@ -8,7 +9,7 @@ class Page(BasePage):
   def __init__(self, *args, **kwargs):
     """The constructor."""
 
-    self.html: None | str = None
+    self.html: Optional[str] = None
     """The page's HTML content."""
 
     self.formats: dict[str, str]

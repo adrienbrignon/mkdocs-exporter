@@ -3,6 +3,7 @@ import types
 import asyncio
 
 from weasyprint import urls
+from typing import Optional
 from mkdocs.plugins import BasePlugin
 from mkdocs_exporter.page import Page
 from mkdocs.structure.pages import Page
@@ -20,9 +21,9 @@ class Plugin(BasePlugin[Config]):
   def __init__(self):
     """The constructor."""
 
-    self.renderer: None | Renderer = None
+    self.renderer: Optional[Renderer] = None
     self.tasks: list[types.CoroutineType] = []
-    self.loop: None | asyncio.AbstractEventLoop = None
+    self.loop: Optional[asyncio.AbstractEventLoop] = None
 
 
   def on_config(self, config: dict) -> None:
@@ -101,7 +102,7 @@ class Plugin(BasePlugin[Config]):
 
 
   @event_priority(-75)
-  def on_post_page(self, html: str, page: Page, config: dict) -> None | str:
+  def on_post_page(self, html: str, page: Page, config: dict) -> Optional[str]:
     """Invoked after a page has been built."""
 
     page.html = html
@@ -125,7 +126,7 @@ class Plugin(BasePlugin[Config]):
     return page.html
 
 
-  def on_post_build(self, **kwargs):
+  def on_post_build(self, **kwargs) -> None:
     """Invoked after the build process."""
 
     if not self.config.enabled:

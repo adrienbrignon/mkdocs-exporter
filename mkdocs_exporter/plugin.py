@@ -16,7 +16,7 @@ class Plugin(BasePlugin):
 
 
   @event_priority(-100)
-  def on_post_page(self, html: str, **kwargs) -> str | None:
+  def on_post_page(self, html: str, **kwargs) -> str:
     """Invoked after a page has been built (and after all other plugins)."""
 
     preprocessor = Preprocessor()
