@@ -71,4 +71,4 @@ Feel free to request additional features by submitting an issue or by contributi
 
 ## License
 
-This project is licensed under the `MIT License (MIT)`, which you can read [here](LICENSE.md).
+This project is licensed under the `MIT License (MIT)`, which you can read [here](LICENSE).
