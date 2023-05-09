@@ -116,7 +116,7 @@ class Preprocessor():
     """Set an attribute on elements matching the given selector."""
 
     for element in self.html.select(selector):
-      setattr(element.attrs, key, value)
+      element.attrs[key] = value
 
     return self
 
