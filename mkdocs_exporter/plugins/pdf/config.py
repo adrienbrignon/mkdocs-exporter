@@ -18,6 +18,9 @@ class Config(BaseConfig):
   enabled = c.Type(bool, default=True)
   """Is the generator enabled?"""
 
+  explicit = c.Type(bool, default=False)
+  """Should pages specify explicitly that they should be rendered as PDF?"""
+
   concurrency = c.Type(int, default=4)
   """The maximum number of concurrent PDF generation tasks."""
 

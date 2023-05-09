@@ -45,7 +45,7 @@ class Plugin(BasePlugin[Config]):
   def on_serve(self, server: LiveReloadServer, **kwargs) -> LiveReloadServer:
     """Invoked when the website is being served."""
 
-    if not self.config.enabled:
+    if not self._enabled():
       return
     for path in [*self.config.stylesheets, *self.config.scripts]:
       server.watch(path)
@@ -59,7 +59,7 @@ class Plugin(BasePlugin[Config]):
   def on_page_markdown(self, markdown: str, page: Page, **kwargs) -> str:
     """Invoked when the page's markdown has been loaded."""
 
-    if not self.config.enabled or 'cover' in page.meta.get('hide', []):
+    if not self._enabled(page) or 'cover' in page.meta.get('hide', []):
       return
 
     content = markdown
@@ -77,7 +77,7 @@ class Plugin(BasePlugin[Config]):
   def on_pre_build(self, **kwargs) -> None:
     """Invoked before the build process starts."""
 
-    if not self.config.enabled:
+    if not self._enabled():
       return
     if self.loop and self.loop.is_running():
       self.loop.close()
@@ -95,15 +95,14 @@ class Plugin(BasePlugin[Config]):
   def on_pre_page(self, page: Page, config: dict, **kwargs):
     """Invoked before building the page."""
 
-    if not self.config.enabled:
+    if not self._enabled():
       return
 
     directory = os.path.dirname(page.file.abs_dest_path)
     filename = os.path.splitext(os.path.basename(page.file.abs_src_path))[0] + '.pdf'
     fullpath = os.path.join(directory, filename)
 
-    if page.meta.get('pdf', True):
-      page.formats['pdf'] = os.path.relpath(fullpath, config['site_dir'])
+    page.formats['pdf'] = os.path.relpath(fullpath, config['site_dir'])
 
 
   @event_priority(-75)
@@ -112,7 +111,9 @@ class Plugin(BasePlugin[Config]):
 
     page.html = html
 
-    if not self.config.enabled or 'pdf' not in page.formats:
+    if not self._enabled(page):
+      del page.formats['pdf']
+    if 'pdf' not in page.formats:
       return html
 
     async def render(page: Page) -> None:
@@ -134,7 +135,7 @@ class Plugin(BasePlugin[Config]):
   def on_post_build(self, **kwargs) -> None:
     """Invoked after the build process."""
 
-    if not self.config.enabled:
+    if not self._enabled():
       return
 
     self.loop = asyncio.new_event_loop()
@@ -158,3 +159,14 @@ class Plugin(BasePlugin[Config]):
 
     if self.loop and self.loop.is_running():
       self.loop.stop()
+
+
+  def _enabled(self, page: Page = None) -> bool:
+    """Is the plugin enabled for this page?"""
+
+    if not self.config.enabled:
+      return False
+    if page and not page.meta.get('pdf', not self.config.explicit):
+      return False
+
+    return True

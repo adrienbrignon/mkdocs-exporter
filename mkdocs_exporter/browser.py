@@ -26,7 +26,10 @@ class Browser:
   def __init__(self):
     """The constructor."""
 
+    self.browser = None
+    self.context = None
     self._launched = False
+    self.playwright = None
     self.lock = asyncio.Lock()
 
 
