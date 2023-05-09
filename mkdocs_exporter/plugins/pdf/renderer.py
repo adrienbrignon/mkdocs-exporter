@@ -60,7 +60,6 @@ class Renderer(BaseRenderer):
     preprocessor.remove_scripts()
     preprocessor.update_links(base, root)
     preprocessor.set_attribute('details:not([open])', 'open', 'open')
-    preprocessor.teleport()
 
     for stylesheet in self.stylesheets:
       with open(stylesheet, 'r') as file:
@@ -68,6 +67,8 @@ class Renderer(BaseRenderer):
     for script in self.scripts:
       with open(script, 'r') as file:
         preprocessor.script(file.read())
+
+    preprocessor.teleport()
 
     if kwargs.get('polyfills', True):
       preprocessor.script(importlib_resources.files(js).joinpath('pagedjs.min.js').read_text())
