@@ -56,7 +56,7 @@ class Renderer(BaseRenderer):
     root = base.replace(page.url.rstrip('/'), '', 1).rstrip('/')
 
     preprocessor.preprocess(page.html)
-    preprocessor.remove(['.md-sidebar.md-sidebar--primary', '.md-sidebar.md-sidebar--secondary', 'header.md-header', '.md-container > nav'])
+    preprocessor.remove(['.md-sidebar.md-sidebar--primary', '.md-sidebar.md-sidebar--secondary', 'header.md-header', '.md-container > nav', 'nav.md-tags'])
     preprocessor.remove_scripts()
     preprocessor.update_links(base, root)
     preprocessor.set_attribute('details:not([open])', 'open', 'open')
