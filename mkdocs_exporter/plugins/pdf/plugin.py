@@ -45,6 +45,8 @@ class Plugin(BasePlugin[Config]):
   def on_serve(self, server: LiveReloadServer, **kwargs) -> LiveReloadServer:
     """Invoked when the website is being served."""
 
+    if not self.config.enabled:
+      return
     for path in [*self.config.stylesheets, *self.config.scripts]:
       server.watch(path)
     for cover in self.config.covers:
@@ -55,6 +57,9 @@ class Plugin(BasePlugin[Config]):
 
   def on_page_markdown(self, markdown: str, **kwargs) -> str:
     """Invoked when the page's markdown has been loaded."""
+
+    if not self.config.enabled:
+      return
 
     content = markdown
 
