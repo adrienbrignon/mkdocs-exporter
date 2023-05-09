@@ -6,7 +6,7 @@ from mkdocs.config.base import Config as BaseConfig
 class ButtonConfig(BaseConfig):
   """The configuration of a button."""
 
-  enabled = c.Type(bool, default=True)
+  enabled = c.Type((bool, Callable), default=True)
   """Is the button enabled?"""
 
   title = c.Type((str, Callable))
