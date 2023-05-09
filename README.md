@@ -4,11 +4,11 @@ A highly-configurable plugin for [*MkDocs*](https://github.com/mkdocs/mkdocs) th
 
 ## Features
 
-- :rocket: **Fast** - PDF documents are generated concurrently!
-- :star: **Powerful** - it uses a headless browser and some awesome libraries under the hood to generate PDF files
+- 🚀 **Fast** - PDF documents are generated concurrently!
+- ⭐ **Powerful** - it uses a headless browser and some awesome libraries under the hood to generate PDF files
   - [*Paged.js*](https://github.com/pagedjs/pagedjs) polyfills are included by default ([Paged Media](https://www.w3.org/TR/css-page-3/) and [Generated Content](https://www.w3.org/TR/css-gcpm-3/) CSS modules)
   - [*Sass*](https://sass-lang.com/) support (via [`libsass`](https://github.com/sass/libsass-python)) for your stylesheets
-- :paintbrush: **Customizable** - full control over the resulting documents
+- 🎨 **Customizable** - full control over the resulting documents
   - Built for and compatible with [`mkdocs-material`](https://github.com/squidfunk/mkdocs-material)
   - Cover pages with templating support (for instance, with the [`macros`](https://github.com/fralau/mkdocs_macros_plugin) plugin)
   - Define custom scripts and stylesheets to customize your PDF documents
