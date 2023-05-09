@@ -58,6 +58,8 @@ class Browser:
       await self.context.close()
     if self.browser:
       await self.browser.close()
+    if self.playwright:
+      await self.playwright.stop()
 
     self._launched = False
 

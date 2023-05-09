@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import importlib_resources
 
+from urllib.parse import unquote
 from mkdocs_exporter.page import Page
 from mkdocs_exporter.resources import js
 from mkdocs_exporter.browser import Browser
@@ -53,12 +54,11 @@ class Renderer(BaseRenderer):
 
     preprocessor = Preprocessor()
     base = os.path.dirname(page.file.abs_dest_path)
-    root = base.replace(page.url.rstrip('/'), '', 1).rstrip('/')
+    root = base.replace(unquote(page.url.rstrip('/')), '', 1).rstrip('/')
 
     preprocessor.preprocess(page.html)
     preprocessor.remove(['.md-sidebar.md-sidebar--primary', '.md-sidebar.md-sidebar--secondary', 'header.md-header', '.md-container > nav', 'nav.md-tags'])
     preprocessor.remove_scripts()
-    preprocessor.update_links(base, root)
     preprocessor.set_attribute('details:not([open])', 'open', 'open')
 
     for stylesheet in self.stylesheets:
@@ -68,10 +68,11 @@ class Renderer(BaseRenderer):
       with open(script, 'r') as file:
         preprocessor.script(file.read())
 
-    preprocessor.teleport()
-
     if kwargs.get('polyfills', True):
       preprocessor.script(importlib_resources.files(js).joinpath('pagedjs.min.js').read_text())
+
+    preprocessor.teleport()
+    preprocessor.update_links(base, root)
 
     html = preprocessor.done()
 
