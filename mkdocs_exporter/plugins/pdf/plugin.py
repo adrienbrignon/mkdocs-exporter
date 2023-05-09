@@ -50,7 +50,8 @@ class Plugin(BasePlugin[Config]):
     for path in [*self.config.stylesheets, *self.config.scripts]:
       server.watch(path)
     for cover in self.config.covers:
-      server.watch(self.config.covers[cover])
+      if self.config.covers[cover]:
+        server.watch(self.config.covers[cover])
 
     return server
 

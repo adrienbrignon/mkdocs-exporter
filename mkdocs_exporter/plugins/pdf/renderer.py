@@ -54,7 +54,7 @@ class Renderer(BaseRenderer):
 
     preprocessor = Preprocessor()
     base = os.path.dirname(page.file.abs_dest_path)
-    root = base.replace(unquote(page.url.rstrip('/')), '', 1).rstrip('/')
+    root = base.replace(unquote(page.url).rstrip('/'), '', 1).rstrip('/')
 
     preprocessor.preprocess(page.html)
     preprocessor.remove(['.md-sidebar.md-sidebar--primary', '.md-sidebar.md-sidebar--secondary', 'header.md-header', '.md-container > nav', 'nav.md-tags'])
