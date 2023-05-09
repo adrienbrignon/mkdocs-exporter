@@ -1,0 +1,55 @@
+site_name: MkDocs Exporter
+repo_url: https://github.com/adrienbrignon/mkdocs-exporter
+repo_name: adrienbrignon/mkdocs-exporter
+edit_uri: edit/master/docs/
+
+theme:
+  name: material
+  icon:
+    logo: material/file-document-arrow-right
+    repo: fontawesome/brands/github
+  palette:
+    primary: custom
+    accent: custom
+  font:
+    text: Roboto
+  features:
+    - content.action.edit
+    - navigation.indexes
+    - navigation.instant
+    - navigation.sections
+    - navigation.tabs
+    - navigation.top
+    - navigation.tracking
+    - toc.follow
+
+plugins:
+  - mkdocs/exporter
+  - mkdocs/exporter/pdf:
+      concurrency: 16
+      stylesheets:
+        - resources/stylesheets/pdf.scss
+      covers:
+        front: resources/templates/covers/front.html.j2
+  - mkdocs/exporter/extras:
+      buttons:
+        - title: Download as PDF
+          enabled: !!python/name:mkdocs_exporter.plugins.pdf.button.enabled
+          icon: !!python/name:mkdocs_exporter.plugins.pdf.button.icon
+          href: !!python/name:mkdocs_exporter.plugins.pdf.button.href
+          download: !!python/name:mkdocs_exporter.plugins.pdf.button.download
+  - search:
+      lang: en
+  - awesome-pages
+  - macros
+  - git-revision-date-localized:
+      enable_creation_date: false
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - pymdownx.details
+  - pymdownx.superfences
+
+extra_css:
+  - assets/stylesheets/custom.css

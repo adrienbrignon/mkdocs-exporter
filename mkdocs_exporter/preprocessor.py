@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import sass
 
-from weasyprint import urls
+from urllib.parse import urlparse
 from bs4 import BeautifulSoup, Tag
 from typing import Any, Callable, Union
 from mkdocs_exporter.logging import logger
@@ -147,7 +147,7 @@ class Preprocessor():
   def _resolve_link(self, url: str, base: str, root: str = None) -> str:
     """Resolves a link to its new base location."""
 
-    if urls.url_is_absolute(url):
+    if bool(urlparse(url).netloc):
       return url
     if root is not None and os.path.isabs(url):
       return 'file://' + os.path.abspath(os.path.join(root, url.strip('/')))

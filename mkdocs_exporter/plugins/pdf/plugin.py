@@ -2,13 +2,12 @@ import os
 import types
 import asyncio
 
-from weasyprint import urls
-from typing import Optional
 from mkdocs.plugins import BasePlugin
 from mkdocs_exporter.page import Page
 from mkdocs.plugins import event_priority
 from mkdocs_exporter.logging import logger
 from mkdocs.livereload import LiveReloadServer
+from typing import Optional, Coroutine, Sequence
 from mkdocs_exporter.plugins.pdf.config import Config
 from mkdocs_exporter.plugins.pdf.renderer import Renderer
 
@@ -22,7 +21,6 @@ class Plugin(BasePlugin[Config]):
 
     self.renderer: Optional[Renderer] = None
     self.tasks: list[types.CoroutineType] = []
-    self.loop: Optional[asyncio.AbstractEventLoop] = None
 
 
   def on_config(self, config: dict) -> None:
@@ -31,7 +29,7 @@ class Plugin(BasePlugin[Config]):
     def resolve(path: str) -> str:
       if path is None:
         return None
-      if urls.url_is_absolute(path):
+      if os.path.isabs(path):
         return path
 
       return os.path.join(os.path.dirname(config['config_file_path']), path)
@@ -77,12 +75,10 @@ class Plugin(BasePlugin[Config]):
   def on_pre_build(self, **kwargs) -> None:
     """Invoked before the build process starts."""
 
+    self.tasks.clear()
+
     if not self._enabled():
       return
-    if self.loop and self.loop.is_running():
-      self.loop.close()
-
-    self.tasks.clear()
 
     self.renderer = Renderer()
 
@@ -138,27 +134,22 @@ class Plugin(BasePlugin[Config]):
     if not self._enabled():
       return
 
-    self.loop = asyncio.new_event_loop()
+    def concurrently(coroutines: Sequence[Coroutine], concurrency: int) -> Sequence[Coroutine]:
+      semaphore = asyncio.Semaphore(concurrency)
 
-    def partition(list, n):
-      for i in range(0, len(list), n):
-        yield [self.loop.create_task(task) for task in list[i:i + n]]
+      async def limit(coroutine: Coroutine) -> Coroutine:
+        async with semaphore:
+          return await asyncio.create_task(coroutine)
 
-    for tasks in partition(self.tasks, self.config.concurrency or 1):
-      self.loop.run_until_complete(asyncio.gather(*tasks))
+      return [limit(coroutine) for coroutine in coroutines]
 
+    loop = asyncio.get_event_loop()
+
+    loop.run_until_complete(asyncio.gather(*concurrently(self.tasks, max(1, self.config.concurrency or 1))))
     self.tasks.clear()
-    self.loop.run_until_complete(self.renderer.dispose())
-    self.loop.close()
+    loop.run_until_complete(self.renderer.dispose())
 
     self.renderer = None
-
-
-  def on_shutdown(self) -> None:
-    """Invoked on shutdown..."""
-
-    if self.loop and self.loop.is_running():
-      self.loop.stop()
 
 
   def _enabled(self, page: Page = None) -> bool:

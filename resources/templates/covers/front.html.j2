@@ -1,0 +1,39 @@
+<style data-teleport="head">
+  .front-cover .title {
+    string-set: title content(text);
+  }
+
+  @page {
+    @top-center {
+      font-size: 9pt;
+      color: #7f7f7f;
+      content: 'MkDocs Exporter' ' — ' string(title);
+    }
+
+    @bottom-center {
+      font-size: 9pt;
+      color: #7f7f7f;
+      content: 'Page ' counter(page) ' of ' counter(pages);
+    }
+  }
+
+  @page :first {
+    margin: 0;
+    background: #d60000;
+
+    @top-center {
+      content: none;
+    }
+
+    @bottom-center {
+      content: none;
+    }
+  }
+</style>
+<div class="front-cover">
+  <img src="/assets/images/background.png">
+  <section>
+    <div class="brand">MkDocs Exporter</div>
+    <div class="title">{{ page.title }}</div>
+  </section>
+</div>
