@@ -52,6 +52,7 @@ plugins:
   - mkdocs/exporter/extras:
       buttons:
         - title: Download as PDF
+          enabled: !!python/name:mkdocs_exporter.plugins.pdf.button.enabled
           icon: !!python/name:mkdocs_exporter.plugins.pdf.button.icon
           href: !!python/name:mkdocs_exporter.plugins.pdf.button.href
           download: !!python/name:mkdocs_exporter.plugins.pdf.button.download

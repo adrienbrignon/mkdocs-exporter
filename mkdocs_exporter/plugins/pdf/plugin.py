@@ -55,10 +55,10 @@ class Plugin(BasePlugin[Config]):
     return server
 
 
-  def on_page_markdown(self, markdown: str, **kwargs) -> str:
+  def on_page_markdown(self, markdown: str, page: Page, **kwargs) -> str:
     """Invoked when the page's markdown has been loaded."""
 
-    if not self.config.enabled:
+    if not self.config.enabled or 'cover' in page.meta.get('hide', []):
       return
 
     content = markdown

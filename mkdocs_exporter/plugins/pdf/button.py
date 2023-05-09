@@ -4,6 +4,12 @@ from textwrap import dedent
 from mkdocs_exporter.page import Page
 
 
+def enabled(page: Page) -> bool:
+  """Is the button enabled?"""
+
+  return 'pdf' in page.formats
+
+
 def href(page: Page) -> str:
   """The button's 'href' attribute."""
 

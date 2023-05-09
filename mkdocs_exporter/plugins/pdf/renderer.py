@@ -16,8 +16,6 @@ class Renderer(BaseRenderer):
   def __init__(self, browser: Browser = None):
     """The constructor."""
 
-    self.back_cover = None
-    self.front_cover = None
     self.scripts: list[str] = []
     self.stylesheets: list[str] = []
     self.browser = browser or Browser()

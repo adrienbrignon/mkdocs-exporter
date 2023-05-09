@@ -29,6 +29,9 @@ class Preprocessor():
   def button(self, title: str, href: str, icon: str, **kwargs) -> Preprocessor:
     """Adds a button at the top of the page."""
 
+    if not kwargs.get('enabled', True):
+      return self
+
     button = self.html.new_tag('a', title=title, href=href, **kwargs, attrs={'class': 'md-content__button md-icon'})
     svg = BeautifulSoup(icon, 'lxml')
 
