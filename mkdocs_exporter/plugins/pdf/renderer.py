@@ -59,6 +59,7 @@ class Renderer(BaseRenderer):
     preprocessor.remove(['.md-sidebar.md-sidebar--primary', '.md-sidebar.md-sidebar--secondary', 'header.md-header', '.md-container > nav'])
     preprocessor.remove_scripts()
     preprocessor.update_links(base, root)
+    preprocessor.set_attribute('details:not([open])', 'open', 'open')
     preprocessor.teleport()
 
     for stylesheet in self.stylesheets:

@@ -112,6 +112,15 @@ class Preprocessor():
     return self
 
 
+  def set_attribute(self, selector: str, key: str, value: str) -> Preprocessor:
+    """Set an attribute on elements matching the given selector."""
+
+    for element in self.html.select(selector):
+      setattr(element.attrs, key, value)
+
+    return self
+
+
   def update_links(self, base: str, root: str = None) -> Preprocessor:
     """Updates links to their new base location."""
 
