@@ -19,6 +19,7 @@ class Plugin(BasePlugin[Config]):
   def __init__(self):
     """The constructor."""
 
+    self.watch: list[str] = []
     self.renderer: Optional[Renderer] = None
     self.tasks: list[types.CoroutineType] = []
 
@@ -26,18 +27,7 @@ class Plugin(BasePlugin[Config]):
   def on_config(self, config: dict) -> None:
     """Invoked when the configuration has been validated."""
 
-    def resolve(path: str) -> str:
-      if path is None:
-        return None
-      if os.path.isabs(path):
-        return path
-
-      return os.path.join(os.path.dirname(config['config_file_path']), path)
-
-    self.config.covers.front = resolve(self.config.covers.front)
-    self.config.covers.back = resolve(self.config.covers.back)
-    self.config.scripts = [resolve(path) for path in self.config.scripts]
-    self.config.stylesheets = [resolve(path) for path in self.config.stylesheets]
+    self.watch = []
 
 
   def on_serve(self, server: LiveReloadServer, **kwargs) -> LiveReloadServer:
@@ -47,27 +37,30 @@ class Plugin(BasePlugin[Config]):
       return
     for path in [*self.config.stylesheets, *self.config.scripts]:
       server.watch(path)
-    for cover in self.config.covers:
-      if self.config.covers[cover]:
-        server.watch(self.config.covers[cover])
+    for path in set(os.path.normpath(path) for path in self.watch):
+      server.watch(path)
 
     return server
 
 
-  def on_page_markdown(self, markdown: str, page: Page, **kwargs) -> str:
+  def on_page_markdown(self, markdown: str, page: Page, config: Config, **kwargs) -> str:
     """Invoked when the page's markdown has been loaded."""
 
-    if not self._enabled(page) or 'cover' in page.meta.get('hide', []):
+    if not self._enabled(page) and 'covers' not in page.meta.get('hide', []):
       return
 
     content = markdown
+    covers = {**self.config.covers, **{k: os.path.join(os.path.dirname(config['config_file_path']), v) for k, v in page.meta.get('covers', {}).items()}}
 
-    if self.config.covers.front:
-      with open(self.config.covers.front, 'r') as file:
+    if covers.get('front'):
+      with open(covers['front'], 'r') as file:
         content = self.renderer.cover(file.read()) + content
-    if self.config.covers.back:
-      with open(self.config.covers.back, 'r') as file:
+    if covers.get('back'):
+      with open(covers['back'], 'r') as file:
         content = content + self.renderer.cover(file.read())
+
+    for path in [path for path in covers.values() if path is not None]:
+      self.watch.append(path)
 
     return content
 

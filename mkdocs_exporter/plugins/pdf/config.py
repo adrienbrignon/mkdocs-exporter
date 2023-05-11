@@ -5,10 +5,10 @@ from mkdocs.config.base import Config as BaseConfig
 class CoversConfig(BaseConfig):
   """The cover's configuration."""
 
-  front = c.Optional(c.Type(str))
+  front = c.Optional(c.File(exists=True))
   """The front cover template location."""
 
-  back = c.Optional(c.Type(str))
+  back = c.Optional(c.File(exists=True))
   """The back cover template location."""
 
 
@@ -24,10 +24,10 @@ class Config(BaseConfig):
   concurrency = c.Type(int, default=4)
   """The maximum number of concurrent PDF generation tasks."""
 
-  stylesheets = c.ListOfItems(c.Type(str), default=[])
+  stylesheets = c.ListOfItems(c.File(exists=True), default=[])
   """A list of custom stylesheets to apply before rendering documents."""
 
-  scripts = c.ListOfItems(c.Type(str), default=[])
+  scripts = c.ListOfItems(c.File(exists=True), default=[])
   """A list of custom scripts to inject before rendering documents."""
 
   covers = c.SubConfig(CoversConfig)
