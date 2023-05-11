@@ -64,3 +64,7 @@ target/
 
 # virtualenv
 .venv/
+.python-version
+
+# poetry
+poetry.toml

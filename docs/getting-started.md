@@ -10,6 +10,10 @@
 
 ## Installation
 
+You can start by installing the plugin with the package manager of your choice:
+
 ```
 pip install mkdocs-exporter
 ```
+
+### Additional dependencies

@@ -2,6 +2,7 @@ site_name: MkDocs Exporter
 repo_url: https://github.com/adrienbrignon/mkdocs-exporter
 repo_name: adrienbrignon/mkdocs-exporter
 edit_uri: edit/master/docs/
+site_dir: dist
 
 theme:
   name: material
@@ -41,9 +42,13 @@ plugins:
   - search:
       lang: en
   - awesome-pages
-  - macros
+  - macros:
+      include_dir: .
   - git-revision-date-localized:
       enable_creation_date: false
+  - redirects:
+      redirect_maps:
+        'index.md': 'getting-started.md'
 
 markdown_extensions:
   - admonition
