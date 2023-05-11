@@ -1,0 +1,75 @@
+name: Documentation
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+
+env:
+  PYTHON_VERSION: '3.11'
+
+concurrency:
+  group: documentation
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 1
+      - name: Set up Poetry
+        run: |
+          pipx install poetry
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: poetry
+      - name: Set up Poetry environment
+        env:
+          PYTHON_VERSION: ${{ env.PYTHON_VERSION }}
+        run: |
+          poetry env use ${PYTHON_VERSION}
+      - name: Install Python dependencies
+        run: |
+          pip install poetry
+          make install
+      - name: Get Playwright version
+        run: |
+          echo "PLAYWRIGHT_VERSION=$(poetry run playwright --version | cut -d ' ' -f 2)" >> $GITHUB_ENV
+      - id: playwright
+        name: Cache playwright binaries
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ env.PLAYWRIGHT_VERSION }}
+      - name: Set up Playwright
+        if: steps.playwright.outputs.cache-hit != 'true'
+        run: |
+          make browser
+      - name: Build documentation
+        run: |
+          make build
+      - name: Upload pages artifacts
+        uses: actions/upload-pages-artifact@v1
+        with:
+          path: dist
+  deploy:
+    name: Deploy
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v2
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}

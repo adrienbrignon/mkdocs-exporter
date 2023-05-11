@@ -12,10 +12,9 @@ all: build
 
 install:
 > poetry install $(ARGS)
-> playwright install
 
 browser:
-> poetry run playwright install chrome $(if $(FORCE),--force,)
+> poetry run playwright install $(if $(FORCE),--force,) --with-deps
 
 build:
 >@ poetry run mkdocs build
