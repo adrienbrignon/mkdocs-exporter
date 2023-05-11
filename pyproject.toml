@@ -28,7 +28,6 @@ lxml = ">=4.9"
 libsass = ">=0.22.0"
 importlib-resources = ">=5.0"
 importlib-metadata = "<5.0"
-mkdocs-redirects = "^1.2.0"
 
 [tool.poetry.plugins."mkdocs.plugins"]
 "mkdocs/exporter" = "mkdocs_exporter.plugin:Plugin"
@@ -45,3 +44,5 @@ mkdocs-git-revision-date-localized-plugin = "^1.2.0"
 mkdocs-git-authors-plugin = "^0.7.0"
 mkdocs-awesome-pages-plugin = "^2.9.1"
 mkdocs-macros-plugin = "^0.7.0"
+mkdocs-minify-plugin = "^0.6.4"
+mkdocs-redirects = "^1.2.0"

@@ -6,6 +6,7 @@ site_dir: dist
 
 theme:
   name: material
+  custom_dir: overrides
   icon:
     logo: material/file-document-arrow-right
     repo: fontawesome/brands/github
@@ -14,8 +15,11 @@ theme:
     accent: custom
   font:
     text: Roboto
+    code: Roboto Mono
   features:
+    - announce.dismiss
     - content.action.edit
+    - navigation.footer
     - navigation.indexes
     - navigation.instant
     - navigation.sections
@@ -23,6 +27,15 @@ theme:
     - navigation.top
     - navigation.tracking
     - toc.follow
+
+extra:
+  social:
+    - name: GitHub
+      icon: fontawesome/brands/github
+      link: https://github.com/adrienbrignon/mkdocs-exporter
+    - name: PyPI
+      icon: fontawesome/brands/python
+      link: https://pypi.org/project/mkdocs-exporter
 
 plugins:
   - mkdocs/exporter
@@ -49,6 +62,10 @@ plugins:
   - redirects:
       redirect_maps:
         'index.md': 'getting-started.md'
+  - search:
+      separator: '[\s\-,:!=\[\]()"`/]+|\.(?!\d)|&[lg]t;|(?!\b)(?=[A-Z][a-z])'
+  - minify:
+      minify_html: true
 
 markdown_extensions:
   - admonition

@@ -16,4 +16,9 @@ You can start by installing the plugin with the package manager of your choice:
 pip install mkdocs-exporter
 ```
 
-### Additional dependencies
+If you plan on using this plugin to generate PDF documents, you'll also need to install a browser and its dependencies.  
+As this project uses [Playwright](https://github.com/microsoft/playwright) under the hood, the installation is a breeze:
+
+```
+playwright install --with-deps
+```
