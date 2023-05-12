@@ -100,7 +100,7 @@ class Plugin(BasePlugin[Config]):
 
     page.html = html
 
-    if not self._enabled(page):
+    if not self._enabled(page) and 'pdf' in page.formats:
       del page.formats['pdf']
     if 'pdf' not in page.formats:
       return html
