@@ -2,17 +2,21 @@
 
 A highly-configurable plugin for [*MkDocs*](https://github.com/mkdocs/mkdocs) that exports your pages to PDF files.
 
+- [Documentation][https://adrienbrignon.github.io/mkdocs-exporter]
+- [PyPI](https://pypi.org/project/mkdocs-exporter)
+
 ## Features
 
 - 🚀 **Fast** - PDF documents are generated concurrently!
+- 🎨 **Customizable** - full control over the resulting documents
+  - Compatible with [`mkdocs-material`](https://github.com/squidfunk/mkdocs-material)
+  - Cover pages (supports [`macros`](https://github.com/fralau/mkdocs_macros_plugin) plugin)
+  - Define custom scripts and stylesheets to customize your PDF documents
+  - Define "buttons" at the top of your documentation pages ([example](https://adrienbrignon.github.io/mkdocs-exporter/setup/setting-up-buttons/))
 - ⭐ **Powerful** - it uses a headless browser and some awesome libraries under the hood to generate PDF files
+  - [*Playwright*](https://github.com/microsoft/playwright-python) to automate browsers
   - [*Paged.js*](https://github.com/pagedjs/pagedjs) polyfills are included by default ([Paged Media](https://www.w3.org/TR/css-page-3/) and [Generated Content](https://www.w3.org/TR/css-gcpm-3/) CSS modules)
   - [*Sass*](https://sass-lang.com/) support (via [`libsass`](https://github.com/sass/libsass-python)) for your stylesheets
-- 🎨 **Customizable** - full control over the resulting documents
-  - Built for and compatible with [`mkdocs-material`](https://github.com/squidfunk/mkdocs-material)
-  - Cover pages with templating support (for instance, with the [`macros`](https://github.com/fralau/mkdocs_macros_plugin) plugin)
-  - Define custom scripts and stylesheets to customize your PDF documents
-  - Define "buttons" at the top of your documentation pages
 
 ## Prerequisites
 
@@ -63,7 +67,6 @@ It has been built with some custom CSS and features cover pages.
 
 ## Roadmap
 
-- Documentation (based on `MkDocs` and featuring this plugin)
 - Ensure full compatibility with other themes than `mkdocs-material`
 - Combine all pages as one PDF
 
