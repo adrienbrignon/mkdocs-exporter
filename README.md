@@ -2,7 +2,7 @@
 
 A highly-configurable plugin for [*MkDocs*](https://github.com/mkdocs/mkdocs) that exports your pages to PDF files.
 
-- [Documentation][https://adrienbrignon.github.io/mkdocs-exporter]
+- [Documentation](https://adrienbrignon.github.io/mkdocs-exporter)
 - [PyPI](https://pypi.org/project/mkdocs-exporter)
 
 ## Features
