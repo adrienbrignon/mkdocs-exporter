@@ -32,4 +32,4 @@ plugins:
   - mkdocs/exporter
 ```
 
-Check out the [setup guides](/setup) for more details about how to use and configure the plugin.
+Check out the [setup guides](./setup) for more details about how to use and configure the plugin.
