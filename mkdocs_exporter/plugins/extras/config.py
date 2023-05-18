@@ -9,6 +9,9 @@ class ButtonConfig(BaseConfig):
   enabled = c.Type((bool, Callable), default=True)
   """Is the button enabled?"""
 
+  id = c.Optional(c.Type(str, Callable))
+  """The button's identifier."""
+
   title = c.Type((str, Callable))
   """The button's title."""
 

@@ -10,6 +10,14 @@
   margin: 1.20cm;
 }
 
+hr:has(+ div.md-source-file), .md-source-file {
+  display: none !important;
+}
+
+summary::after {
+  display: none;
+}
+
 .front-cover {
   margin: var(--margin);
   height: calc(var(--height) - var(--offset));

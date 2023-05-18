@@ -26,23 +26,6 @@ class Preprocessor():
     return self
 
 
-  def button(self, title: str, href: str, icon: str, **kwargs) -> Preprocessor:
-    """Adds a button at the top of the page."""
-
-    tags = self.html.find('nav', {'class': 'md-tags'})
-    button = self.html.new_tag('a', title=title, href=href, **kwargs, attrs={'class': 'md-content__button md-icon'})
-    svg = BeautifulSoup(icon, 'lxml')
-
-    button.append(svg)
-
-    if tags:
-      tags.insert_after(button)
-    else:
-      self.html.find('article', {'class': 'md-content__inner'}).insert(0, button)
-
-    return self
-
-
   def teleport(self) -> Preprocessor:
     """Teleport elements to their destination."""
 

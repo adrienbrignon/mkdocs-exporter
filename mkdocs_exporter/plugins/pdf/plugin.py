@@ -84,11 +84,13 @@ class Plugin(BasePlugin[Config]):
   def on_pre_page(self, page: Page, config: dict, **kwargs):
     """Invoked before building the page."""
 
+    if not hasattr(page, 'html'):
+      raise Exception('Missing `mkdocs/exporter` plugin or your plugins are not ordered properly!')
     if not self._enabled():
       return
 
     directory = os.path.dirname(page.file.abs_dest_path)
-    filename = os.path.splitext(os.path.basename(page.file.abs_src_path))[0] + '.pdf'
+    filename = os.path.splitext(os.path.basename(page.file.abs_dest_path))[0] + '.pdf'
     fullpath = os.path.join(directory, filename)
 
     page.formats['pdf'] = os.path.relpath(fullpath, config['site_dir'])

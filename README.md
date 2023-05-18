@@ -17,7 +17,7 @@ A highly-configurable plugin for [*MkDocs*](https://github.com/mkdocs/mkdocs) th
 ## Prerequisites
 
 - Python `>= 3.7`
-- MkDocs `>= 1.1`
+- MkDocs `>= 1.4`
 
 ## Installation
 
