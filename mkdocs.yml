@@ -1,4 +1,5 @@
 site_name: MkDocs Exporter
+site_url: https://adrienbrignon.github.io/mkdocs-exporter
 repo_url: https://github.com/adrienbrignon/mkdocs-exporter
 repo_name: adrienbrignon/mkdocs-exporter
 edit_uri: edit/master/docs/

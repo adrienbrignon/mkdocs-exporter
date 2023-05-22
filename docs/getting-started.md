@@ -13,7 +13,7 @@ hide:
 
     This documentation website features the plugin, meaning that you can download this page as a PDF document and read it offline!
 
-    Try this out by clicking the download button at the top of this page (or you can directly head [here](./getting-started.pdf){:target="_blank"}).
+    Try this out by clicking the download button at the top of this page (or you can directly head [here](./index.pdf){:target="_blank"}).
 
 
 
