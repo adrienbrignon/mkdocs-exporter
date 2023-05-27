@@ -38,4 +38,4 @@ plugins:
   - mkdocs/exporter
 ```
 
-Check out the [setup guides](/setup/setting-up-documents) for more details about how to use and configure the plugin.
+Check out the [setup guides](../setup/setting-up-documents) for more details about how to use and configure the plugin.
