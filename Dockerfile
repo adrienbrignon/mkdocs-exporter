@@ -29,7 +29,7 @@ ENV POETRY_VERSION=1.5.0 \
 RUN python3 -m venv .venv
 
 COPY mkdocs_exporter/ mkdocs_exporter/
-COPY pyproject.toml poetry.lock Makefile README.md .
+COPY pyproject.toml poetry.lock Makefile README.md ./
 
 RUN . .venv/bin/activate \
  && pip install poetry \
