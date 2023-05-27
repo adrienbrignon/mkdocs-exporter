@@ -46,20 +46,20 @@ class Renderer(BaseRenderer):
     return f'<div data-decompose="true">{content}</div>' + '\n'
 
 
-  async def render(self, page: Page, **kwargs) -> bytes:
+  async def render(self, page: Page) -> bytes:
     """Renders a page as a PDF document."""
 
     if not self.browser.launched:
       await self.browser.launch()
 
-    preprocessor = Preprocessor()
+    preprocessor = Preprocessor(theme=page.theme)
     base = os.path.dirname(page.file.abs_dest_path)
     root = base.replace(unquote(page.url).rstrip('/'), '', 1).rstrip('/')
 
     preprocessor.preprocess(page.html)
-    preprocessor.remove(['.md-sidebar.md-sidebar--primary', '.md-sidebar.md-sidebar--secondary', 'header.md-header', '.md-container > nav', 'nav.md-tags'])
     preprocessor.remove_scripts()
     preprocessor.set_attribute('details:not([open])', 'open', 'open')
+    page.theme.preprocess(preprocessor)
 
     for stylesheet in self.stylesheets:
       with open(stylesheet, 'r') as file:
@@ -68,9 +68,7 @@ class Renderer(BaseRenderer):
       with open(script, 'r') as file:
         preprocessor.script(file.read())
 
-    if kwargs.get('polyfills', True):
-      preprocessor.script(importlib_resources.files(js).joinpath('pagedjs.min.js').read_text())
-
+    preprocessor.script(importlib_resources.files(js).joinpath('pagedjs.min.js').read_text())
     preprocessor.teleport()
     preprocessor.update_links(base, root)
 

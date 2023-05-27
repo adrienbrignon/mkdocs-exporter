@@ -1,9 +1,10 @@
 ---
 buttons:
   - title: I'm Feeling Lucky
-    href: https://www.youtube.com/watch?v=dQw4w9WgXcQ
     icon: material-star-outline
-    target: _blank
+    attributes:
+      href: https://www.youtube.com/watch?v=dQw4w9WgXcQ
+      target: _blank
 ---
 
 # Setting up buttons
@@ -33,11 +34,16 @@ plugins:
         - title: Download as PDF
           icon: material-file-download-outline
           enabled: !!python/name:mkdocs_exporter.plugins.pdf.button.enabled
-          href: !!python/name:mkdocs_exporter.plugins.pdf.button.href
-          download: !!python/name:mkdocs_exporter.plugins.pdf.button.download
+          attributes:
+            href: !!python/name:mkdocs_exporter.plugins.pdf.button.href
+            download: !!python/name:mkdocs_exporter.plugins.pdf.button.download
 ```
 
 The functions referenced in this configuration are provided by the **MkDocs Exporter** plugin.
+
+!!! info
+
+    Currently, icons are only available with the [MkDocs Material](https://github.com/squidfunk/mkdocs-material) theme.
 
 ### Defining a dynamic button
 
@@ -80,9 +86,10 @@ Here's the configuration used by this page:
 
 buttons:
   - title: {{ button.title }}
-    href: {{ button.href }}
     icon: {{ button.icon }}
-    target: {{ button.target }}
+    attributes:
+      href: {{ button.attributes.href }}
+      target: {{ button.attributes.target }}
 ---
 
 # {{ page.title }}

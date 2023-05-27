@@ -6,16 +6,31 @@ import sass
 from urllib.parse import urlparse
 from bs4 import BeautifulSoup, Tag
 from typing import Any, Callable, Union
+from mkdocs_exporter.theme import Theme
 from mkdocs_exporter.logging import logger
 
 
 class Preprocessor():
   """The HTML preprocessor."""
 
-  def __init__(self, html: str = None):
+  def __init__(self, html: str = None, **kwargs):
     """The constructor."""
 
+    self.html = None
+    self.theme = None
+
+    if 'theme' in kwargs:
+      self.set_theme(kwargs['theme'])
+
     self.preprocess(html)
+
+
+  def set_theme(self, theme: Theme) -> Preprocessor:
+    """Sets the current theme."""
+
+    self.theme = theme
+
+    return self
 
 
   def preprocess(self, html: str) -> Preprocessor:
@@ -45,6 +60,15 @@ class Preprocessor():
       element.attrs['data-teleport'] = None
 
       destination.append(element)
+
+    return self
+
+
+  def button(self, title: str, icon: str, attributes: dict = {}, **kwargs) -> Preprocessor:
+    """Adds a button at the top of the page."""
+
+    if kwargs.get('enabled', True) and self.theme:
+      self.theme.button(self, title, icon, attributes)
 
     return self
 

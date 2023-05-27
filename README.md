@@ -9,13 +9,13 @@ A highly-configurable plugin for [*MkDocs*](https://github.com/mkdocs/mkdocs) th
 
 - 🚀 **Fast** - PDF documents are generated concurrently!
 - 🎨 **Customizable** - full control over the resulting documents
-  - Compatible with [`mkdocs-material`](https://github.com/squidfunk/mkdocs-material)
   - Cover pages (supports [`macros`](https://github.com/fralau/mkdocs_macros_plugin) plugin)
   - Define custom scripts and stylesheets to customize your PDF documents
   - Define "buttons" at the top of your documentation pages ([example](https://adrienbrignon.github.io/mkdocs-exporter/setup/setting-up-buttons/))
+  - Compatible with [`material`](https://github.com/squidfunk/mkdocs-material) and [`readthedocs`](https://www.mkdocs.org/user-guide/choosing-your-theme/#readthedocs) themes
 - ⭐ **Powerful** - it uses a headless browser and some awesome libraries under the hood to generate PDF files
   - [*Playwright*](https://github.com/microsoft/playwright-python) to automate browsers
-  - [*Paged.js*](https://github.com/pagedjs/pagedjs) polyfills are included by default ([Paged Media](https://www.w3.org/TR/css-page-3/) and [Generated Content](https://www.w3.org/TR/css-gcpm-3/) CSS modules)
+  - [*Paged.js*](https://github.com/pagedjs/pagedjs) polyfills are included ([Paged Media](https://www.w3.org/TR/css-page-3/) and [Generated Content](https://www.w3.org/TR/css-gcpm-3/) CSS modules)
   - [*Sass*](https://sass-lang.com/) support (via [`libsass`](https://github.com/sass/libsass-python)) for your stylesheets
 
 ## Prerequisites

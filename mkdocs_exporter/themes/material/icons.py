@@ -23,7 +23,7 @@ class Markdown:
   }
 
 
-def get_svg_icon(name):
+def get_icon(name):
   """Gets an icon by its name."""
 
   if not name.startswith(':'):
