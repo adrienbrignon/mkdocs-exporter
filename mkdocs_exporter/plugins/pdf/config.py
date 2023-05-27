@@ -32,6 +32,3 @@ class Config(BaseConfig):
 
   covers = c.SubConfig(CoversConfig)
   """The document's cover pages."""
-
-  polyfills = c.Type(bool, default=True)
-  """Should polyfills be imported?"""

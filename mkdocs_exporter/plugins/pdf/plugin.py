@@ -110,7 +110,7 @@ class Plugin(BasePlugin[Config]):
     async def render(page: Page) -> None:
       logger.info('Rendering PDF for %s...', page.file.src_path)
 
-      pdf = await self.renderer.render(page, polyfills=self.config['polyfills'])
+      pdf = await self.renderer.render(page)
       fullpath = os.path.join(config['site_dir'], page.formats['pdf'])
 
       with open(fullpath, 'wb+') as file:

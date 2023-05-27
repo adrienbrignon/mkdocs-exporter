@@ -1,9 +1,10 @@
 from typing import Optional
+from collections import UserDict
 from mkdocs.plugins import BasePlugin
 from mkdocs_exporter.page import Page
 from mkdocs.plugins import event_priority
+from mkdocs_exporter.preprocessor import Preprocessor
 from mkdocs_exporter.plugins.extras.config import Config
-from mkdocs_exporter.plugins.extras.preprocessor import Preprocessor
 
 
 class Plugin(BasePlugin[Config]):
@@ -14,15 +15,22 @@ class Plugin(BasePlugin[Config]):
   def on_post_page(self, html: str, page: Page, **kwargs) -> Optional[str]:
     """Invoked after a page has been built."""
 
-    def resolve(value):
-      return value(page) if callable(value) else value
+    def resolve(object):
+      if callable(object):
+        return resolve(object(page))
+      if isinstance(object, list):
+        return [resolve(v) for v in object]
+      if isinstance(object, (dict, UserDict)):
+        return {k: resolve(v) for k, v in object.items()}
 
-    preprocessor = Preprocessor()
+      return object
+
+    preprocessor = Preprocessor(theme=page.theme)
 
     preprocessor.preprocess(html)
 
     for button in [*self.config.buttons, *page.meta.get('buttons', [])]:
-      if 'enabled' not in button or resolve(button['enabled']):
-        preprocessor.button(**{k: resolve(v) for k, v in button.items()})
+      if resolve(button.get('enabled', True)):
+        preprocessor.button(**resolve(button))
 
     return preprocessor.done()

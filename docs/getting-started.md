@@ -15,7 +15,13 @@ hide:
 
     Try this out by clicking the download button at the top of this page (or you can directly head [here](./index.pdf){:target="_blank"}).
 
+## Prerequisites
 
+- Python `>= 3.7`
+- MkDocs `>= 1.4`
+- A compatible theme
+  - [`material`](https://github.com/squidfunk/mkdocs-material) (:material-star-shooting: *currently used by this documentation*)
+  - [`readthedocs`](https://www.mkdocs.org/user-guide/choosing-your-theme/#readthedocs)
 
 ## Installation
 

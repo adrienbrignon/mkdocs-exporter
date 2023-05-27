@@ -14,7 +14,7 @@ plugins:
 
     **MkDocs Exporter** comes with various plugins in a single package.
   
-    This architecture was chosen to reduce code duplication and maintain a generic base that can be used
+    This architecture has been chosen to reduce code duplication and maintain a generic base that can be used
     to export your pages to formats other than PDF (although this is the only format currently supported).
 
     Basically, the `mkdocs/exporter` must always be registered first as it provides a common ground for

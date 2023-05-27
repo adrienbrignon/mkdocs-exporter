@@ -9,23 +9,14 @@ class ButtonConfig(BaseConfig):
   enabled = c.Type((bool, Callable), default=True)
   """Is the button enabled?"""
 
-  id = c.Optional(c.Type(str, Callable))
-  """The button's identifier."""
-
   title = c.Type((str, Callable))
   """The button's title."""
 
   icon = c.Type((str, Callable))
   """The button's icon (typically, an SVG element)."""
 
-  href = c.Type((str, Callable))
-  """The button's 'href' attribute."""
-
-  download = c.Optional(c.Type((bool, str, Callable)))
-  """The button's 'download' attribute."""
-
-  target = c.Optional(c.Choice(('_blank', '_self', '_parent', '_top')))
-  """The button's 'target' attribute."""
+  attributes = c.Type((dict, Callable), default={})
+  """Some extra attributes to add to the button."""
 
 
 class Config(BaseConfig):

@@ -7,7 +7,6 @@ site_dir: dist
 
 theme:
   name: material
-  custom_dir: overrides
   icon:
     logo: material/file-document-arrow-right
     repo: fontawesome/brands/github
@@ -51,8 +50,9 @@ plugins:
         - title: Download as PDF
           icon: material-file-download-outline
           enabled: !!python/name:mkdocs_exporter.plugins.pdf.button.enabled
-          href: !!python/name:mkdocs_exporter.plugins.pdf.button.href
-          download: !!python/name:mkdocs_exporter.plugins.pdf.button.download
+          attributes:
+            href: !!python/name:mkdocs_exporter.plugins.pdf.button.href
+            download: !!python/name:mkdocs_exporter.plugins.pdf.button.download
   - search:
       lang: en
   - awesome-pages
@@ -63,8 +63,6 @@ plugins:
   - redirects:
       redirect_maps:
         'index.md': 'getting-started.md'
-  - search:
-      separator: '[\s\-,:!=\[\]()"`/]+|\.(?!\d)|&[lg]t;|(?!\b)(?=[A-Z][a-z])'
   - minify:
       minify_html: true
 
@@ -73,6 +71,12 @@ markdown_extensions:
   - attr_list
   - pymdownx.details
   - pymdownx.superfences
+  - mdx_truly_sane_lists:
+      truly_sane: true
+      nested_indent: 2
+  - pymdownx.emoji:
+      emoji_index: !!python/name:materialx.emoji.twemoji
+      emoji_generator: !!python/name:materialx.emoji.to_svg
 
 extra_css:
   - assets/stylesheets/custom.css

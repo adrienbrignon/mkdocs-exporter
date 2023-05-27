@@ -1,0 +1,8 @@
+html, body {
+  overflow-x: visible;
+}
+
+.wy-nav-content {
+  padding: 0;
+  max-width: unset;
+}
