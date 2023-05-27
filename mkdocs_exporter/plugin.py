@@ -64,7 +64,7 @@ class Plugin(BasePlugin):
     for file in self.files:
       css = None
 
-      with open(file.abs_dest_path, 'r') as reader:
+      with open(file.abs_dest_path, 'r', encoding='utf-8') as reader:
         css = self.theme.stylesheet(reader.read())
-      with open(file.abs_dest_path, 'w+') as writer:
+      with open(file.abs_dest_path, 'w+', encoding='utf-8') as writer:
         writer.write(css)
