@@ -68,7 +68,6 @@ It has been built with some custom CSS and features cover pages.
 
 ## Roadmap
 
-- Ensure full compatibility with other themes than `mkdocs-material`
 - Combine all pages as one PDF
 
 Feel free to request additional features by submitting an issue or by contributing through a pull request.
