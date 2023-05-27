@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import asyncio
 
 from tempfile import NamedTemporaryFile
@@ -73,15 +74,20 @@ class Browser:
     """Prints some HTML to PDF."""
 
     page = await self.context.new_page()
+    file = NamedTemporaryFile(suffix='.html', mode='w+', encoding='utf-8', delete=False)
 
-    with NamedTemporaryFile(suffix='.html', mode='w+', encoding='utf-8') as file:
-      file.write(html)
-      file.flush()
+    file.write(html)
+    file.close()
 
-      await page.goto('file://' + file.name, wait_until='networkidle')
-      await page.locator('.pagedjs_pages').wait_for(timeout=30000)
+    await page.goto('file://' + file.name, wait_until='networkidle')
+    await page.locator('.pagedjs_pages').wait_for(timeout=30000)
 
     pdf = await page.pdf(prefer_css_page_size=True, print_background=True, display_header_footer=False)
+
+    try:
+      os.unlink(file)
+    except Exception:
+      pass
 
     await page.close()
 
