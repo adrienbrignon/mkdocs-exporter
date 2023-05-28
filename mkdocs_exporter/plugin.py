@@ -25,7 +25,7 @@ class Plugin(BasePlugin):
   def on_pre_build(self, **kwargs) -> None:
     """Invoked before the build process starts."""
 
-    self.files = []
+    self.files.clear()
 
 
   def on_pre_page(self, page: Page, **kwargs) -> None:
@@ -43,7 +43,7 @@ class Plugin(BasePlugin):
     preprocessor = Preprocessor(theme=page.theme)
 
     preprocessor.preprocess(html)
-    preprocessor.remove('*[data-decompose=true]')
+    preprocessor.remove('*[data-decompose="true"]')
     preprocessor.teleport()
 
     return preprocessor.done()
