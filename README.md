@@ -4,6 +4,7 @@ A highly-configurable plugin for [*MkDocs*](https://github.com/mkdocs/mkdocs) th
 
 - [Documentation](https://adrienbrignon.github.io/mkdocs-exporter)
 - [PyPI](https://pypi.org/project/mkdocs-exporter)
+- [Examples](./examples)
 
 ## Features
 
@@ -13,6 +14,7 @@ A highly-configurable plugin for [*MkDocs*](https://github.com/mkdocs/mkdocs) th
   - Define custom scripts and stylesheets to customize your PDF documents
   - Define "buttons" at the top of your documentation pages ([example](https://adrienbrignon.github.io/mkdocs-exporter/setup/setting-up-buttons/))
   - Compatible with [`material`](https://github.com/squidfunk/mkdocs-material) and [`readthedocs`](https://www.mkdocs.org/user-guide/choosing-your-theme/#readthedocs) themes
+    - Check out some sample PDF documents [here](./examples/themes)
 - ⭐ **Powerful** - it uses a headless browser and some awesome libraries under the hood to generate PDF files
   - [*Playwright*](https://github.com/microsoft/playwright-python) to automate browsers
   - [*Paged.js*](https://github.com/pagedjs/pagedjs) polyfills are included ([Paged Media](https://www.w3.org/TR/css-page-3/) and [Generated Content](https://www.w3.org/TR/css-gcpm-3/) CSS modules)
