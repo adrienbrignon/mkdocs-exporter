@@ -1,0 +1,40 @@
+name: Lint
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+
+env:
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  lint:
+    name: Lint source code
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 1
+      - name: Set up Poetry
+        run: |
+          pipx install poetry
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: poetry
+      - name: Set up Poetry environment
+        env:
+          PYTHON_VERSION: ${{ env.PYTHON_VERSION }}
+        run: |
+          poetry env use ${PYTHON_VERSION}
+      - name: Install Python dependencies
+        run: |
+          pip install poetry
+          make install
+      - name: Run linter
+        run: |
+          poetry run flake8
