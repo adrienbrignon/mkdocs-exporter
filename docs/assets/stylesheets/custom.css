@@ -2,3 +2,25 @@
   --md-primary-fg-color: #EA2027;
   --md-accent-fg-color: #000000;
 }
+
+@keyframes spin {
+  from {
+    transform:rotate(0deg);
+  }
+
+  to {
+    transform:rotate(360deg);
+  }
+}
+
+.md-icon-spin {
+  animation-name: spin;
+  animation-duration: 3s;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+.page-break {
+  display: none;
+  page-break-after: always;
+}

@@ -46,6 +46,7 @@ plugins:
         - resources/stylesheets/pdf.scss
       covers:
         front: resources/templates/covers/front.html.j2
+        back: resources/templates/covers/back.html.j2
   - mkdocs/exporter/extras:
       buttons:
         - title: Download as PDF
@@ -72,6 +73,8 @@ markdown_extensions:
   - attr_list
   - pymdownx.details
   - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
   - mdx_truly_sane_lists:
       truly_sane: true
       nested_indent: 2

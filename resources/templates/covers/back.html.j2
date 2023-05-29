@@ -1,0 +1,43 @@
+<style data-teleport="head">
+  .back-cover {
+    page: last;
+    height: 100%;
+  }
+
+  .back-cover img {
+    top: 0;
+    left: 0;
+    position: absolute;
+  }
+
+  .back-cover section {
+    .title {
+      color: #fff;
+      position: absolute;
+      top: 50%;
+      left: 0;
+      vertical-align: middle;
+      font-size: 24pt;
+      text-align: center;
+      width: 100%;
+    }
+  }
+
+  @page last {
+    margin: 0;
+    background: var(--md-primary-fg-color);
+
+    @top-center {
+      content: none;
+    }
+
+    @bottom-center {
+      content: none;
+    }
+  }
+</style>
+<div class="back-cover">
+  <section>
+    <div class="title">{{ config.site_name }}</div>
+  </section>
+</div>

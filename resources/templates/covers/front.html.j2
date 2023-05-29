@@ -1,5 +1,34 @@
 <style data-teleport="head">
-  .front-cover .title {
+  .front-cover {
+    margin: var(--margin);
+    height: calc(var(--height) - var(--offset));
+    page-break-after: always;
+    border: 1px solid #fff;
+    position: relative;
+  }
+
+  .front-cover img {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    image-rendering: optimizeQuality;
+  }
+
+  .front-cover section {
+    color: #fff;
+    padding: 0.635cm;
+    max-width: 10.25cm;
+    word-wrap: break-word;
+    margin-top: calc(var(--height) / 2 - var(--offset) - 2cm);
+    font-size: 13pt;
+  }
+
+  .front-cover section > .title {
+    font-size: 26pt;
+    font-weight: 500;
+    line-height: 1.1;
+    color: #fff;
     string-set: title content(text);
   }
 
@@ -7,7 +36,7 @@
     @top-center {
       font-size: 9pt;
       color: #7f7f7f;
-      content: 'MkDocs Exporter' ' — ' string(title);
+      content: '{{ config.site_name }}' ' — ' string(title);
     }
 
     @bottom-center {
@@ -33,7 +62,7 @@
 <div class="front-cover">
   <img src="/assets/images/background.png">
   <section>
-    <div class="brand">MkDocs Exporter</div>
+    <div class="brand">{{ config.site_name }}</div>
     <div class="title">{{ page.title }}</div>
   </section>
 </div>

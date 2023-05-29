@@ -29,11 +29,75 @@ This feature is especially useful during your development process, when you don'
 
 ```yaml
 plugins:
+  - mkdocs/exporter
   - mkdocs/exporter/pdf:
       enabled: ![MKDOCS_EXPORTER_ENABLED, true]
 ```
 
 You can now use the `MKDOCS_EXPORTER_ENABLED` environment variable to toggle the PDF generation.
+
+### Setup cover pages
+
+Cover pages can give your PDF documents a professional quality.  
+Here is how cover pages are set up for this documentation.
+
+???+ tip "Power! Unlimited Power!"
+
+    The following examples use the [`macros`](https://github.com/fralau/mkdocs_macros_plugin) plugin for *extra powerful* pages.
+
+<div class="page-break"></div>
+
+=== "`mkdocs.yml`"
+
+    ```yaml
+    plugins:
+      - mkdocs/exporter
+      - mkdocs/exporter/pdf:
+          stylesheets:
+            - resources/stylesheets/pdf.scss
+          covers:
+            front: resources/templates/covers/front.html.j2
+            back: resources/templates/covers/back.html.j2
+    ```
+
+    > :material-file-code: See the full content of this file [here](https://github.com/adrienbrignon/mkdocs-exporter/blob/master/mkdocs.yml).
+
+=== "`resources/templates/covers/front.html.j2`"
+
+    ```html
+    <div class="front-cover">
+      <img src="/assets/images/background.png">
+      <section>
+        <div class="brand">{% raw %}{{ config.site_name }}{% endraw %}</div>
+        <div class="title">{% raw %}{{ page.title }}{% endraw %}</div>
+      </section>
+    </div>
+    ```
+
+    > :material-file-code: See the full content of this file [here](https://github.com/adrienbrignon/mkdocs-exporter/blob/master/resources/templates/covers/front.html.j2).
+
+=== "`resources/templates/covers/back.html.j2`"
+
+    ```html
+    <div class="back-cover">
+      <section>
+        <div class="title">{% raw %}{{ config.site_name }}{% endraw %}</div>
+      </section>
+    </div>
+    ```
+
+    > :material-file-code: See the full content of this file [here](https://github.com/adrienbrignon/mkdocs-exporter/blob/master/resources/templates/covers/back.html.j2).
+
+=== "`resources/stylesheets/pdf.css`"
+
+    ```scss
+    @page {
+      size: A4;
+      margin: 1.20cm;
+    }
+    ```
+
+    > :material-file-code: See the full content of this file [here](https://github.com/adrienbrignon/mkdocs-exporter/blob/master/resources/stylesheets/pdf.scss).
 
 ### Increase concurrency
 
@@ -51,8 +115,8 @@ As you've guessed, a value of **1** will build PDF documents sequentially.
 
 ### Exclude some pages
 
-Sometimes, you may want to prevent a page from being converted to a PDF document.  
-You can use the `pdf` meta tag on your page to do so:
+You may want to prevent a page from generating a PDF document.  
+To do so, you can use the `pdf` meta tag on your pages:
 
 ```yaml
 ---
@@ -64,7 +128,7 @@ pdf: false
 [...]
 ```
 
-If you exclude more pages than you include, you can take the problem the other way around and explicitly define the pages for which PDF documents should be generated.  
+If you exclude more pages than you include, you may want to  and explicitly define the pages for which PDF documents should be generated.  
 We call that the `explicit` mode, it can be enabled in your configuration file:
 
 ```yaml
@@ -73,7 +137,7 @@ plugins:
       explicit: true
 ```
 
-Only pages with a truthy value in the `pdf` meta tag will have a PDF document generated.
+Only pages with a truthy `pdf` meta tag will see their PDF document generated.
 
 ```yaml
 ---

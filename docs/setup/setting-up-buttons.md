@@ -3,6 +3,7 @@ buttons:
   - title: I'm Feeling Lucky
     icon: material-star-outline
     attributes:
+      class: md-content__button md-icon md-icon-spin
       href: https://www.youtube.com/watch?v=dQw4w9WgXcQ
       target: _blank
 ---
@@ -43,7 +44,7 @@ The functions referenced in this configuration are provided by the **MkDocs Expo
 
 !!! info
 
-    Currently, icons are only available with the [MkDocs Material](https://github.com/squidfunk/mkdocs-material) theme.
+    Currently, icons are only available with the [`material`](https://github.com/squidfunk/mkdocs-material) theme.
 
 ### Defining a dynamic button
 
@@ -70,7 +71,8 @@ plugins:
       buttons:
         - title: Search on Google
           icon: material-google
-          href: !!python/name:my_module.button.href
+          attributes:
+            href: !!python/name:my_module.button.href
 ```
 
 Rinse and repeat, you can use this method for any property of a button.
@@ -88,6 +90,7 @@ buttons:
   - title: {{ button.title }}
     icon: {{ button.icon }}
     attributes:
+      class: {{ button.attributes.class }}
       href: {{ button.attributes.href }}
       target: {{ button.attributes.target }}
 ---
