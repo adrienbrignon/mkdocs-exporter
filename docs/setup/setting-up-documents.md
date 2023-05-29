@@ -88,7 +88,7 @@ Here is how cover pages are set up for this documentation.
 
     > :material-file-code: See the full content of this file [here](https://github.com/adrienbrignon/mkdocs-exporter/blob/master/resources/templates/covers/back.html.j2).
 
-=== "`resources/stylesheets/pdf.css`"
+=== "`resources/stylesheets/pdf.scss`"
 
     ```scss
     @page {
