@@ -1,5 +1,21 @@
 # MkDocs Exporter
 
+<div>
+  <a href="https://pypi.org/project/mkdocs-exporter">
+    <img src="https://img.shields.io/pypi/v/mkdocs-exporter?color=blue">
+  </a>
+  <a href="https://pypi.org/project/mkdocs-exporter">
+    <img src="https://img.shields.io/pypi/pyversions/mkdocs-exporter?color=blue">
+  </a>
+  <a href="https://pypi.org/project/mkdocs-exporter">
+    <img src="https://img.shields.io/pypi/dm/mkdocs-exporter?color=cactus">
+  </a>
+  <a href="https://github.com/adrienbrignon/mkdocs-exporter/blob/master/LICENSE">
+    <img align="right" src="https://img.shields.io/github/license/adrienbrignon/mkdocs-exporter?color=white">
+  </a>
+</div>
+<br />
+
 A highly-configurable plugin for [*MkDocs*](https://github.com/mkdocs/mkdocs) that exports your pages to PDF files.
 
 - [Documentation](https://adrienbrignon.github.io/mkdocs-exporter)
