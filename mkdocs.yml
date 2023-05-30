@@ -39,7 +39,7 @@ extra:
       link: https://pypi.org/project/mkdocs-exporter
 
 plugins:
-  - mkdocs/exporter
+  - mkdocs/exporter:
   - mkdocs/exporter/pdf:
       concurrency: 16
       stylesheets:

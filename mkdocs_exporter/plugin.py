@@ -1,12 +1,13 @@
 from mkdocs.plugins import BasePlugin
 from mkdocs_exporter.page import Page
 from mkdocs.plugins import event_priority
+from mkdocs_exporter.config import Config
 from mkdocs.structure.files import File, Files
 from mkdocs_exporter.preprocessor import Preprocessor
 from mkdocs_exporter.themes.factory import Factory as ThemeFactory
 
 
-class Plugin(BasePlugin):
+class Plugin(BasePlugin[Config]):
   """The plugin."""
 
 
@@ -19,7 +20,7 @@ class Plugin(BasePlugin):
   def on_config(self, config: dict) -> None:
     """Invoked when the configuration has been loaded."""
 
-    self.theme = ThemeFactory.create(config['theme'])
+    self.theme = ThemeFactory.create(self.config.theme or config['theme'])
 
 
   def on_pre_build(self, **kwargs) -> None:
