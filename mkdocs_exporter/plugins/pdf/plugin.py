@@ -1,6 +1,7 @@
 import os
 import types
 import asyncio
+import nest_asyncio
 
 from mkdocs.plugins import BasePlugin
 from mkdocs_exporter.page import Page
@@ -22,7 +23,14 @@ class Plugin(BasePlugin[Config]):
     self.watch: list[str] = []
     self.renderer: Optional[Renderer] = None
     self.tasks: list[types.CoroutineType] = []
-    self.loop = asyncio.AbstractEventLoop = None
+    self.loop: asyncio.AbstractEventLoopPolicy = asyncio.new_event_loop()
+
+
+  def on_startup(self, **kwargs) -> None:
+    """Invoked when the plugin is starting..."""
+
+    nest_asyncio.apply(self.loop)
+    asyncio.set_event_loop(self.loop)
 
 
   def on_config(self, config: dict) -> None:
@@ -69,18 +77,12 @@ class Plugin(BasePlugin[Config]):
   def on_pre_build(self, **kwargs) -> None:
     """Invoked before the build process starts."""
 
+    self.tasks.clear()
+
     if not self._enabled():
       return
 
-    self.tasks.clear()
-
-    if self.loop and self.loop.is_running():
-      self.loop.close()
-
     self.renderer = Renderer()
-    self.loop = asyncio.new_event_loop()
-
-    asyncio.set_event_loop(self.loop)
 
     for stylesheet in self.config.stylesheets:
       self.renderer.add_stylesheet(stylesheet)
@@ -149,12 +151,9 @@ class Plugin(BasePlugin[Config]):
 
     self.loop.run_until_complete(asyncio.gather(*concurrently(self.tasks, max(1, self.config.concurrency or 1))))
     self.loop.run_until_complete(self.renderer.dispose())
-    self.loop.close()
-
-    self.loop = None
-    self.renderer = None
-
     self.tasks.clear()
+
+    self.renderer = None
 
 
   def _enabled(self, page: Page = None) -> bool:
