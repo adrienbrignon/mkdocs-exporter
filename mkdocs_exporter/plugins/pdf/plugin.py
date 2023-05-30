@@ -22,6 +22,7 @@ class Plugin(BasePlugin[Config]):
     self.watch: list[str] = []
     self.renderer: Optional[Renderer] = None
     self.tasks: list[types.CoroutineType] = []
+    self.loop = asyncio.AbstractEventLoop = None
 
 
   def on_config(self, config: dict) -> None:
@@ -68,12 +69,18 @@ class Plugin(BasePlugin[Config]):
   def on_pre_build(self, **kwargs) -> None:
     """Invoked before the build process starts."""
 
-    self.tasks.clear()
-
     if not self._enabled():
       return
 
+    self.tasks.clear()
+
+    if self.loop and self.loop.is_running():
+      self.loop.close()
+
     self.renderer = Renderer()
+    self.loop = asyncio.new_event_loop()
+
+    asyncio.set_event_loop(self.loop)
 
     for stylesheet in self.config.stylesheets:
       self.renderer.add_stylesheet(stylesheet)
@@ -140,13 +147,14 @@ class Plugin(BasePlugin[Config]):
 
       return [limit(coroutine) for coroutine in coroutines]
 
-    loop = asyncio.get_event_loop()
+    self.loop.run_until_complete(asyncio.gather(*concurrently(self.tasks, max(1, self.config.concurrency or 1))))
+    self.loop.run_until_complete(self.renderer.dispose())
+    self.loop.close()
 
-    loop.run_until_complete(asyncio.gather(*concurrently(self.tasks, max(1, self.config.concurrency or 1))))
-    self.tasks.clear()
-    loop.run_until_complete(self.renderer.dispose())
-
+    self.loop = None
     self.renderer = None
+
+    self.tasks.clear()
 
 
   def _enabled(self, page: Page = None) -> bool:
