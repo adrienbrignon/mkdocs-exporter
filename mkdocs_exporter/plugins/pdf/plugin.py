@@ -84,10 +84,10 @@ class Plugin(BasePlugin[Config]):
   def on_pre_page(self, page: Page, config: dict, **kwargs):
     """Invoked before building the page."""
 
-    if not hasattr(page, 'html'):
-      raise Exception('Missing `mkdocs/exporter` plugin or your plugins are not ordered properly!')
     if not self._enabled():
       return
+    if not hasattr(page, 'html'):
+      raise Exception('Missing `mkdocs/exporter` plugin or your plugins are not ordered properly!')
 
     directory = os.path.dirname(page.file.abs_dest_path)
     filename = os.path.splitext(os.path.basename(page.file.abs_dest_path))[0] + '.pdf'
@@ -100,18 +100,20 @@ class Plugin(BasePlugin[Config]):
   def on_post_page(self, html: str, page: Page, config: dict) -> Optional[str]:
     """Invoked after a page has been built."""
 
-    page.html = html
-
     if not self._enabled(page) and 'pdf' in page.formats:
       del page.formats['pdf']
     if 'pdf' not in page.formats:
       return html
+
+    page.html = html
 
     async def render(page: Page) -> None:
       logger.info('Rendering PDF for %s...', page.file.src_path)
 
       pdf = await self.renderer.render(page)
       fullpath = os.path.join(config['site_dir'], page.formats['pdf'])
+
+      page.html = None
 
       with open(fullpath, 'wb+') as file:
         file.write(pdf)

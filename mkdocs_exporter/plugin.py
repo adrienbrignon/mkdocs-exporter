@@ -13,7 +13,7 @@ class Plugin(BasePlugin):
   def __init__(self) -> None:
     """The constructor."""
 
-    self.files: list[File] = []
+    self.stylesheets: list[File] = []
 
 
   def on_config(self, config: dict) -> None:
@@ -25,7 +25,7 @@ class Plugin(BasePlugin):
   def on_pre_build(self, **kwargs) -> None:
     """Invoked before the build process starts."""
 
-    self.files.clear()
+    self.stylesheets.clear()
 
 
   def on_pre_page(self, page: Page, **kwargs) -> None:
@@ -52,7 +52,7 @@ class Plugin(BasePlugin):
   def on_files(self, files: Files, **kwargs) -> Files:
     """Invoked when files are ready to be manipulated."""
 
-    self.files.extend(files.css_files())
+    self.stylesheets.extend(files.css_files())
 
     return files
 
@@ -61,10 +61,10 @@ class Plugin(BasePlugin):
   def on_post_build(self, **kwargs) -> None:
     """Invoked when the build process is done."""
 
-    for file in self.files:
-      css = None
+    for stylesheet in self.stylesheets:
+      content = None
 
-      with open(file.abs_dest_path, 'r', encoding='utf-8') as reader:
-        css = self.theme.stylesheet(reader.read())
-      with open(file.abs_dest_path, 'w+', encoding='utf-8') as writer:
-        writer.write(css)
+      with open(stylesheet.abs_dest_path, 'r', encoding='utf-8') as reader:
+        content = self.theme.stylesheet(reader.read())
+      with open(stylesheet.abs_dest_path, 'w+', encoding='utf-8') as writer:
+        writer.write(content)

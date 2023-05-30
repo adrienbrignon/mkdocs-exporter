@@ -15,6 +15,9 @@ class Plugin(BasePlugin[Config]):
   def on_post_page(self, html: str, page: Page, **kwargs) -> Optional[str]:
     """Invoked after a page has been built."""
 
+    if not self.config.enabled:
+      return
+
     def resolve(object):
       if callable(object):
         return resolve(object(page))
