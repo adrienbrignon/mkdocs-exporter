@@ -3,9 +3,9 @@ from __future__ import annotations
 import os
 import sass
 
+from typing import Union
 from urllib.parse import urlparse
 from bs4 import BeautifulSoup, Tag
-from typing import Any, Callable, Union
 from mkdocs_exporter.theme import Theme
 from mkdocs_exporter.logging import logger
 
