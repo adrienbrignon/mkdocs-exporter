@@ -57,7 +57,6 @@ class Renderer(BaseRenderer):
     root = base.replace(unquote(page.url).rstrip('/'), '', 1).rstrip('/')
 
     preprocessor.preprocess(page.html)
-    preprocessor.remove_scripts()
     preprocessor.set_attribute('details:not([open])', 'open', 'open')
     page.theme.preprocess(preprocessor)
 

@@ -111,16 +111,6 @@ class Preprocessor():
     return self
 
 
-  def remove_scripts(self, predicate: Callable[[Any], bool] = lambda _: True) -> Preprocessor:
-    """Remove all script tags."""
-
-    for element in self.html.find_all('script'):
-      if predicate(element):
-        element.decompose()
-
-    return self
-
-
   def set_attribute(self, selector: str, key: str, value: str) -> Preprocessor:
     """Set an attribute on elements matching the given selector."""
 
