@@ -1,5 +1,26 @@
 # Setting up documents
 
+## Prerequisites
+
+Under-the-hood, this library depends on a web browser controlled by *Playwright* to generate PDF documents.
+
+At the time of writing, *Playwright* supports the following operating systems:
+
+- Windows 10+, Windows Server 2016+ or Windows Subsystem for Linux (WSL)
+- macOS 12 Monterey or MacOS 13 Ventura
+- Debian 11, Ubuntu 20.04 or Ubuntu 22.04
+
+???+ tip "If your operating system is not supported"
+
+    You can still use *Docker* to build your documentation from any operating system.  
+    Feel free to check out the [Dockerfile](https://github.com/adrienbrignon/mkdocs-exporter/blob/master/Dockerfile) used by this documentation.
+  
+To install the browser and its required dependencies, run:
+
+```bash
+playwright install --with-deps
+```
+
 ## Configuration
 
 First of all, you'll need to register the `mkdocs/exporter/pdf` plugin (**after** the `mkdocs/exporter` one) to your configuration:
@@ -10,22 +31,22 @@ plugins:
   - mkdocs/exporter/pdf
 ```
 
-???+ question "Why an additional plugin?"
+???+ question "Why multiple plugins?"
 
-    **MkDocs Exporter** comes with various plugins in a single package.
+    **MkDocs Exporter** comes as various plugins in a single package.
   
-    This architecture has been chosen to reduce code duplication and maintain a generic base that can be used
-    to export your pages to formats other than PDF (although this is the only format currently supported).
+    This architecture reduces code duplication and maintains a generic base that can be used to export
+    your pages to formats other than PDF (although this is currently the only format supported).
 
-    Basically, the `mkdocs/exporter` must always be registered first as it provides a common ground for
-    other plugins to use.
+    To sum things up, the `mkdocs/exporter` should always be registered first as it provides a common ground for
+    other plugins to rely on.
 
 ## Usage
 
-### Toggle documents generation
+### Toggling documents generation
 
-The documents generation can be enabled or disabled at any time.  
-This feature is especially useful during your development process, when you don't want to slow down your iterations because of document generation.
+Document generation can be enabled or disabled at any time.
+This feature is particularly useful during your development processes: when you don't want to slow down your iterations because of document generation.
 
 ```yaml
 plugins:
@@ -34,12 +55,12 @@ plugins:
       enabled: ![MKDOCS_EXPORTER_ENABLED, true]
 ```
 
-You can now use the `MKDOCS_EXPORTER_ENABLED` environment variable to toggle the PDF generation.
+With this configuration, the `MKDOCS_EXPORTER_ENABLED` environment variable can be used as a switch for the generation process.
 
-### Setup cover pages
+### Setting up cover pages
 
 Cover pages can give your PDF documents a professional quality.  
-Here is how cover pages are set up for this documentation.
+Here's how cover pages are set up for this documentation.
 
 ???+ tip "Power! Unlimited Power!"
 
@@ -58,6 +79,8 @@ Here is how cover pages are set up for this documentation.
           covers:
             front: resources/templates/covers/front.html.j2
             back: resources/templates/covers/back.html.j2
+
+    [...]
     ```
 
     > :material-file-code: See the full content of this file [here](https://github.com/adrienbrignon/mkdocs-exporter/blob/master/mkdocs.yml).
@@ -72,6 +95,8 @@ Here is how cover pages are set up for this documentation.
         <div class="title">{% raw %}{{ page.title }}{% endraw %}</div>
       </section>
     </div>
+
+    [...]
     ```
 
     > :material-file-code: See the full content of this file [here](https://github.com/adrienbrignon/mkdocs-exporter/blob/master/resources/templates/covers/front.html.j2).
@@ -84,6 +109,8 @@ Here is how cover pages are set up for this documentation.
         <div class="title">{% raw %}{{ config.site_name }}{% endraw %}</div>
       </section>
     </div>
+
+    [...]
     ```
 
     > :material-file-code: See the full content of this file [here](https://github.com/adrienbrignon/mkdocs-exporter/blob/master/resources/templates/covers/back.html.j2).
@@ -95,14 +122,16 @@ Here is how cover pages are set up for this documentation.
       size: A4;
       margin: 1.20cm;
     }
+
+    [...]
     ```
 
     > :material-file-code: See the full content of this file [here](https://github.com/adrienbrignon/mkdocs-exporter/blob/master/resources/stylesheets/pdf.scss).
 
-### Increase concurrency
+### Increasing concurrency
 
-PDF are, by default, generated concurrently which greatly reduces build time.  
-You may want to override the default value of **4**, based on your current hardware.
+PDF are, by default, generated concurrently which greatly reduces the overall build time.  
+You may want to override the default value of **4**, depending on your hardware.
 
 ```yaml
 plugins:
@@ -110,12 +139,12 @@ plugins:
       concurrency: 16
 ```
 
-With this configuration, up to **16** PDF documents can be generated concurrently.  
-As you've guessed, a value of **1** will build PDF documents sequentially.
+With this configuration, up to **16** PDF documents will be generated concurrently.  
+As you've guessed, a value of **1** will force PDF documents to be built sequentially.
 
-### Exclude some pages
+### Excluding some pages
 
-You may want to prevent a page from generating a PDF document.  
+You may want to prevent some pages from generating a PDF document.  
 To do so, you can use the `pdf` meta tag on your pages:
 
 ```yaml
@@ -128,8 +157,8 @@ pdf: false
 [...]
 ```
 
-If you exclude more pages than you include, you may want to  and explicitly define the pages for which PDF documents should be generated.  
-We call that the `explicit` mode, it can be enabled in your configuration file:
+If you exclude more pages than you include, you may want to explicitly define the pages for which PDF documents should be generated.  
+This behaviour is called the `explicit` mode, it can be enabled in your configuration file:
 
 ```yaml
 plugins:
@@ -137,7 +166,7 @@ plugins:
       explicit: true
 ```
 
-Only pages with a truthy `pdf` meta tag will see their PDF document generated.
+With this option, only pages with a truthy `pdf` meta tag will have their corresponding PDF document generated.
 
 ```yaml
 ---

@@ -11,7 +11,7 @@ hide:
 
 ???+ tip "Did you know?"
 
-    This documentation website features the plugin, meaning that you can download this page as a PDF document and read it offline!
+    This documentation features the plugin: you can download this page as a PDF document and read it offline!
 
     Try this out by clicking the download button at the top of this page (or you can directly head [here](./index.pdf){:target="_blank"}).
 
@@ -20,7 +20,7 @@ hide:
 - Python `>= 3.7`
 - MkDocs `>= 1.4`
 - A compatible theme
-  - [`material`](https://github.com/squidfunk/mkdocs-material) (:material-star-shooting: *currently used by this documentation*)
+  - [`material`](https://github.com/squidfunk/mkdocs-material) (:material-star-shooting: *used by this documentation*)
   - [`readthedocs`](https://www.mkdocs.org/user-guide/choosing-your-theme/#readthedocs)
 
 ## Installation

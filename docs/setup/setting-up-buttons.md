@@ -12,9 +12,13 @@ buttons:
 
 You can define custom buttons at the top of your pages.
 
+!!! example "Try it out"
+
+    A custom button is featured on this page, check it out!
+
 ## Configuration
 
-As this feature is provided by the `mkdocs/exporter/extras` plugin, you'll need to add it to your list of plugins:
+This feature is provided by the `mkdocs/exporter/extras` plugin, you'll need to add it to your list of plugins:
 
 ```yaml
 plugins:
@@ -44,14 +48,14 @@ The functions referenced in this configuration are provided by the **MkDocs Expo
 
 !!! info
 
-    Currently, icons are only available with the [`material`](https://github.com/squidfunk/mkdocs-material) theme.
+    Currently, icons are only available when using the [`material`](https://github.com/squidfunk/mkdocs-material) theme.
 
 ### Defining a dynamic button
 
-As you've seen in the previous example, you can use Python functions to resolve the attributes of a button dynamically.
+As you've seen in the previous example, you can use Python functions to resolve button's attributes dynamically.  
 Let's write a button that when clicked, it starts a search on Google with the current page's title as query.
 
-First of all, let's write the function that will resolve to the `href` attribute's of the button:
+First of all, let's write the function that will return the button's `href` attribute:
 
 ```python
 from urllib.parse import urlencode
@@ -63,7 +67,7 @@ def href(page: Page) -> str:
   return 'https://google.com/search' + urlencode({q: page.title})
 ```
 
-Then, we can define a button and specify the previously defined function (assuming it has been saved to `my_module/button.py`):
+Then, we can define the button and specify the path to the previously defined function (assuming it has been saved under the `my_module` module, in `button.py`):
 
 ```yaml
 plugins:
@@ -77,10 +81,10 @@ plugins:
 
 Rinse and repeat, you can use this method for any property of a button.
 
-### Adding a button on a page
+### Adding button on a specific page
 
-You can also use `meta` tags to define buttons on a per-page basis.  
-Here's the configuration used by this page:
+You can also use the `buttons` meta tag to define buttons on a per-page basis.  
+Here's the configuration currently used by this page:
 
 ```yaml
 ---
