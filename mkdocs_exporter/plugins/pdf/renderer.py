@@ -6,20 +6,20 @@ import importlib_resources
 from urllib.parse import unquote
 from mkdocs_exporter.page import Page
 from mkdocs_exporter.resources import js
-from mkdocs_exporter.browser import Browser
 from mkdocs_exporter.preprocessor import Preprocessor
+from mkdocs_exporter.plugins.pdf.browser import Browser
 from mkdocs_exporter.renderer import Renderer as BaseRenderer
 
 
 class Renderer(BaseRenderer):
   """The renderer."""
 
-  def __init__(self, browser: Browser = None):
+  def __init__(self, browser: Browser = None, browser_options: dict = None):
     """The constructor."""
 
     self.scripts: list[str] = []
     self.stylesheets: list[str] = []
-    self.browser = browser or Browser()
+    self.browser = browser or Browser(browser_options)
 
 
   def add_stylesheet(self, path: str) -> Renderer:

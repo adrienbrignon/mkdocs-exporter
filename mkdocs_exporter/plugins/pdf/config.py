@@ -2,6 +2,13 @@ from mkdocs.config import config_options as c
 from mkdocs.config.base import Config as BaseConfig
 
 
+class BrowserConfig(BaseConfig):
+  """The browser's configuration."""
+
+  debug = c.Type(bool, default=False)
+  """Should console messages sent to the browser be logged?"""
+
+
 class CoversConfig(BaseConfig):
   """The cover's configuration."""
 
@@ -32,3 +39,6 @@ class Config(BaseConfig):
 
   covers = c.SubConfig(CoversConfig)
   """The document's cover pages."""
+
+  browser = c.SubConfig(BrowserConfig)
+  """The browser's configuration."""

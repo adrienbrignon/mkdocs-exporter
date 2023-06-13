@@ -82,7 +82,7 @@ class Plugin(BasePlugin[Config]):
     if not self._enabled():
       return
 
-    self.renderer = Renderer()
+    self.renderer = Renderer(browser_options=self.config.browser)
 
     for stylesheet in self.config.stylesheets:
       self.renderer.add_stylesheet(stylesheet)
@@ -117,7 +117,7 @@ class Plugin(BasePlugin[Config]):
     page.html = html
 
     async def render(page: Page) -> None:
-      logger.info('Rendering PDF for %s...', page.file.src_path)
+      logger.info("[pdf] Rendering '%s'...", page.file.src_path)
 
       pdf = await self.renderer.render(page)
       fullpath = os.path.join(config['site_dir'], page.formats['pdf'])
@@ -127,7 +127,7 @@ class Plugin(BasePlugin[Config]):
       with open(fullpath, 'wb+') as file:
         file.write(pdf)
 
-      logger.info('File written to %s!', fullpath)
+      logger.info("[pdf] File written to '%s'!", fullpath)
 
     self.tasks.append(render(page))
 
