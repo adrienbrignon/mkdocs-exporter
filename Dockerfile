@@ -42,6 +42,6 @@ RUN . .venv/bin/activate \
  && make build
 
 
-FROM nginx:1.23.4
+FROM nginx:1.25.1
 
 COPY --from=builder /usr/src/app/dist /usr/share/nginx/html
