@@ -9,7 +9,7 @@ from mkdocs_exporter.themes.material.icons import get_icon
 
 
 class Theme(BaseTheme):
-  """The "MkDocs Material" theme."""
+  """The "material" theme."""
 
   name = 'material'
   """The name of the theme."""

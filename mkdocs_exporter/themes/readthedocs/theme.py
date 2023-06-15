@@ -9,7 +9,7 @@ from mkdocs_exporter.preprocessor import Preprocessor
 
 
 class Theme(BaseTheme):
-  """The "Read the Docs" theme."""
+  """The "readthedocs" theme."""
 
   name = 'readthedocs'
   """The name of the theme."""

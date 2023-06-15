@@ -119,15 +119,14 @@ class Plugin(BasePlugin[Config]):
     async def render(page: Page) -> None:
       logger.info("[pdf] Rendering '%s'...", page.file.src_path)
 
-      pdf = await self.renderer.render(page)
-      fullpath = os.path.join(config['site_dir'], page.formats['pdf'])
+      html = self.renderer.preprocess(page)
+      pdf = await self.renderer.render(html)
 
       page.html = None
 
-      with open(fullpath, 'wb+') as file:
+      with open(os.path.join(config['site_dir'], page.formats['pdf']), 'wb+') as file:
         file.write(pdf)
-
-      logger.info("[pdf] File written to '%s'!", fullpath)
+        logger.info("[pdf] File written to '%s'!", file.name)
 
     self.tasks.append(render(page))
 

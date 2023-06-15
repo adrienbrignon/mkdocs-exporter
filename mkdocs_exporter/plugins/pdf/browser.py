@@ -88,7 +88,7 @@ class Browser:
     file.close()
 
     await page.goto('file://' + file.name, wait_until='networkidle')
-    await page.locator('.pagedjs_pages').wait_for(timeout=30000)
+    await page.locator('body[mkdocs-exporter="true"]').wait_for(timeout=30000)
 
     pdf = await page.pdf(prefer_css_page_size=True, print_background=True, display_header_footer=False)
 

@@ -46,11 +46,8 @@ class Renderer(BaseRenderer):
     return f'<div data-decompose="true">{content}</div>' + '\n'
 
 
-  async def render(self, page: Page) -> bytes:
-    """Renders a page as a PDF document."""
-
-    if not self.browser.launched:
-      await self.browser.launch()
+  def preprocess(self, page: Page) -> str:
+    """Preprocesses a page, returning HTML that can be printed."""
 
     preprocessor = Preprocessor(theme=page.theme)
     base = os.path.dirname(page.file.abs_dest_path)
@@ -59,6 +56,8 @@ class Renderer(BaseRenderer):
     preprocessor.preprocess(page.html)
     preprocessor.set_attribute('details:not([open])', 'open', 'open')
     page.theme.preprocess(preprocessor)
+
+    preprocessor.script(importlib_resources.files(js).joinpath('pdf.js').read_text())
 
     for stylesheet in self.stylesheets:
       with open(stylesheet, 'r', encoding='utf-8') as file:
@@ -71,7 +70,16 @@ class Renderer(BaseRenderer):
     preprocessor.teleport()
     preprocessor.update_links(base, root)
 
-    html = preprocessor.done()
+    return preprocessor.done()
+
+
+  async def render(self, page: str | Page) -> bytes:
+    """Renders a page as a PDF document."""
+
+    if not self.browser.launched:
+      await self.browser.launch()
+
+    html = page if isinstance(page, str) else self.preprocess(page)
 
     return await self.browser.print(html)
 
