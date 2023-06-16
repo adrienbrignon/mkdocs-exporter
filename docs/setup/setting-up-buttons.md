@@ -61,7 +61,7 @@ First of all, let's write the function that will return the button's `href` attr
 from urllib.parse import urlencode
 from mkdocs_exporter.page import Page
 
-def href(page: Page) -> str:
+def href(page: Page, **kwargs) -> str:
   """The button's 'href' attribute."""
 
   return 'https://google.com/search' + urlencode({q: page.title})
