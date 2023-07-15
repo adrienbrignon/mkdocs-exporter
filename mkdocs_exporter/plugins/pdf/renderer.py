@@ -57,7 +57,7 @@ class Renderer(BaseRenderer):
     preprocessor.set_attribute('details:not([open])', 'open', 'open')
     page.theme.preprocess(preprocessor)
 
-    preprocessor.script(importlib_resources.files(js).joinpath('pdf.js').read_text())
+    preprocessor.script(importlib_resources.files(js).joinpath('pdf.js').read_text(encoding='utf-8'))
 
     for stylesheet in self.stylesheets:
       with open(stylesheet, 'r', encoding='utf-8') as file:
@@ -66,7 +66,7 @@ class Renderer(BaseRenderer):
       with open(script, 'r', encoding='utf-8') as file:
         preprocessor.script(file.read())
 
-    preprocessor.script(importlib_resources.files(js).joinpath('pagedjs.min.js').read_text())
+    preprocessor.script(importlib_resources.files(js).joinpath('pagedjs.min.js').read_text(encoding='utf-8'))
     preprocessor.teleport()
     preprocessor.update_links(base, root)
 
