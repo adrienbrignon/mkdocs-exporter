@@ -31,10 +31,3 @@ window.MkDocsExporter = {
   }
 
 };
-
-
-window.PagedConfig = {
-  before: async () => {
-    //
-  }
-}
