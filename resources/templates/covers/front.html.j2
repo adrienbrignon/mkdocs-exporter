@@ -5,31 +5,52 @@
     page-break-after: always;
     border: 1px solid #fff;
     position: relative;
-  }
 
-  .front-cover img {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    image-rendering: optimizeQuality;
-  }
+    img {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      image-rendering: optimizeQuality;
+    }
 
-  .front-cover section {
-    color: #fff;
-    padding: 0.635cm;
-    max-width: 10.25cm;
-    word-wrap: break-word;
-    margin-top: calc(var(--height) / 2 - var(--offset) - 2cm);
-    font-size: 13pt;
-  }
+    .logo {
+      position: absolute;
+      top: calc(2cm);
+      fill: white;
+      left: 50%;
+      transform: translateX(-50%);
 
-  .front-cover section > .title {
-    font-size: 26pt;
-    font-weight: 500;
-    line-height: 1.1;
-    color: #fff;
-    string-set: title content(text);
+      > div {
+        width: 3cm;
+        text-align: center;
+        height: 3cm;
+      }
+    }
+
+    section {
+      color: #fff;
+      padding: 0.635cm;
+      max-width: 10.25cm;
+      word-wrap: break-word;
+      margin-top: calc(var(--height) / 2 - var(--offset) - 2cm);
+      font-size: 13pt;
+
+      > .title {
+        font-size: 32pt;
+        font-weight: 500;
+        line-height: 1.1;
+        margin-top: 1em;
+        color: #fff;
+        string-set: title content(text);
+      }
+
+      > .version {
+        line-height: 1;
+        font-size: 10pt;
+        font-family: monospace;
+      }
+    }
   }
 
   @page {
@@ -61,8 +82,16 @@
 </style>
 <div class="front-cover">
   <img src="/assets/images/background.png">
+  <div class="logo">
+    <div>
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="m23 19-3-3v2h-4v2h4v2l3-3m-10 0c0-.3 0-.7.1-1H6v-2h7.8c.5-.8 1.1-1.5 1.9-2H6v-2h12v1.1c.3-.1.7-.1 1-.1s.7 0 1 .1V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h7.8c-.5-.9-.8-1.9-.8-3m0-15.5L18.5 9H13V3.5Z"></path>
+      </svg>
+    </div>
+  </div>
   <section>
     <div class="brand">{{ config.site_name }}</div>
+    <div class="version">{{ version }}</div>
     <div class="title">{{ page.title }}</div>
   </section>
 </div>

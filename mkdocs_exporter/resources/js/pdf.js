@@ -13,7 +13,11 @@ window.PagedConfig = {
   before: async () => {
     if (window.MkDocsExporter) {
       if (typeof window.MkDocsExporter.render === 'function') {
-        await window.MkDocsExporter.render(this);
+        try {
+          await window.MkDocsExporter.render(this);
+        } catch (error) {
+          console.error('[mkdocs-exporter] Failed to invoke render function', error);
+        }
       }
     }
   },

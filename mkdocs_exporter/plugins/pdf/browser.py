@@ -4,8 +4,9 @@ import os
 import asyncio
 
 from tempfile import NamedTemporaryFile
-from mkdocs_exporter.logging import logger
 from playwright.async_api import async_playwright
+
+from mkdocs_exporter.logging import logger
 
 
 class Browser:
@@ -35,6 +36,12 @@ class Browser:
     self.debug = options.get('debug', False)
     self.headless = options.get('headless', True)
     self.timeout = options.get('timeout', 60_000)
+    self.levels = {
+      'warn': 'warning',
+      'error': 'error',
+      'info': 'info',
+      'debug': 'debug'
+    }
 
 
   async def launch(self) -> Browser:
@@ -53,12 +60,7 @@ class Browser:
       self.browser = await self.playwright.chromium.launch(headless=self.headless, args=self.args)
       self.context = await self.browser.new_context()
 
-      if self.debug:
-        async def log(msg):
-          for arg in msg.args:
-            logger.info(f"[pdf.browser] ({msg.type}) {await msg.page.title()}\n\t{await arg.json_value()}")
-
-        self.context.on('console', log)
+      self.context.on('console', self.log)
 
       self._launched = True
 
@@ -102,3 +104,17 @@ class Browser:
     await page.close()
 
     return pdf
+
+
+  async def log(self, msg):
+    """Logs a message coming from the browser."""
+
+    prefix = '[mkdocs-exporter]'
+    text = msg.text
+    level = self.levels.get(msg.type, 'info')
+
+    if text.startswith(prefix):
+      text = msg.text[len(prefix):].strip()
+
+    if self.debug or level == 'error':
+      getattr(logger, level)(f"[mkdocs-exporter.pdf.browser] ({msg.type}) {await msg.page.title()}\n{text}")

@@ -4,22 +4,25 @@ import os
 import importlib_resources
 
 from urllib.parse import unquote
+
 from mkdocs_exporter.page import Page
 from mkdocs_exporter.resources import js
-from mkdocs_exporter.preprocessor import Preprocessor
 from mkdocs_exporter.plugins.pdf.browser import Browser
 from mkdocs_exporter.renderer import Renderer as BaseRenderer
+from mkdocs_exporter.plugins.pdf.preprocessor import Preprocessor
 
 
 class Renderer(BaseRenderer):
   """The renderer."""
 
-  def __init__(self, browser: Browser = None, browser_options: dict = None):
+
+  def __init__(self, browser: Browser = None, options: dict = None):
     """The constructor."""
 
+    self.options: dict = options
     self.scripts: list[str] = []
     self.stylesheets: list[str] = []
-    self.browser = browser or Browser(browser_options)
+    self.browser = browser or Browser(self.options.get('browser', None))
 
 
   def add_stylesheet(self, path: str) -> Renderer:
@@ -68,6 +71,9 @@ class Renderer(BaseRenderer):
     preprocessor.script(importlib_resources.files(js).joinpath('pagedjs.min.js').read_text(encoding='utf-8'))
     preprocessor.teleport()
     preprocessor.update_links(base, root)
+
+    if self.options.get('url'):
+      preprocessor.rewrite_links(page.abs_url, self.options['url'])
 
     return preprocessor.done()
 

@@ -3,12 +3,13 @@ import types
 import asyncio
 import nest_asyncio
 
+from typing import Optional, Coroutine, Sequence
+
 from mkdocs.plugins import BasePlugin
 from mkdocs_exporter.page import Page
 from mkdocs.plugins import event_priority
 from mkdocs_exporter.logging import logger
 from mkdocs.livereload import LiveReloadServer
-from typing import Optional, Coroutine, Sequence
 from mkdocs_exporter.plugins.pdf.config import Config
 from mkdocs_exporter.plugins.pdf.renderer import Renderer
 
@@ -37,6 +38,9 @@ class Plugin(BasePlugin[Config]):
     """Invoked when the configuration has been validated."""
 
     self.watch = []
+
+    if self.config.get('url') is None:
+      self.config['url'] = config['site_url']
 
 
   def on_serve(self, server: LiveReloadServer, **kwargs) -> LiveReloadServer:
@@ -82,7 +86,7 @@ class Plugin(BasePlugin[Config]):
     if not self._enabled():
       return
 
-    self.renderer = Renderer(browser_options=self.config.browser)
+    self.renderer = Renderer(options=self.config)
 
     for stylesheet in self.config.stylesheets:
       self.renderer.add_stylesheet(stylesheet)

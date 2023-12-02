@@ -48,3 +48,6 @@ class Config(BaseConfig):
 
   browser = c.SubConfig(BrowserConfig)
   """The browser's configuration."""
+
+  url = c.Optional(c.Type(str))
+  """The base URL that'll be prefixed to links with a relative path."""

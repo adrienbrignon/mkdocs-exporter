@@ -63,6 +63,8 @@ plugins:
   - awesome-pages
   - macros:
       include_dir: .
+      modules:
+        - macros
   - git-revision-date-localized:
       enable_creation_date: false
   - redirects:
