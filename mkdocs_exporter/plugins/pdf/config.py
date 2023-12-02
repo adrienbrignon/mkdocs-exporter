@@ -8,6 +8,12 @@ class BrowserConfig(BaseConfig):
   debug = c.Type(bool, default=False)
   """Should console messages sent to the browser be logged?"""
 
+  headless = c.Type(bool, default=True)
+  """Should the browser start in headless mode?"""
+
+  timeout = c.Type(int, default=60_000)
+  """The timeout when waiting for the PDF to render."""
+
 
 class CoversConfig(BaseConfig):
   """The cover's configuration."""

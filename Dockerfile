@@ -21,7 +21,7 @@ RUN apt-get update \
 
 FROM base as builder
 
-ENV POETRY_VERSION=1.5.0 \
+ENV POETRY_VERSION=1.7.1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DEFAULT_TIMEOUT=100 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
@@ -42,6 +42,6 @@ RUN . .venv/bin/activate \
  && make build
 
 
-FROM nginx:1.25.1
+FROM nginx:1.25.3
 
 COPY --from=builder /usr/src/app/dist /usr/share/nginx/html

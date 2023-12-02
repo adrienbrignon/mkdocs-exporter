@@ -6,11 +6,12 @@ Under-the-hood, this library depends on a web browser controlled by *Playwright*
 
 At the time of writing, *Playwright* supports the following operating systems:
 
+- Python 3.8 or higher
 - Windows 10+, Windows Server 2016+ or Windows Subsystem for Linux (WSL)
 - macOS 12 Monterey or MacOS 13 Ventura
-- Debian 11, Ubuntu 20.04 or Ubuntu 22.04
+- Debian 11, Debian 12, Ubuntu 20.04 or Ubuntu 22.04
 
-???+ tip "If your operating system is not supported"
+???+ tip "Your operating system is not supported?"
 
     You can still use *Docker* to build your documentation from any operating system.  
     Feel free to check out the [Dockerfile](https://github.com/adrienbrignon/mkdocs-exporter/blob/master/Dockerfile) used by this documentation.

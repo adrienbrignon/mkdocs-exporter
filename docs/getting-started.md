@@ -17,7 +17,7 @@ hide:
 
 ## Prerequisites
 
-- Python `>= 3.7`
+- Python `>= 3.8`
 - MkDocs `>= 1.4`
 - A compatible theme
   - [`material`](https://github.com/squidfunk/mkdocs-material) (:material-star-shooting: *used by this documentation*)

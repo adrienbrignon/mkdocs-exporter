@@ -117,7 +117,7 @@ class Plugin(BasePlugin[Config]):
     page.html = html
 
     async def render(page: Page) -> None:
-      logger.info("[pdf] Rendering '%s'...", page.file.src_path)
+      logger.info("[mkdocs-exporter.pdf] Rendering '%s'...", page.file.src_path)
 
       html = self.renderer.preprocess(page)
       pdf = await self.renderer.render(html)
@@ -126,7 +126,7 @@ class Plugin(BasePlugin[Config]):
 
       with open(os.path.join(config['site_dir'], page.formats['pdf']), 'wb+') as file:
         file.write(pdf)
-        logger.info("[pdf] File written to '%s'!", file.name)
+        logger.info("[mkdocs-exporter.pdf] File written to '%s'!", file.name)
 
     self.tasks.append(render(page))
 

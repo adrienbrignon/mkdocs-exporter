@@ -24,3 +24,8 @@
   display: none;
   page-break-after: always;
 }
+
+.md-image {
+  border-radius: 0.50em;
+  border: 1px solid #ddd;
+}
