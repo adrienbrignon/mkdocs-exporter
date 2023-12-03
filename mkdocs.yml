@@ -39,8 +39,8 @@ extra:
       link: https://pypi.org/project/mkdocs-exporter
 
 plugins:
-  - mkdocs/exporter:
-  - mkdocs/exporter/pdf:
+  - exporter:
+  - exporter-pdf:
       concurrency: 16
       stylesheets:
         - resources/stylesheets/pdf.scss
@@ -50,7 +50,7 @@ plugins:
       browser:
         debug: false
         headless: true
-  - mkdocs/exporter/extras:
+  - exporter-extras:
       buttons:
         - title: Download as PDF
           icon: material-file-download-outline

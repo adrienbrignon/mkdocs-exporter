@@ -24,12 +24,12 @@ playwright install --with-deps
 
 ## Configuration
 
-First of all, you'll need to register the `mkdocs/exporter/pdf` plugin (**after** the `mkdocs/exporter` one) to your configuration:
+First of all, you'll need to register the `exporter-pdf` plugin (**after** the `exporter` one) to your configuration:
 
 ```yaml
 plugins:
-  - mkdocs/exporter
-  - mkdocs/exporter/pdf
+  - exporter
+  - exporter-pdf
 ```
 
 ???+ question "Why multiple plugins?"
@@ -39,7 +39,7 @@ plugins:
     This architecture reduces code duplication and maintains a generic base that can be used to export
     your pages to formats other than PDF (although this is currently the only format supported).
 
-    To sum things up, the `mkdocs/exporter` should always be registered first as it provides a common ground for
+    To sum things up, the `exporter` should always be registered first as it provides a common ground for
     other plugins to rely on.
 
 ## Usage
@@ -51,8 +51,8 @@ This feature is particularly useful during your development processes: when you 
 
 ```yaml
 plugins:
-  - mkdocs/exporter
-  - mkdocs/exporter/pdf:
+  - exporter
+  - exporter-pdf:
       enabled: ![MKDOCS_EXPORTER_ENABLED, true]
 ```
 
@@ -73,8 +73,8 @@ Here's how cover pages are set up for this documentation.
 
     ```yaml
     plugins:
-      - mkdocs/exporter
-      - mkdocs/exporter/pdf:
+      - exporter
+      - exporter-pdf:
           stylesheets:
             - resources/stylesheets/pdf.scss
           covers:
@@ -136,7 +136,7 @@ You may want to override the default value of **4**, depending on your hardware.
 
 ```yaml
 plugins:
-  - mkdocs/exporter/pdf:
+  - exporter-pdf:
       concurrency: 16
 ```
 
@@ -163,7 +163,7 @@ This behaviour is called the `explicit` mode, it can be enabled in your configur
 
 ```yaml
 plugins:
-  - mkdocs/exporter/pdf:
+  - exporter-pdf:
       explicit: true
 ```
 

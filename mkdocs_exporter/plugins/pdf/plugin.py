@@ -100,7 +100,7 @@ class Plugin(BasePlugin[Config]):
     if not self._enabled():
       return
     if not hasattr(page, 'html'):
-      raise Exception('Missing `mkdocs/exporter` plugin or your plugins are not ordered properly!')
+      raise Exception('Missing `exporter` plugin or your plugins are not ordered properly!')
 
     directory = os.path.dirname(page.file.abs_dest_path)
     filename = os.path.splitext(os.path.basename(page.file.abs_dest_path))[0] + '.pdf'
@@ -168,3 +168,12 @@ class Plugin(BasePlugin[Config]):
       return False
 
     return True
+
+
+
+class PluginDeprecated(Plugin):
+  def on_config(self, config: dict) -> None:
+    logger.warning(
+      "The plugin name 'mkdocs/exporter/pdf' will stop working soon, please replace it with 'exporter-pdf'"
+    )
+    super().on_config(config)
