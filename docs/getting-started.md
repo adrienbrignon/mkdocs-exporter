@@ -35,7 +35,7 @@ You can now register the plugin in your configuration file:
 
 ```yaml
 plugins:
-  - mkdocs/exporter
+  - exporter
 ```
 
 Check out the [setup guides](../setup/setting-up-documents) for more details about how to use and configure the plugin.

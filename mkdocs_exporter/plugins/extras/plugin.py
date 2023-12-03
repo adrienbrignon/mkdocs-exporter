@@ -3,6 +3,7 @@ from collections import UserDict
 from mkdocs.plugins import BasePlugin
 from mkdocs_exporter.page import Page
 from mkdocs.plugins import event_priority
+from mkdocs_exporter.logging import logger
 from mkdocs_exporter.preprocessor import Preprocessor
 from mkdocs_exporter.plugins.extras.config import Config
 
@@ -37,3 +38,10 @@ class Plugin(BasePlugin[Config]):
         preprocessor.button(**resolve(button))
 
     return preprocessor.done()
+
+
+class PluginDeprecated(Plugin):
+  def on_config(self, config: dict) -> None:
+    logger.warning(
+      "The plugin name 'mkdocs/exporter' will stop working soon, please replace it with 'exporter'"
+    )

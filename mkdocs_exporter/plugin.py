@@ -3,6 +3,7 @@ from mkdocs_exporter.page import Page
 from mkdocs.plugins import event_priority
 from mkdocs_exporter.config import Config
 from mkdocs.structure.files import File, Files
+from mkdocs_exporter.logging import logger
 from mkdocs_exporter.preprocessor import Preprocessor
 from mkdocs_exporter.themes.factory import Factory as ThemeFactory
 
@@ -69,3 +70,11 @@ class Plugin(BasePlugin[Config]):
         content = self.theme.stylesheet(reader.read())
       with open(stylesheet.abs_dest_path, 'w+', encoding='utf-8') as writer:
         writer.write(content)
+
+
+class PluginDeprecated(Plugin):
+  def on_config(self, config: dict) -> None:
+    logger.warning(
+      "The plugin name 'mkdocs/exporter/extras' will stop working soon, please replace it with 'exporter-extras'"
+    )
+    super().on_config(config)

@@ -56,9 +56,9 @@ pip install mkdocs-exporter
 
 Three plugins are currently available:
 
-- `mkdocs/exporter` (*required*): base plugin which must precede the others
-- `mkdocs/exporter/pdf` (*optional*): plugin that exports your pages as individual PDF documents
-- `mkdocs/exporter/extras` (*optional*): provides extra functionalities (buttons, HTML utilities...)
+- `exporter` (*required*): base plugin which must precede the others
+- `exporter-pdf` (*optional*): plugin that exports your pages as individual PDF documents
+- `exporter-extras` (*optional*): provides extra functionalities (buttons, HTML utilities...)
 
 ### Example
 
@@ -66,15 +66,15 @@ The following configuration excerpt from [`mkdocs.yml`](./mkdocs.yml) should cov
 
 ```yaml
 plugins:
-  - mkdocs/exporter
-  - mkdocs/exporter/pdf:
+  - exporter
+  - exporter-pdf:
       concurrency: 8
       covers:
         front: resources/templates/covers/front.html.j2
         back: resources/templates/covers/back.html.j2
       stylesheets:
         - resources/stylesheets/pdf.scss
-  - mkdocs/exporter/extras:
+  - exporter-extras:
       buttons:
         - title: Download as PDF
           enabled: !!python/name:mkdocs_exporter.plugins.pdf.button.enabled

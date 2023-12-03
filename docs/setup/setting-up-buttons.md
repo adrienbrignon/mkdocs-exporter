@@ -18,12 +18,12 @@ You can define custom buttons at the top of your pages.
 
 ## Configuration
 
-This feature is provided by the `mkdocs/exporter/extras` plugin, you'll need to add it to your list of plugins:
+This feature is provided by the `exporter-extras` plugin, you'll need to add it to your list of plugins:
 
 ```yaml
 plugins:
-  - mkdocs/exporter
-  - mkdocs/exporter/extras
+  - exporter
+  - exporter-extras
 ```
 
 ## Usage
@@ -34,7 +34,7 @@ This example will add a download button at the top of all pages that have a corr
 
 ```yaml
 plugins:
-  - mkdocs/exporter/extras:
+  - exporter-extras:
       buttons:
         - title: Download as PDF
           icon: material-file-download-outline
@@ -71,7 +71,7 @@ Then, we can define the button and specify the path to the previously defined fu
 
 ```yaml
 plugins:
-  - mkdocs/exporter/extras:
+  - exporter-extras:
       buttons:
         - title: Search on Google
           icon: material-google
