@@ -29,14 +29,15 @@ libsass = ">=0.22.0"
 importlib-resources = ">=5.0"
 importlib-metadata = ">=6.0"
 nest-asyncio = ">=1.5.6"
+mkdocs-material = {extras = ["imaging"], version = "^9.4.14"}
 
 [tool.poetry.plugins."mkdocs.plugins"]
 "exporter" = "mkdocs_exporter.plugin:Plugin"
 "exporter-pdf" = "mkdocs_exporter.plugins.pdf.plugin:Plugin"
 "exporter-extras" = "mkdocs_exporter.plugins.extras.plugin:Plugin"
-"mkdocs/exporter" = "mkdocs_exporter.plugin:PluginDeprecated"
-"mkdocs/exporter/pdf" = "mkdocs_exporter.plugins.pdf.plugin:PluginDeprecated"
-"mkdocs/exporter/extras" = "mkdocs_exporter.plugins.extras.plugin:PluginDeprecated"
+"mkdocs/exporter" = "mkdocs_exporter.plugin:DeprecatedPlugin"
+"mkdocs/exporter/pdf" = "mkdocs_exporter.plugins.pdf.plugin:DeprecatedPlugin"
+"mkdocs/exporter/extras" = "mkdocs_exporter.plugins.extras.plugin:DeprecatedPlugin"
 
 [tool.poetry.urls]
 "Bug Tracker" = "https://github.com/adrienbrignon/mkdocs-exporter/issues"

@@ -4,6 +4,7 @@ import os
 import sass
 
 from typing import Union
+from sass import CompileError
 from urllib.parse import urlparse
 from bs4 import BeautifulSoup, Tag
 
@@ -46,7 +47,7 @@ class Preprocessor():
     """Teleport elements to their destination."""
 
     for element in self.html.select('*[data-teleport]'):
-      selector = element.attrs['data-teleport']
+      selector = element.attrs.get('data-teleport')
       destination = self.html.select_one(selector)
       tag = Tag(None, name=element.name, attrs=element.attrs)
 
@@ -58,8 +59,7 @@ class Preprocessor():
 
         continue
 
-      element.attrs['data-teleport'] = None
-
+      element.attrs.pop('data-teleport', None)
       destination.append(element)
 
     return self
@@ -89,7 +89,15 @@ class Preprocessor():
   def stylesheet(self, stylesheet: str, **kwargs) -> Preprocessor:
     """Appends a stylesheet to the document's head."""
 
-    css = sass.compile(string=stylesheet, output_style='compressed')
+    css = None
+
+    try:
+      css = sass.compile(string=stylesheet, output_style='compressed')
+    except CompileError as error:
+      logger.error(error)
+
+      return self
+
     element = self.html.new_tag('style', type='text/css', rel='stylesheet', **kwargs)
 
     element.string = css

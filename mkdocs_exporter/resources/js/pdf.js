@@ -16,7 +16,7 @@ window.PagedConfig = {
         try {
           await window.MkDocsExporter.render(this);
         } catch (error) {
-          console.error('[mkdocs-exporter] Failed to invoke render function', error);
+          console.error('[mkdocs-exporter] Failed to invoke render function:', error);
         }
       }
     }
@@ -27,6 +27,6 @@ window.PagedConfig = {
    */
   after: () => {
     document.body.setAttribute('mkdocs-exporter', 'true');
-  },
+  }
 
 };

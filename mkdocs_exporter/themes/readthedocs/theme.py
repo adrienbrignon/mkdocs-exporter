@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import importlib_resources
 
+from mkdocs.structure.files import File
+
 from mkdocs_exporter.resources import css
 from mkdocs_exporter.theme import Theme as BaseTheme
 from mkdocs_exporter.preprocessor import Preprocessor
@@ -37,7 +39,7 @@ class Theme(BaseTheme):
     return None
 
 
-  def stylesheet(self, css: str) -> str:
+  def stylesheet(self, stylesheet: File, content: str) -> str:
     """Transforms a stylesheet."""
 
-    return css.replace(':nth-of-type(3n+1)', ':nth-of-type(3n)')
+    return content.replace(':nth-of-type(3n+1)', ':nth-of-type(3n)')

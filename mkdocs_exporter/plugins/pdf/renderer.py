@@ -65,7 +65,7 @@ class Renderer(BaseRenderer):
         preprocessor.stylesheet(file.read())
     for script in self.scripts:
       with open(script, 'r', encoding='utf-8') as file:
-        preprocessor.script(file.read())
+        preprocessor.script(file.read(), path=stylesheet)
 
     preprocessor.script(importlib_resources.files(js).joinpath('pdf.js').read_text(encoding='utf-8'))
     preprocessor.script(importlib_resources.files(js).joinpath('pagedjs.min.js').read_text(encoding='utf-8'))

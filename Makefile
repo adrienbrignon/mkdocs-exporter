@@ -2,7 +2,7 @@ ifeq ($(origin .RECIPEPREFIX), undefined)
   $(error This Make does not support .RECIPEPREFIX. Please use GNU Make 4.0 or later)
 endif
 
-PDF = false
+PDF = true
 DEBUG = false
 
 .RECIPEPREFIX = >
@@ -17,10 +17,10 @@ browser:
 > poetry run playwright install $(if $(FORCE),--force,) --with-deps
 
 build:
->@ poetry run mkdocs build
+>@ MKDOCS_EXPORTER_PDF=$(PDF) poetry run mkdocs build
 
 serve:
->@ poetry run mkdocs serve
+>@ MKDOCS_EXPORTER_PDF=$(PDF) poetry run mkdocs serve
 
 clean:
 > $(RM) -rf dist/

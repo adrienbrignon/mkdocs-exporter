@@ -23,10 +23,12 @@ theme:
     - navigation.footer
     - navigation.indexes
     - navigation.instant
+    - navigation.instant.progress
     - navigation.sections
     - navigation.tabs
     - navigation.top
     - navigation.tracking
+    - navigation.prune
     - toc.follow
 
 extra:
@@ -42,6 +44,7 @@ plugins:
   - exporter:
   - exporter-pdf:
       concurrency: 16
+      enabled: !ENV [MKDOCS_EXPORTER_PDF, true]
       stylesheets:
         - resources/stylesheets/pdf.scss
       covers:
@@ -72,6 +75,9 @@ plugins:
         'index.md': 'getting-started.md'
   - minify:
       minify_html: true
+  - social:
+      cards_layout_options:
+        background_color: '#EA2027'
 
 markdown_extensions:
   - admonition

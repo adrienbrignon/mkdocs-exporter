@@ -67,18 +67,18 @@ class Plugin(BasePlugin[Config]):
       content = None
 
       with open(stylesheet.abs_dest_path, 'r', encoding='utf-8') as reader:
-        content = self.theme.stylesheet(reader.read())
+        content = self.theme.stylesheet(stylesheet, reader.read())
       with open(stylesheet.abs_dest_path, 'w+', encoding='utf-8') as writer:
         writer.write(content)
 
 
-class PluginDeprecated(Plugin):
+class DeprecatedPlugin(Plugin):
   """Deprecated plugin, will be removed in the next major release."""
 
 
-  def on_config(self, config: dict) -> None:
+  def on_config(self, config: dict, **kwargs) -> None:
     """Invoked when the configuration has been loaded."""
 
     logger.warning("The plugin name 'mkdocs/exporter' will stop working soon, please replace it with 'exporter'")
 
-    super().on_config(config)
+    super().on_config(config, **kwargs)

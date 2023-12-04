@@ -39,8 +39,10 @@ plugins:
     This architecture reduces code duplication and maintains a generic base that can be used to export
     your pages to formats other than PDF (although this is currently the only format supported).
 
-    To sum things up, the `exporter` should always be registered first as it provides a common ground for
+    To sum things up, the `exporter` plugin should always be registered first as it provides a common ground for
     other plugins to rely on.
+
+<div class="page-break"></div>
 
 ## Usage
 
@@ -67,8 +69,6 @@ Here's how cover pages are set up for this documentation.
 
     The following examples use the [`macros`](https://github.com/fralau/mkdocs_macros_plugin) plugin for *extra powerful* pages.
 
-<div class="page-break"></div>
-
 === "`mkdocs.yml`"
 
     ```yaml
@@ -85,6 +85,8 @@ Here's how cover pages are set up for this documentation.
     ```
 
     > :material-file-code: See the full content of this file [here](https://github.com/adrienbrignon/mkdocs-exporter/blob/master/mkdocs.yml).
+
+<div class="page-break"></div>
 
 === "`resources/templates/covers/front.html.j2`"
 
@@ -128,6 +130,8 @@ Here's how cover pages are set up for this documentation.
     ```
 
     > :material-file-code: See the full content of this file [here](https://github.com/adrienbrignon/mkdocs-exporter/blob/master/resources/stylesheets/pdf.scss).
+
+<div class="page-break"></div>
 
 ### Increasing concurrency
 

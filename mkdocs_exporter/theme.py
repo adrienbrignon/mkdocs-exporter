@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 from abc import abstractmethod
+from mkdocs.structure.files import File
 from mkdocs.theme import Theme as BaseTheme
 
 
@@ -26,7 +29,7 @@ class Theme:
     raise NotImplementedError()
 
 
-  def stylesheet(self, css: str) -> str:
+  def stylesheet(self, stylesheet: File, content: str) -> str:
     """Transforms a stylesheet."""
 
-    return css
+    return content

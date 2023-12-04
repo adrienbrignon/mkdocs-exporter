@@ -12,6 +12,12 @@ class Plugin(BasePlugin[Config]):
   """The plugin."""
 
 
+  def on_config(self, *args, **kwargs) -> None:
+    """Invoked when the configuration has been loaded."""
+
+    pass
+
+
   @event_priority(-85)
   def on_post_page(self, html: str, page: Page, config: dict, **kwargs) -> Optional[str]:
     """Invoked after a page has been built."""
@@ -40,13 +46,13 @@ class Plugin(BasePlugin[Config]):
     return preprocessor.done()
 
 
-class PluginDeprecated(Plugin):
+class DeprecatedPlugin(Plugin):
   """Deprecated plugin, will be removed in the next major release."""
 
 
-  def on_config(self, config: dict) -> None:
+  def on_config(self, *args, **kwargs) -> None:
     """Invoked when the configuration has been loaded."""
 
     logger.warning("The plugin name 'mkdocs/exporter/extras' will stop working soon, please replace it with 'exporter-extras'")
 
-    super().on_config(config)
+    super().on_config(*args, **kwargs)
