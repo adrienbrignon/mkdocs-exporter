@@ -1,4 +1,4 @@
-FROM ubuntu:22.04 as base
+FROM docker.io/ubuntu:22.04 as base
 WORKDIR /usr/src/app
 
 ENV PYTHONFAULTHANDLER=1 \
@@ -42,6 +42,6 @@ RUN . .venv/bin/activate \
  && make build
 
 
-FROM nginx:1.25.3
+FROM docker.io/nginx:1.25.3
 
 COPY --from=builder /usr/src/app/dist /usr/share/nginx/html
