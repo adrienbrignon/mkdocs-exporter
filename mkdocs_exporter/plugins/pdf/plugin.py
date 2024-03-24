@@ -177,6 +177,6 @@ class DeprecatedPlugin(Plugin):
   def on_config(self, config: dict, **kwargs) -> None:
     """Invoked when the configuration has been loaded."""
 
-    logger.warning("The plugin name 'mkdocs/exporter/pdf' will stop working soon, please replace it with 'exporter-pdf'")
+    logger.warning("The plugin name 'mkdocs/exporter/pdf' has been deprecated, please replace it with 'exporter-pdf'")
 
     super().on_config(config, **kwargs)

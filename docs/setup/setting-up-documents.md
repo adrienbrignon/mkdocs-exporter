@@ -1,4 +1,4 @@
-# Setting up documents
+# Setting up PDF documents
 
 ## Prerequisites
 
@@ -31,6 +31,8 @@ plugins:
   - exporter
   - exporter-pdf
 ```
+
+You can find the configuration reference [here](../reference/configuration/pdf.md).
 
 ???+ question "Why multiple plugins?"
 

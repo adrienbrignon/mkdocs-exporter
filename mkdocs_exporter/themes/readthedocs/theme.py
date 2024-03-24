@@ -30,7 +30,10 @@ class Theme(BaseTheme):
     button = preprocessor.html.new_tag('a', title=title, attrs={'class': 'btn btn-neutral float-right', **attributes})
     button.string = title
 
-    preprocessor.html.find('div', {'class': 'document'}).insert(0, button)
+    target = preprocessor.html.find('div', {'class': 'document'})
+
+    if target:
+      target.insert(0, button)
 
 
   def icon(self, name: str):

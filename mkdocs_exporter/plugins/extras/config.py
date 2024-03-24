@@ -25,8 +25,5 @@ class Config(BaseConfig):
   enabled = c.Type(bool, default=True)
   """Is the plugin enabled?"""
 
-  downloads = c.ListOfItems(c.Choice(('pdf', 'html')), default=['pdf'])
-  """The download buttons to show."""
-
   buttons = c.ListOfItems(c.SubConfig(ButtonConfig))
   """The buttons to add."""

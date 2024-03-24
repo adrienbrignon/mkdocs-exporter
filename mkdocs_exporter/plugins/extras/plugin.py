@@ -53,6 +53,6 @@ class DeprecatedPlugin(Plugin):
   def on_config(self, *args, **kwargs) -> None:
     """Invoked when the configuration has been loaded."""
 
-    logger.warning("The plugin name 'mkdocs/exporter/extras' will stop working soon, please replace it with 'exporter-extras'")
+    logger.warning("The plugin name 'mkdocs/exporter/extras' has been deprecated, please replace it with 'exporter-extras'")
 
     super().on_config(*args, **kwargs)

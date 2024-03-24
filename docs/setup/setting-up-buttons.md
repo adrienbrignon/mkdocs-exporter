@@ -26,6 +26,8 @@ plugins:
   - exporter-extras
 ```
 
+You can find the configuration reference [here](../reference/configuration/extras.md).
+
 ## Usage
 
 ### Adding a download button
