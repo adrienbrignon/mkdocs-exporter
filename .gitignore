@@ -68,3 +68,4 @@ target/
 
 # poetry
 poetry.toml
+.python-version

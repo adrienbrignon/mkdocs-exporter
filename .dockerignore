@@ -1,4 +1,6 @@
 .venv/
+.cache/
+.github/
 
 dist/
 examples/
