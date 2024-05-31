@@ -1,6 +1,6 @@
 from __future__ import annotations
-
 from urllib.parse import urlparse, urljoin
+
 from mkdocs_exporter.preprocessor import Preprocessor as BasePreprocessor
 
 

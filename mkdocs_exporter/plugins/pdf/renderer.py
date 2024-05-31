@@ -22,7 +22,7 @@ class Renderer(BaseRenderer):
     self.options: dict = options
     self.scripts: list[str] = []
     self.stylesheets: list[str] = []
-    self.browser = browser or Browser(self.options.get('browser', None))
+    self.browser = browser or Browser(self.options.get('browser', {}))
 
 
   def add_stylesheet(self, path: str) -> Renderer:

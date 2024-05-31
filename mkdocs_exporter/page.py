@@ -13,7 +13,7 @@ class Page(BasePage):
     self.html: Optional[str] = None
     """The page's HTML content."""
 
-    self.formats: dict[str, str]
+    self.formats: dict[str, dict]
     """The documents that have been generated for this page (format as key, path to the file as value)."""
 
     self.theme: Theme = None

@@ -6,10 +6,11 @@ import nest_asyncio
 from typing import Optional, Coroutine, Sequence
 
 from mkdocs.plugins import BasePlugin
-from mkdocs_exporter.page import Page
 from mkdocs.plugins import event_priority
-from mkdocs_exporter.logging import logger
 from mkdocs.livereload import LiveReloadServer
+
+from mkdocs_exporter.page import Page
+from mkdocs_exporter.logging import logger
 from mkdocs_exporter.plugins.pdf.config import Config
 from mkdocs_exporter.plugins.pdf.renderer import Renderer
 
@@ -64,11 +65,19 @@ class Plugin(BasePlugin[Config]):
 
     content = markdown
     covers = {**self.config.covers, **{k: os.path.join(os.path.dirname(config['config_file_path']), v) for k, v in page.meta.get('covers', {}).items()}}
+    page.formats['pdf']['covers'] = {
+      'front': False,
+      'back': False
+    }
 
     if covers.get('front'):
+      page.formats['pdf']['covers']['front'] = True
+
       with open(covers['front'], 'r', encoding='utf-8') as file:
         content = self.renderer.cover(file.read()) + content
     if covers.get('back'):
+      page.formats['pdf']['covers']['back'] = True
+
       with open(covers['back'], 'r', encoding='utf-8') as file:
         content = content + self.renderer.cover(file.read())
 
@@ -106,7 +115,9 @@ class Plugin(BasePlugin[Config]):
     filename = os.path.splitext(os.path.basename(page.file.abs_dest_path))[0] + '.pdf'
     fullpath = os.path.join(directory, filename)
 
-    page.formats['pdf'] = os.path.relpath(fullpath, config['site_dir'])
+    page.formats['pdf'] = {
+      'path': os.path.relpath(fullpath, config['site_dir'])
+    }
 
 
   @event_priority(-75)
@@ -128,7 +139,7 @@ class Plugin(BasePlugin[Config]):
 
       page.html = None
 
-      with open(os.path.join(config['site_dir'], page.formats['pdf']), 'wb+') as file:
+      with open(os.path.join(config['site_dir'], page.formats['pdf']['path']), 'wb+') as file:
         file.write(pdf)
         logger.info("[mkdocs-exporter.pdf] File written to '%s'!", file.name)
 
@@ -168,15 +179,3 @@ class Plugin(BasePlugin[Config]):
       return False
 
     return True
-
-
-class DeprecatedPlugin(Plugin):
-  """Deprecated plugin, will be removed in the next major release."""
-
-
-  def on_config(self, config: dict, **kwargs) -> None:
-    """Invoked when the configuration has been loaded."""
-
-    logger.warning("The plugin name 'mkdocs/exporter/pdf' has been deprecated, please replace it with 'exporter-pdf'")
-
-    super().on_config(config, **kwargs)

@@ -12,7 +12,7 @@ def enabled(page: Page, **kwargs) -> bool:
 def href(page: Page, **kwargs) -> str:
   """The button's 'href' attribute."""
 
-  return os.path.relpath(page.formats['pdf'], page.url)
+  return os.path.relpath(page.formats['pdf']['path'], page.url)
 
 
 def download(page: Page, **kwargs) -> str:

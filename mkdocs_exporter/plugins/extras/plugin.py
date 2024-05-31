@@ -1,9 +1,10 @@
 from typing import Optional
 from collections import UserDict
+
 from mkdocs.plugins import BasePlugin
-from mkdocs_exporter.page import Page
 from mkdocs.plugins import event_priority
-from mkdocs_exporter.logging import logger
+
+from mkdocs_exporter.page import Page
 from mkdocs_exporter.preprocessor import Preprocessor
 from mkdocs_exporter.plugins.extras.config import Config
 
@@ -44,15 +45,3 @@ class Plugin(BasePlugin[Config]):
         preprocessor.button(**resolve(button))
 
     return preprocessor.done()
-
-
-class DeprecatedPlugin(Plugin):
-  """Deprecated plugin, will be removed in the next major release."""
-
-
-  def on_config(self, *args, **kwargs) -> None:
-    """Invoked when the configuration has been loaded."""
-
-    logger.warning("The plugin name 'mkdocs/exporter/extras' has been deprecated, please replace it with 'exporter-extras'")
-
-    super().on_config(*args, **kwargs)

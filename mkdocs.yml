@@ -53,6 +53,8 @@ plugins:
       browser:
         debug: false
         headless: true
+  - exporter-aggregator:
+      enabled: true
   - exporter-extras:
       buttons:
         - title: Download as PDF

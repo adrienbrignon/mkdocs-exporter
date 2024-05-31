@@ -30,14 +30,13 @@ importlib-resources = ">=5.0"
 importlib-metadata = ">=6.0"
 nest-asyncio = ">=1.5.6"
 mkdocs-material = {extras = ["imaging"], version = "^9.4.14"}
+pypdf = ">=4.2.0"
 
 [tool.poetry.plugins."mkdocs.plugins"]
 "exporter" = "mkdocs_exporter.plugin:Plugin"
 "exporter-pdf" = "mkdocs_exporter.plugins.pdf.plugin:Plugin"
 "exporter-extras" = "mkdocs_exporter.plugins.extras.plugin:Plugin"
-"mkdocs/exporter" = "mkdocs_exporter.plugin:DeprecatedPlugin"
-"mkdocs/exporter/pdf" = "mkdocs_exporter.plugins.pdf.plugin:DeprecatedPlugin"
-"mkdocs/exporter/extras" = "mkdocs_exporter.plugins.extras.plugin:DeprecatedPlugin"
+"exporter-aggregator" = "mkdocs_exporter.plugins.aggregator.plugin:Plugin"
 
 [tool.poetry.urls]
 "Bug Tracker" = "https://github.com/adrienbrignon/mkdocs-exporter/issues"
