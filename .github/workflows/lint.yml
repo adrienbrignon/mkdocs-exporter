@@ -3,8 +3,6 @@ name: Lint
 on:
   workflow_dispatch:
   push:
-    branches:
-      - master
 
 env:
   PYTHON_VERSION: '3.12'
