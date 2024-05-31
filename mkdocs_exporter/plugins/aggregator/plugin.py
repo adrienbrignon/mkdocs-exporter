@@ -54,7 +54,7 @@ class Plugin(BasePlugin[Config]):
 
       aggregate.append(pdf, pages=pages)
 
-    aggregate.add_metadata({ '/Producer': 'MkDocs Exporter' })
+    aggregate.add_metadata({'/Producer': 'MkDocs Exporter'})
     aggregate.write(destination)
     aggregate.close()
 
