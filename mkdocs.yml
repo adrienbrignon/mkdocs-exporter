@@ -55,6 +55,8 @@ plugins:
         headless: true
   - exporter-aggregator:
       enabled: true
+      output: .well-known/document.pdf
+      covers: limits
   - exporter-extras:
       buttons:
         - title: Download as PDF

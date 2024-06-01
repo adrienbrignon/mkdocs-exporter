@@ -40,7 +40,9 @@ class Plugin(BasePlugin[Config]):
     logger.info('[mkdocs-exporter.aggregator] Generating aggregated PDF document...')
 
     aggregate = PdfWriter()
-    destination = os.path.join(config['site_dir'], 'aggregate.pdf')
+    destination = os.path.join(config['site_dir'], self.config['output'])
+
+    os.makedirs(os.path.dirname(destination), exist_ok=True)
 
     for n, page in enumerate(self.pages):
       if 'pdf' not in page.formats:
@@ -48,14 +50,21 @@ class Plugin(BasePlugin[Config]):
 
       pages = None
       pdf = os.path.join(config['site_dir'], page.formats['pdf']['path'])
+      total = len(PdfReader(pdf).pages)
 
       if 'covers' in page.formats['pdf']:
-        pages = (0 if n == 0 else 1, len(PdfReader(pdf).pages) - (0 if n == (len(self.pages) - 1) else 1))
+        covers = page.formats['pdf']['covers']
+
+        if self.config['covers'] == 'none':
+          pages = (1 if covers['front'] else 0, (total - 1) if covers['back'] else total)
+        if self.config['covers'] == 'limits':
+          pages = (1 if n != 0 and covers['front'] else 0, (total - 1) if n != (len(self.pages) - 1) and covers['back'] else total)
 
       aggregate.append(pdf, pages=pages)
 
-    aggregate.add_metadata({'/Producer': 'MkDocs Exporter'})
-    aggregate.write(destination)
-    aggregate.close()
+    if len(aggregate.pages) > 0:
+      aggregate.add_metadata({'/Producer': 'MkDocs Exporter', **self.config['metadata']})
+      aggregate.write(destination)
+      logger.info("[mkdocs-exporter.aggregator] Aggregated PDF document written to '%s'!", destination)
 
-    logger.info("[mkdocs-exporter.aggregator] Aggregated PDF document written to '%s'!", destination)
+    aggregate.close()

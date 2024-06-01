@@ -8,8 +8,11 @@ class Config(BaseConfig):
   enabled = c.Type(bool, default=True)
   """Is the plugin enabled?"""
 
-  stylesheets = c.ListOfItems(c.File(exists=True), default=[])
-  """A list of custom stylesheets to apply before rendering documents."""
+  metadata = c.Type(dict, default={})
+  """The metadata to append to the PDF."""
 
-  scripts = c.ListOfItems(c.File(exists=True), default=[])
-  """A list of custom scripts to inject before rendering documents."""
+  output = c.Type(str, default='site.pdf')
+  """The output file path."""
+
+  covers = c.Choice(['all', 'none', 'limits'], default='all')
+  """The way that cover pages will be handled."""
