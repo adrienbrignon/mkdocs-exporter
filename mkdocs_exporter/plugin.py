@@ -1,10 +1,15 @@
+from typing import Type
+
 from mkdocs.plugins import BasePlugin
-from mkdocs_exporter.page import Page
 from mkdocs.plugins import event_priority
-from mkdocs_exporter.config import Config
 from mkdocs.structure.files import File, Files
+
+from mkdocs_exporter.page import Page
+from mkdocs_exporter.config import Config
+from mkdocs_exporter.helpers import resolve
 from mkdocs_exporter.preprocessor import Preprocessor
 from mkdocs_exporter.themes.factory import Factory as ThemeFactory
+from mkdocs_exporter.formats.pdf.plugin import Plugin as PDFFormatPlugin
 
 
 class Plugin(BasePlugin[Config]):
@@ -17,10 +22,24 @@ class Plugin(BasePlugin[Config]):
     self.stylesheets: list[File] = []
 
 
-  def on_config(self, config: dict) -> None:
+  @event_priority(100)
+  def on_config(self, config: dict, *args, **kwargs) -> None:
     """Invoked when the configuration has been loaded."""
 
     self.theme = ThemeFactory.create(self.config.theme or config['theme'])
+
+    def register(key, plugin: Type[Plugin], config_data: dict) -> Plugin:
+      """Registers a MkDocs plugin dynamically."""
+
+      key = 'exporter-' + key
+
+      config.plugins[key] = plugin()
+      config.plugins[key].config = config_data
+
+      config.plugins[key].on_config(config, *args, **kwargs)
+
+    if 'pdf' in self.config.formats:
+      register('pdf', PDFFormatPlugin, self.config['formats']['pdf'])
 
 
   def on_pre_build(self, **kwargs) -> None:
@@ -29,6 +48,7 @@ class Plugin(BasePlugin[Config]):
     self.stylesheets.clear()
 
 
+  @event_priority(100)
   def on_pre_page(self, page: Page, **kwargs) -> None:
     """Invoked after a page has been built."""
 
@@ -44,6 +64,11 @@ class Plugin(BasePlugin[Config]):
     preprocessor = Preprocessor(theme=page.theme)
 
     preprocessor.preprocess(html)
+
+    for button in [*self.config.buttons, *page.meta.get('buttons', [])]:
+      if resolve(button.get('enabled', True), page=page):
+        preprocessor.button(**resolve(button, page=page))
+
     preprocessor.remove('*[data-decompose="true"]')
     preprocessor.teleport()
 

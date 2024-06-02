@@ -11,8 +11,9 @@ from mkdocs.livereload import LiveReloadServer
 
 from mkdocs_exporter.page import Page
 from mkdocs_exporter.logging import logger
-from mkdocs_exporter.plugins.pdf.config import Config
-from mkdocs_exporter.plugins.pdf.renderer import Renderer
+from mkdocs_exporter.formats.pdf.config import Config
+from mkdocs_exporter.formats.pdf.renderer import Renderer
+from mkdocs_exporter.formats.pdf.aggregator import Aggregator
 
 
 class Plugin(BasePlugin[Config]):
@@ -25,14 +26,7 @@ class Plugin(BasePlugin[Config]):
     self.watch: list[str] = []
     self.renderer: Optional[Renderer] = None
     self.tasks: list[types.CoroutineType] = []
-    self.loop: asyncio.AbstractEventLoopPolicy = asyncio.new_event_loop()
-
-
-  def on_startup(self, **kwargs) -> None:
-    """Invoked when the plugin is starting..."""
-
-    nest_asyncio.apply(self.loop)
-    asyncio.set_event_loop(self.loop)
+    self.loop: Optional[asyncio.AbstractEventLoopPolicy] = None
 
 
   def on_config(self, config: dict) -> None:
@@ -57,6 +51,7 @@ class Plugin(BasePlugin[Config]):
     return server
 
 
+  @event_priority(100)
   def on_page_markdown(self, markdown: str, page: Page, config: Config, **kwargs) -> str:
     """Invoked when the page's markdown has been loaded."""
 
@@ -95,6 +90,11 @@ class Plugin(BasePlugin[Config]):
     if not self._enabled():
       return
 
+    self.loop = asyncio.new_event_loop()
+
+    nest_asyncio.apply(self.loop)
+    asyncio.set_event_loop(self.loop)
+
     self.renderer = Renderer(options=self.config)
 
     for stylesheet in self.config.stylesheets:
@@ -103,6 +103,7 @@ class Plugin(BasePlugin[Config]):
       self.renderer.add_script(script)
 
 
+  @event_priority(90)
   def on_pre_page(self, page: Page, config: dict, **kwargs):
     """Invoked before building the page."""
 
@@ -116,39 +117,38 @@ class Plugin(BasePlugin[Config]):
     fullpath = os.path.join(directory, filename)
 
     page.formats['pdf'] = {
-      'path': os.path.relpath(fullpath, config['site_dir'])
+      'path': fullpath,
+      'url': os.path.relpath(fullpath, config['site_dir'])
     }
 
 
-  @event_priority(-75)
-  def on_post_page(self, html: str, page: Page, config: dict) -> Optional[str]:
+  @event_priority(90)
+  def on_post_page(self, html: str, page: Page, **kwargs) -> Optional[str]:
     """Invoked after a page has been built."""
 
     if not self._enabled(page) and 'pdf' in page.formats:
       del page.formats['pdf']
-    if 'pdf' not in page.formats:
-      return html
 
     page.html = html
 
-    async def render(page: Page) -> None:
-      logger.info("[mkdocs-exporter.pdf] Rendering '%s'...", page.file.src_path)
+    if 'pdf' in page.formats:
+      async def render(page: Page) -> None:
+        logger.info("[mkdocs-exporter.pdf] Rendering '%s'...", page.file.src_path)
 
-      html = self.renderer.preprocess(page)
-      pdf = await self.renderer.render(html)
+        html = self.renderer.preprocess(page)
+        pdf = await self.renderer.render(html)
 
-      page.html = None
+        with open(page.formats['pdf']['path'], 'wb+') as file:
+          file.write(pdf)
+          logger.info("[mkdocs-exporter.pdf] File written to '%s'!", file.name)
 
-      with open(os.path.join(config['site_dir'], page.formats['pdf']['path']), 'wb+') as file:
-        file.write(pdf)
-        logger.info("[mkdocs-exporter.pdf] File written to '%s'!", file.name)
-
-    self.tasks.append(render(page))
+      self.tasks.append(render(page))
 
     return page.html
 
 
-  def on_post_build(self, **kwargs) -> None:
+  @event_priority(-100)
+  def on_post_build(self, config: dict, **kwargs) -> None:
     """Invoked after the build process."""
 
     if not self._enabled():
@@ -167,7 +167,39 @@ class Plugin(BasePlugin[Config]):
     self.loop.run_until_complete(self.renderer.dispose())
     self.tasks.clear()
 
+    self.loop = None
     self.renderer = None
+
+    nest_asyncio.apply(self.loop)
+    asyncio.set_event_loop(self.loop)
+
+    if self.config.get('aggregator', {})['enabled']:
+      aggregator = Aggregator()
+      aggregator_config = self.config.get('aggregator', {})
+
+      aggregator.open(os.path.join(config['site_dir'], aggregator_config['output']))
+      aggregator.covers(aggregator_config['covers'])
+      aggregator.aggregate(self.pages)
+      aggregator.save(metadata=aggregator_config['metadata'])
+
+
+  @event_priority(-100)
+  def on_nav(self, nav, **kwargs):
+    """Invoked when the navigation is ready."""
+
+    def flatten(items):
+      pages = []
+
+      for item in items:
+        if item.is_page:
+          pages.append(item)
+        if item.is_section:
+          pages = pages + flatten(item.children)
+
+      return pages
+
+    self.nav = nav
+    self.pages = flatten(nav)
 
 
   def _enabled(self, page: Page = None) -> bool:

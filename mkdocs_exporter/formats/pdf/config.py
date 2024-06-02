@@ -25,6 +25,21 @@ class CoversConfig(BaseConfig):
   """The back cover template location."""
 
 
+class AggregatorConfig(BaseConfig):
+
+  enabled = c.Type(bool, default=False)
+  """Is the aggregator enabled?"""
+
+  output = c.Type(str, default='site.pdf')
+  """The aggregated PDF document output file path."""
+
+  covers = c.Choice(['none', 'all', 'limits'], default='all')
+  """The behaviour of cover pages."""
+
+  metadata = c.Type(dict, default={})
+  """Some metadata to append to the PDF document."""
+
+
 class Config(BaseConfig):
   """The plugin's configuration."""
 
@@ -51,3 +66,6 @@ class Config(BaseConfig):
 
   url = c.Optional(c.Type(str))
   """The base URL that'll be prefixed to links with a relative path."""
+
+  aggregator = c.SubConfig(AggregatorConfig)
+  """The aggregator's configuration."""

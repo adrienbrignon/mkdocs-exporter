@@ -29,7 +29,6 @@ class Theme(BaseTheme):
 
     button = preprocessor.html.new_tag('a', title=title, attrs={'class': 'btn btn-neutral float-right', **attributes})
     button.string = title
-
     target = preprocessor.html.find('div', {'class': 'document'})
 
     if target:

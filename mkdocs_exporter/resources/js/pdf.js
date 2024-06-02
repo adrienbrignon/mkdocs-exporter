@@ -4,7 +4,7 @@ window.PagedConfig = {
    * The settings.
    */
   settings: {
-    maxChars: 1e9
+    maxChars: 1e32
   },
 
   /**

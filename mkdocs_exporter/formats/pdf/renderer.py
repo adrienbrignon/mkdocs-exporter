@@ -7,9 +7,9 @@ from urllib.parse import unquote
 
 from mkdocs_exporter.page import Page
 from mkdocs_exporter.resources import js
-from mkdocs_exporter.plugins.pdf.browser import Browser
+from mkdocs_exporter.formats.pdf.browser import Browser
 from mkdocs_exporter.renderer import Renderer as BaseRenderer
-from mkdocs_exporter.plugins.pdf.preprocessor import Preprocessor
+from mkdocs_exporter.formats.pdf.preprocessor import Preprocessor
 
 
 class Renderer(BaseRenderer):

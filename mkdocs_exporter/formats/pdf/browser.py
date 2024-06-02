@@ -13,6 +13,8 @@ class Browser:
   """A web browser instance."""
 
   args = [
+    '--disable-background-timer-throttling',
+    '--disable-renderer-backgrounding',
     '--allow-file-access-from-files'
   ]
   """The browser's arguments..."""

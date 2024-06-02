@@ -41,30 +41,6 @@ extra:
       link: https://pypi.org/project/mkdocs-exporter
 
 plugins:
-  - exporter:
-  - exporter-pdf:
-      concurrency: 16
-      enabled: !ENV [MKDOCS_EXPORTER_PDF, true]
-      stylesheets:
-        - resources/stylesheets/pdf.scss
-      covers:
-        front: resources/templates/covers/front.html.j2
-        back: resources/templates/covers/back.html.j2
-      browser:
-        debug: false
-        headless: true
-  - exporter-aggregator:
-      enabled: true
-      output: .well-known/document.pdf
-      covers: limits
-  - exporter-extras:
-      buttons:
-        - title: Download as PDF
-          icon: material-file-download-outline
-          enabled: !!python/name:mkdocs_exporter.plugins.pdf.button.enabled
-          attributes:
-            href: !!python/name:mkdocs_exporter.plugins.pdf.button.href
-            download: !!python/name:mkdocs_exporter.plugins.pdf.button.download
   - search:
       lang: en
   - awesome-pages
@@ -82,6 +58,34 @@ plugins:
   - social:
       cards_layout_options:
         background_color: '#EA2027'
+  - exporter:
+      formats:
+        pdf:
+          concurrency: 16
+          enabled: !ENV [MKDOCS_EXPORTER_PDF, true]
+          stylesheets:
+            - resources/stylesheets/pdf.scss
+          covers:
+            front: resources/templates/covers/front.html.j2
+            back: resources/templates/covers/back.html.j2
+          browser:
+            debug: false
+            headless: true
+          aggregator:
+            enabled: true
+            output: .well-known/document.pdf
+            covers: all
+      buttons:
+        - title: View as PDF
+          icon: material-file-move-outline
+          enabled: !!python/name:mkdocs_exporter.formats.pdf.buttons.download.enabled
+          attributes:
+            target: _blank
+            href: !!python/name:mkdocs_exporter.formats.pdf.buttons.download.href
+        - title: Download as PDF
+          icon: material-file-download-outline
+          enabled: !!python/name:mkdocs_exporter.formats.pdf.buttons.download.enabled
+          attributes: !!python/name:mkdocs_exporter.formats.pdf.buttons.download.attributes
 
 markdown_extensions:
   - admonition

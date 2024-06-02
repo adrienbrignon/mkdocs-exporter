@@ -10,15 +10,24 @@ def enabled(page: Page, **kwargs) -> bool:
 
 
 def href(page: Page, **kwargs) -> str:
-  """The button's 'href' attribute."""
+  """The value of the 'href' attribute."""
 
-  return os.path.relpath(page.formats['pdf']['path'], page.url)
+  return os.path.relpath(page.formats['pdf']['url'], page.url)
 
 
 def download(page: Page, **kwargs) -> str:
-  """The button's 'download' attribute."""
+  """The value of the 'download' attribute."""
 
   return page.title + os.path.extsep + 'pdf'
+
+
+def attributes(page: Page, **kwargs) -> dict:
+  """The button's 'href' attribute."""
+
+  return {
+    'href': href(page, **kwargs),
+    'download': download(page, **kwargs),
+  }
 
 
 def icon(page: Page, **kwargs) -> str:
