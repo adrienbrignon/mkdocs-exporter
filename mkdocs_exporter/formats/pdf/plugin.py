@@ -1,7 +1,6 @@
 import os
 import types
 import asyncio
-import nest_asyncio
 
 from typing import Optional, Coroutine, Sequence
 
@@ -92,7 +91,6 @@ class Plugin(BasePlugin[Config]):
 
     self.loop = asyncio.new_event_loop()
 
-    nest_asyncio.apply(self.loop)
     asyncio.set_event_loop(self.loop)
 
     self.renderer = Renderer(options=self.config)
@@ -170,7 +168,6 @@ class Plugin(BasePlugin[Config]):
     self.loop = None
     self.renderer = None
 
-    nest_asyncio.apply(self.loop)
     asyncio.set_event_loop(self.loop)
 
     if self.config.get('aggregator', {})['enabled']:

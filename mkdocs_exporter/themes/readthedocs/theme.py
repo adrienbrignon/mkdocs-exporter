@@ -1,7 +1,7 @@
 
 from __future__ import annotations
 
-import importlib_resources
+import importlib
 
 from mkdocs.structure.files import File
 
@@ -21,7 +21,7 @@ class Theme(BaseTheme):
     """Preprocesses the DOM before rendering a document."""
 
     preprocessor.remove(['.rst-content > div[role="navigation"]', 'nav.wy-nav-side'])
-    preprocessor.stylesheet(importlib_resources.files(css).joinpath('readthedocs.css').read_text(encoding='utf-8'))
+    preprocessor.stylesheet(importlib.resources.files(css).joinpath('readthedocs.css').read_text(encoding='utf-8'))
 
 
   def button(self, preprocessor: Preprocessor, title: str, icon: str, attributes: dict = {}):

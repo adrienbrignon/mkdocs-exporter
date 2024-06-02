@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-import importlib_resources
+import importlib.resources
 
 from urllib.parse import unquote
 
@@ -67,8 +67,8 @@ class Renderer(BaseRenderer):
       with open(script, 'r', encoding='utf-8') as file:
         preprocessor.script(file.read(), path=stylesheet)
 
-    preprocessor.script(importlib_resources.files(js).joinpath('pdf.js').read_text(encoding='utf-8'))
-    preprocessor.script(importlib_resources.files(js).joinpath('pagedjs.min.js').read_text(encoding='utf-8'))
+    preprocessor.script(importlib.resources.files(js).joinpath('pdf.js').read_text(encoding='utf-8'))
+    preprocessor.script(importlib.resources.files(js).joinpath('pagedjs.min.js').read_text(encoding='utf-8'))
     preprocessor.teleport()
     preprocessor.update_links(base, root)
 
