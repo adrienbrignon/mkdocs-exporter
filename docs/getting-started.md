@@ -9,15 +9,14 @@ hide:
 
 [MkDocs Exporter](/) is a plugin for [MkDocs](https://www.mkdocs.org/), it allows you to export your documentation to various formats such as PDF. If you're familiar with Python, you can install the plugin with `pip` (or your favourite package manager).
 
-???+ tip "Did you know?"
+## Examples
 
-    This documentation features the plugin: you can download this page as a PDF document and read it offline!
-
-    Try this out by clicking the download button at the top of this page (or you can directly head [here](./index.pdf){:target="_blank"}).
+- [__Read__ this documentation in the PDF format](./combined.pdf)
+- [__View__ this page in the PDF format](./index.pdf)
 
 ## Prerequisites
 
-- Python `>= 3.8`
+- Python `>= 3.9`
 - MkDocs `>= 1.4`
 - A compatible theme
   - [`material`](https://github.com/squidfunk/mkdocs-material) (:material-star-shooting: *used by this documentation*)
@@ -38,4 +37,4 @@ plugins:
   - exporter
 ```
 
-Check out the [setup guides](setup/setting-up-documents.md) for more details about how to use and configure the plugin.
+Check out the [configuration guides](configuration/generating-pdf-documents) for more details about how to use and configure the plugin.

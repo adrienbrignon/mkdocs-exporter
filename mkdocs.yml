@@ -5,6 +5,11 @@ repo_name: adrienbrignon/mkdocs-exporter
 edit_uri: edit/master/docs/
 site_dir: dist
 
+validation:
+  absolute_links: ignore
+  unrecognized_links: ignore
+  anchors: ignore
+
 theme:
   name: material
   custom_dir: overrides
@@ -41,6 +46,19 @@ extra:
       link: https://pypi.org/project/mkdocs-exporter
 
 plugins:
+  - mkdocstrings:
+      handlers:
+        python:
+          import:
+            - https://docs.python.org/3/objects.inv
+            - https://installer.readthedocs.io/en/stable/objects.inv
+          options:
+            show_bases: false
+            show_source: true
+            show_labels: false
+            show_root_heading: true
+  - privacy:
+      log_level: error
   - search:
       lang: en
   - awesome-pages
@@ -73,8 +91,8 @@ plugins:
             headless: true
           aggregator:
             enabled: true
-            output: .well-known/document.pdf
-            covers: all
+            output: documentation.pdf
+            covers: limits
       buttons:
         - title: View as PDF
           icon: material-file-move-outline
@@ -90,6 +108,7 @@ plugins:
 markdown_extensions:
   - admonition
   - attr_list
+  - md_in_html
   - pymdownx.details
   - pymdownx.superfences:
       custom_fences:
@@ -106,6 +125,11 @@ markdown_extensions:
       emoji_generator: !!python/name:material.extensions.emoji.to_svg
   - pymdownx.arithmatex:
       generic: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
 
 extra_css:
   - assets/stylesheets/custom.css

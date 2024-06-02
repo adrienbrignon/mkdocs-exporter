@@ -8,8 +8,8 @@ from mkdocs_exporter.formats.pdf.config import Config as PDFFormatConfig
 
 class FormatsConfig(BaseConfig):
 
-  """The PDF format configuration."""
   pdf = c.SubConfig(PDFFormatConfig)
+  """The PDF format configuration."""
 
 
 class ButtonConfig(BaseConfig):

@@ -30,7 +30,7 @@ class AggregatorConfig(BaseConfig):
   enabled = c.Type(bool, default=False)
   """Is the aggregator enabled?"""
 
-  output = c.Type(str, default='site.pdf')
+  output = c.Type(str, default='combined.pdf')
   """The aggregated PDF document output file path."""
 
   covers = c.Choice(['none', 'all', 'limits'], default='all')
