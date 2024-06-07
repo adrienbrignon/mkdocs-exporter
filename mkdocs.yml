@@ -46,6 +46,8 @@ extra:
       link: https://pypi.org/project/mkdocs-exporter
 
 plugins:
+  - privacy:
+      log_level: warn
   - mkdocstrings:
       handlers:
         python:
@@ -85,7 +87,6 @@ plugins:
             - resources/stylesheets/pdf.scss
           covers:
             front: resources/templates/covers/front.html.j2
-            back: resources/templates/covers/back.html.j2
           browser:
             debug: false
             headless: true

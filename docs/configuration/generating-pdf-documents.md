@@ -221,6 +221,8 @@ plugins:
           attributes: !!python/name:mkdocs_exporter.formats.pdf.buttons.download.attributes
 ```
 
+<div class="page-break-after"></div>
+
 ### Combining pages into a single PDF document
 
 In *MkDocs Exporter*, the aggregator feature allows you to consolidate multiple individual PDF documents into a single cohesive PDF file.  
@@ -248,26 +250,5 @@ plugins:
         pdf:
           aggregator:
             enabled: true
-            covers: all
-            output: combined.pdf
+            output: documentation.pdf
 ```
-
-#### Configuring cover pages
-
-In your `mkdocs.yml` configuration file, you can specify how cover pages are handled during the aggregation process using the `covers` parameter:
-
-```yaml
-plugins:
-  - exporter:
-      formats:
-        pdf:
-          aggregator:
-            enabled: true
-            covers: all
-```
-
-You can define how cover pages from individual PDFs should be handled using one of the following modes:
-
-- `none`: Cover pages will be skipped in the final combined document.
-- `all` (*default*): Cover pages will be included as-is from each individual PDF.
-- `limits`: Only the front cover of the first page and the back cover of the last page will be included in the combined document.

@@ -32,6 +32,7 @@ class LoggingConfig(BaseConfig):
   """The logging configuration."""
 
   level = c.Choice(['debug', 'info', 'warning', 'error', 'critical'], default='info')
+  """The log level."""
 
 
 class Config(BaseConfig):

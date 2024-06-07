@@ -33,9 +33,6 @@ class AggregatorConfig(BaseConfig):
   output = c.Type(str, default='combined.pdf')
   """The aggregated PDF document output file path."""
 
-  covers = c.Choice(['none', 'all', 'limits'], default='all')
-  """The behaviour of cover pages."""
-
   metadata = c.Type(dict, default={})
   """Some metadata to append to the PDF document."""
 

@@ -13,7 +13,7 @@ hide:
 
 ## Examples
 
-- [__Read__ this documentation in the PDF format](./combined.pdf)
+- [__Read__ this documentation in the PDF format](../documentation.pdf)
 - [__View__ this page in the PDF format](./index.pdf)
 
 ## Prerequisites

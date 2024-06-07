@@ -62,19 +62,11 @@ class Plugin(BasePlugin[Config]):
 
     content = markdown
     covers = {**self.config.covers, **{k: os.path.join(os.path.dirname(config['config_file_path']), v) for k, v in page.meta.get('covers', {}).items()}}
-    page.formats['pdf']['covers'] = {
-      'front': False,
-      'back': False
-    }
 
     if covers.get('front'):
-      page.formats['pdf']['covers']['front'] = True
-
       with open(covers['front'], 'r', encoding='utf-8') as file:
         content = self.renderer.cover(file.read()) + content
     if covers.get('back'):
-      page.formats['pdf']['covers']['back'] = True
-
       with open(covers['back'], 'r', encoding='utf-8') as file:
         content = content + self.renderer.cover(file.read())
 
