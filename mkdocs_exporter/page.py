@@ -7,17 +7,11 @@ from mkdocs.structure.pages import Page as BasePage
 class Page(BasePage):
   """A page."""
 
+  html: Optional[str] = None
+  """The page's HTML content."""
 
-  def __init__(self, *args, **kwargs):
-    """The constructor."""
+  formats: dict[str, dict]
+  """The documents that have been generated for this page (format as key, path to the file as value)."""
 
-    self.html: Optional[str] = None
-    """The page's HTML content."""
-
-    self.formats: dict[str, dict]
-    """The documents that have been generated for this page (format as key, path to the file as value)."""
-
-    self.theme: Theme = None
-    """The theme of the page."""
-
-    super().__init__(*args, **kwargs)
+  theme: Theme = None
+  """The theme of the page."""

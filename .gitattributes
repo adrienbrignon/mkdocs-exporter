@@ -1,1 +1,1 @@
-mkdocs_exporter/resources/**/* -diff
+mkdocs_exporter/**/resources/**/* -diff

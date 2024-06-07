@@ -20,4 +20,4 @@ class Factory:
       if t.name == theme.name:
         return t(theme)
 
-    raise RuntimeError(f'The theme you are using ({theme.name}) is not supported yet, sorry.')
+    raise RuntimeError(f'The theme you are using ({theme.name}) is currently not supported by MkDocs Exporter, sorry.')
