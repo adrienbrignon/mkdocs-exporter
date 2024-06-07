@@ -28,6 +28,12 @@ class ButtonConfig(BaseConfig):
   """Some extra attributes to add to the button."""
 
 
+class LoggingConfig(BaseConfig):
+  """The logging configuration."""
+
+  level = c.Choice(['debug', 'info', 'warning', 'error', 'critical'], default='info')
+
+
 class Config(BaseConfig):
   """The plugin's configuration."""
 
@@ -39,3 +45,6 @@ class Config(BaseConfig):
 
   buttons = c.ListOfItems(c.SubConfig(ButtonConfig))
   """The buttons to add."""
+
+  logging = c.SubConfig(LoggingConfig)
+  """The logging configuration."""

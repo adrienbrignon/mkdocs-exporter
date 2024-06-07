@@ -6,7 +6,7 @@ import importlib.resources
 from urllib.parse import unquote
 
 from mkdocs_exporter.page import Page
-from mkdocs_exporter.resources import js
+from mkdocs_exporter.formats.pdf.resources import js
 from mkdocs_exporter.formats.pdf.browser import Browser
 from mkdocs_exporter.renderer import Renderer as BaseRenderer
 from mkdocs_exporter.formats.pdf.preprocessor import Preprocessor
@@ -78,7 +78,7 @@ class Renderer(BaseRenderer):
     return preprocessor.done()
 
 
-  async def render(self, page: str | Page) -> bytes:
+  async def render(self, page: str | Page) -> tuple[bytes, int]:
     """Renders a page as a PDF document."""
 
     if not self.browser.launched:

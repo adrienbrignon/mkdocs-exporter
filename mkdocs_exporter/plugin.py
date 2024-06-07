@@ -1,11 +1,14 @@
+import logging
+
 from typing import Type
 
-from mkdocs.plugins import BasePlugin
 from mkdocs.plugins import event_priority
 from mkdocs.structure.files import File, Files
+from mkdocs.plugins import BasePlugin, CombinedEvent
 
 from mkdocs_exporter.page import Page
 from mkdocs_exporter.config import Config
+from mkdocs_exporter.logging import logger
 from mkdocs_exporter.helpers import resolve
 from mkdocs_exporter.preprocessor import Preprocessor
 from mkdocs_exporter.themes.factory import Factory as ThemeFactory
@@ -20,6 +23,7 @@ class Plugin(BasePlugin[Config]):
     """The constructor."""
 
     self.stylesheets: list[File] = []
+    self.on_post_page = CombinedEvent(self._on_post_page_1, self._on_post_page_2)
 
 
   @event_priority(100)
@@ -27,6 +31,9 @@ class Plugin(BasePlugin[Config]):
     """Invoked when the configuration has been loaded."""
 
     self.theme = ThemeFactory.create(self.config.theme or config['theme'])
+
+    if 'level' in self.config.logging:
+      logger.setLevel(logging.getLevelName(self.config.logging.level.upper()))
 
     def register(key, plugin: Type[Plugin], config_data: dict) -> Plugin:
       """Registers a MkDocs plugin dynamically."""
@@ -50,15 +57,22 @@ class Plugin(BasePlugin[Config]):
 
   @event_priority(100)
   def on_pre_page(self, page: Page, **kwargs) -> None:
-    """Invoked after a page has been built."""
+    """Invoked before a page has been built."""
 
     page.html = None
     page.formats = {}
     page.theme = self.theme
 
 
+  @event_priority(100)
+  def _on_post_page_1(self, html: str, page: Page, **kwargs) -> str:
+    """Invoked after a page has been built (and before all other plugins)."""
+
+    page.html = html
+
+
   @event_priority(-100)
-  def on_post_page(self, html: str, page: Page, **kwargs) -> str:
+  def _on_post_page_2(self, html: str, page: Page, **kwargs) -> str:
     """Invoked after a page has been built (and after all other plugins)."""
 
     preprocessor = Preprocessor(theme=page.theme)

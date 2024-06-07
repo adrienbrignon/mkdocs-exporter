@@ -2,11 +2,21 @@ from __future__ import annotations
 
 import os
 
-from pypdf import PdfReader, PdfWriter
+from pypdf import PdfWriter
+
+from mkdocs_exporter.formats.pdf.renderer import Renderer
+from mkdocs_exporter.formats.pdf.preprocessor import Preprocessor
 
 
 class Aggregator:
   """Aggregates PDF documents together."""
+
+
+  def __init__(self, renderer: Renderer):
+    """The constructor."""
+
+    self.total_pages = 0
+    self.renderer = renderer
 
 
   def open(self, path: str) -> Aggregator:
@@ -16,32 +26,29 @@ class Aggregator:
     self.writer = PdfWriter()
 
 
-  def covers(self, mode: str) -> Aggregator:
-    """Defines the way of handling cover pages."""
+  def increment_total_pages(self, total_pages: int) -> Aggregator:
+    """Increments the total pages count."""
 
-    self._covers = mode
+    self.total_pages = self.total_pages + total_pages
 
 
-  def aggregate(self, pages: list) -> Aggregator:
-    """Aggregates pages together."""
+  def preprocess(self, html: str, page_number: int = 1) -> str:
+    """Preprocesses the page."""
 
-    for n, page in enumerate(pages):
-      if 'pdf' not in page.formats:
-        continue
+    preprocessor = Preprocessor()
 
-      bounds = None
-      pdf = page.formats['pdf']['path']
-      total = len(PdfReader(pdf).pages)
+    preprocessor.preprocess(html)
+    preprocessor.metadata({'page': page_number, 'pages': self.total_pages})
 
-      if 'covers' in page.formats['pdf']:
-        covers = page.formats['pdf']['covers']
+    return preprocessor.done()
 
-        if self._covers == 'none':
-          bounds = (1 if covers['front'] else 0, (total - 1) if covers['back'] else total)
-        if self._covers == 'limits':
-          bounds = (1 if n != 0 and covers['front'] else 0, (total - 1) if n != (len(pages) - 1) and covers['back'] else total)
 
-      self.writer.append(pdf, pages=bounds)
+  def append(self, document: str) -> Aggregator:
+    """Appends a document to this one."""
+
+    self.writer.append(document)
+
+    return self
 
 
   def save(self, metadata={}) -> Aggregator:

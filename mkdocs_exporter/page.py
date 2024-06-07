@@ -1,4 +1,5 @@
 from typing import Optional
+
 from mkdocs_exporter.theme import Theme
 from mkdocs.structure.pages import Page as BasePage
 

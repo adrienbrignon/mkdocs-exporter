@@ -3,6 +3,8 @@ hide:
   - navigation
 ---
 
+<div class="mkdocs-exporter" style="display: none;"></div>
+
 # Getting started
 
 ## Introduction

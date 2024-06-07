@@ -57,8 +57,6 @@ plugins:
             show_source: true
             show_labels: false
             show_root_heading: true
-  - privacy:
-      log_level: error
   - search:
       lang: en
   - awesome-pages
@@ -77,6 +75,8 @@ plugins:
       cards_layout_options:
         background_color: '#EA2027'
   - exporter:
+      logging:
+        level: debug
       formats:
         pdf:
           enabled: !ENV [MKDOCS_EXPORTER_PDF, true]

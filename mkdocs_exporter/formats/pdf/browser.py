@@ -84,28 +84,30 @@ class Browser:
     return self
 
 
-  async def print(self, html: str) -> bytes:
-    """Prints some HTML to PDF."""
+  async def print(self, html: str) -> tuple[bytes, int]:
+    """Prints some HTML to PDF and returns the PDF and the number of pages printed."""
 
-    page = await self.context.new_page()
+    pages = 0
+    context = await self.context.new_page()
     file = NamedTemporaryFile(suffix='.html', mode='w+', encoding='utf-8', delete=False)
 
     file.write(html)
     file.close()
 
-    await page.goto('file://' + file.name, wait_until='networkidle')
-    await page.locator('body[mkdocs-exporter="true"]').wait_for(timeout=self.timeout)
+    await context.goto('file://' + file.name, wait_until='networkidle')
+    await context.locator('body[mkdocs-exporter="true"]').wait_for(timeout=self.timeout)
 
-    pdf = await page.pdf(prefer_css_page_size=True, print_background=True, display_header_footer=False)
+    pages = int(await context.locator('body').get_attribute('mkdocs-exporter-pages') or 0)
+    pdf = await context.pdf(prefer_css_page_size=True, print_background=True, display_header_footer=False)
 
     try:
       os.unlink(file)
     except Exception:
       pass
 
-    await page.close()
+    await context.close()
 
-    return pdf
+    return (pdf, pages)
 
 
   async def log(self, msg):

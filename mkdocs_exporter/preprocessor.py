@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import sass
+import json
 
 from typing import Union
 from sass import CompileError
@@ -138,6 +139,12 @@ class Preprocessor():
       element['src'] = self._resolve_link(element['src'], base, root)
 
     return self
+
+
+  def metadata(self, metadata: dict) -> Preprocessor:
+    """Inserts metadata."""
+
+    return self.script(f"window.__MKDOCS_EXPORTER__ = {json.dumps(metadata)};")
 
 
   def done(self) -> str:

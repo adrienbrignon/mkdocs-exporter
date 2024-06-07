@@ -2,13 +2,14 @@ import os
 import types
 import asyncio
 
-from typing import Optional, Coroutine, Sequence
+from typing import Optional
 
-from mkdocs.plugins import BasePlugin
 from mkdocs.plugins import event_priority
 from mkdocs.livereload import LiveReloadServer
+from mkdocs.plugins import BasePlugin, CombinedEvent
 
 from mkdocs_exporter.page import Page
+from mkdocs_exporter.helpers import concurrently
 from mkdocs_exporter.logging import logger
 from mkdocs_exporter.formats.pdf.config import Config
 from mkdocs_exporter.formats.pdf.renderer import Renderer
@@ -25,7 +26,9 @@ class Plugin(BasePlugin[Config]):
     self.watch: list[str] = []
     self.renderer: Optional[Renderer] = None
     self.tasks: list[types.CoroutineType] = []
+    self.aggregator: Optional[Aggregator] = None
     self.loop: Optional[asyncio.AbstractEventLoopPolicy] = None
+    self.on_post_build = CombinedEvent(self._on_post_build_1, self._on_post_build_2, self._on_post_build_3)
 
 
   def on_config(self, config: dict) -> None:
@@ -84,16 +87,16 @@ class Plugin(BasePlugin[Config]):
   def on_pre_build(self, **kwargs) -> None:
     """Invoked before the build process starts."""
 
-    self.tasks.clear()
-
     if not self._enabled():
       return
 
     self.loop = asyncio.new_event_loop()
+    self.renderer = Renderer(options=self.config)
+
+    if self.config.aggregator.get('enabled'):
+      self.aggregator = Aggregator(renderer=self.renderer)
 
     asyncio.set_event_loop(self.loop)
-
-    self.renderer = Renderer(options=self.config)
 
     for stylesheet in self.config.stylesheets:
       self.renderer.add_stylesheet(stylesheet)
@@ -107,8 +110,6 @@ class Plugin(BasePlugin[Config]):
 
     if not self._enabled():
       return
-    if not hasattr(page, 'html'):
-      raise Exception('Missing `exporter` plugin or your plugins are not ordered properly!')
 
     directory = os.path.dirname(page.file.abs_dest_path)
     filename = os.path.splitext(os.path.basename(page.file.abs_dest_path))[0] + '.pdf'
@@ -127,57 +128,84 @@ class Plugin(BasePlugin[Config]):
     if not self._enabled(page) and 'pdf' in page.formats:
       del page.formats['pdf']
 
-    page.html = html
-
     if 'pdf' in page.formats:
       async def render(page: Page) -> None:
         logger.info("[mkdocs-exporter.pdf] Rendering '%s'...", page.file.src_path)
 
         html = self.renderer.preprocess(page)
-        pdf = await self.renderer.render(html)
+        pdf, pages = await self.renderer.render(html)
+
+        page.formats['pdf']['pages'] = pages
 
         with open(page.formats['pdf']['path'], 'wb+') as file:
           file.write(pdf)
-          logger.info("[mkdocs-exporter.pdf] File written to '%s'!", file.name)
+
+        if self.aggregator:
+          self.aggregator.increment_total_pages(pages)
 
       self.tasks.append(render(page))
 
     return page.html
 
 
+  @event_priority(-90)
+  def _on_post_build_1(self, **kwargs) -> None:
+    """Invoked after the build process."""
+
+    if not self._enabled():
+      return
+    while self.tasks:
+      self.loop.run_until_complete(asyncio.gather(*concurrently(self.tasks, max(1, self.config.concurrency or 1))))
+
+
+  @event_priority(-95)
+  def _on_post_build_2(self, config: dict, **kwargs) -> None:
+    """Invoked after the build process."""
+
+    if not self._enabled() or not self.aggregator:
+      return
+
+    output = self.config['aggregator']['output']
+    self.pages = [page for page in self.pages if 'pdf' in page.formats]
+
+    logger.info("[mkdocs-exporter.pdf] Aggregating %d pages from %d documents together as '%s'...", self.aggregator.total_pages, len(self.pages), output)
+
+    async def render(page: Page, page_number: int) -> None:
+      html = self.aggregator.preprocess(self.renderer.preprocess(page), page_number=page_number)
+      pdf, _ = await self.renderer.render(html)
+
+      with open(page.formats['pdf']['path'] + '.aggregate', 'wb+') as file:
+        file.write(pdf)
+
+    for n, page in enumerate(self.pages):
+      self.tasks.append(render(page, page_number=sum(page.formats['pdf']['pages'] for page in self.pages[:n])))
+    while self.tasks:
+      self.loop.run_until_complete(asyncio.gather(*concurrently(self.tasks, max(1, self.config.concurrency or 1))))
+
+    self.aggregator.open(os.path.join(config['site_dir'], output))
+
+    for page in self.pages:
+      self.aggregator.append(page.formats['pdf']['path'] + '.aggregate')
+      os.unlink(page.formats['pdf']['path'] + '.aggregate')
+
+    self.aggregator.save()
+
+
   @event_priority(-100)
-  def on_post_build(self, config: dict, **kwargs) -> None:
+  def _on_post_build_3(self, **kwargs) -> None:
     """Invoked after the build process."""
 
     if not self._enabled():
       return
 
-    def concurrently(coroutines: Sequence[Coroutine], concurrency: int) -> Sequence[Coroutine]:
-      semaphore = asyncio.Semaphore(concurrency)
-
-      async def limit(coroutine: Coroutine) -> Coroutine:
-        async with semaphore:
-          return await asyncio.create_task(coroutine)
-
-      return [limit(coroutine) for coroutine in coroutines]
-
-    self.loop.run_until_complete(asyncio.gather(*concurrently(self.tasks, max(1, self.config.concurrency or 1))))
     self.loop.run_until_complete(self.renderer.dispose())
-    self.tasks.clear()
 
     self.loop = None
+    self.pages = None
     self.renderer = None
+    self.aggregator = None
 
     asyncio.set_event_loop(self.loop)
-
-    if self.config.get('aggregator', {})['enabled']:
-      aggregator = Aggregator()
-      aggregator_config = self.config.get('aggregator', {})
-
-      aggregator.open(os.path.join(config['site_dir'], aggregator_config['output']))
-      aggregator.covers(aggregator_config['covers'])
-      aggregator.aggregate(self.pages)
-      aggregator.save(metadata=aggregator_config['metadata'])
 
 
   @event_priority(-100)
@@ -195,7 +223,6 @@ class Plugin(BasePlugin[Config]):
 
       return pages
 
-    self.nav = nav
     self.pages = flatten(nav)
 
 
