@@ -1,4 +1,4 @@
-name: Lint
+name: Security
 
 on:
   workflow_dispatch:
@@ -8,8 +8,8 @@ env:
   PYTHON_VERSION: '3.12'
 
 jobs:
-  flake8:
-    name: Flake8
+  bandit:
+    name: Bandit
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -33,6 +33,6 @@ jobs:
         run: |
           pip install poetry
           make install
-      - name: Run Flake8
+      - name: Run Bandit
         run: |
-          poetry run flake8
+          poetry run bandit -r mkdocs_exporter

@@ -47,7 +47,6 @@ extra:
 
 plugins:
   - privacy:
-      log_level: warn
   - mkdocstrings:
       handlers:
         python:
@@ -76,6 +75,9 @@ plugins:
   - social:
       cards_layout_options:
         background_color: '#EA2027'
+  - git-committers:
+      repository: adrienbrignon/mkdocs-exporter
+      branch: master
   - exporter:
       logging:
         level: debug
@@ -87,13 +89,13 @@ plugins:
             - resources/stylesheets/pdf.scss
           covers:
             front: resources/templates/covers/front.html.j2
+            back: resources/templates/covers/back.html.j2
           browser:
             debug: false
-            headless: true
           aggregator:
-            enabled: true
+            enabled: !ENV [MKDOCS_EXPORTER_PDF_AGGREGATOR, true]
             output: documentation.pdf
-            covers: limits
+            covers: front
       buttons:
         - title: View as PDF
           icon: material-file-move-outline
@@ -134,13 +136,13 @@ markdown_extensions:
 
 extra_css:
   - assets/stylesheets/custom.css
-  - https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.7/katex.min.css
+  - https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css
 
 extra_javascript:
   - assets/scripts/katex.js
   - assets/scripts/mathjax.js
   - assets/scripts/mkdocs-exporter.js
-  - https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.7/katex.min.js
-  - https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.7/contrib/auto-render.min.js
+  - https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js
+  - https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js
   - https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js
-  - https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.6.1/mermaid.min.js
+  - https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.1/mermaid.min.js

@@ -3,8 +3,6 @@ hide:
   - navigation
 ---
 
-<div class="mkdocs-exporter" style="display: none;"></div>
-
 # Getting started
 
 ## Introduction
@@ -39,4 +37,4 @@ plugins:
   - exporter
 ```
 
-Check out the [configuration guides](configuration/generating-pdf-documents) for more details about how to use and configure the plugin.
+Check out the [configuration guides](../configuration/generating-pdf-documents) for more details about how to use and configure the plugin.

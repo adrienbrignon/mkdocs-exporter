@@ -15,7 +15,8 @@ class Browser:
   args = [
     '--disable-background-timer-throttling',
     '--disable-renderer-backgrounding',
-    '--allow-file-access-from-files'
+    '--allow-file-access-from-files',
+    '--font-render-hinting=none'
   ]
   """The browser's arguments..."""
 
@@ -38,6 +39,7 @@ class Browser:
     self.debug = options.get('debug', False)
     self.headless = options.get('headless', True)
     self.timeout = options.get('timeout', 60_000)
+    self.args = self.args + options.get('args', [])
     self.levels = {
       'warn': 'warning',
       'error': 'error',
@@ -100,12 +102,9 @@ class Browser:
     pages = int(await context.locator('body').get_attribute('mkdocs-exporter-pages') or 0)
     pdf = await context.pdf(prefer_css_page_size=True, print_background=True, display_header_footer=False)
 
-    try:
-      os.unlink(file)
-    except Exception:
-      pass
-
     await context.close()
+
+    os.unlink(file.name)
 
     return (pdf, pages)
 

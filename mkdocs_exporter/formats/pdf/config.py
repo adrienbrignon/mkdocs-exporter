@@ -14,6 +14,9 @@ class BrowserConfig(BaseConfig):
   timeout = c.Type(int, default=60_000)
   """The timeout when waiting for the PDF to render."""
 
+  args = c.ListOfItems(c.Type(str), default=[])
+  """Extra arguments to pass to the browser."""
+
 
 class CoversConfig(BaseConfig):
   """The cover's configuration."""
@@ -26,6 +29,7 @@ class CoversConfig(BaseConfig):
 
 
 class AggregatorConfig(BaseConfig):
+  """The aggregator's configuration."""
 
   enabled = c.Type(bool, default=False)
   """Is the aggregator enabled?"""
@@ -35,6 +39,9 @@ class AggregatorConfig(BaseConfig):
 
   metadata = c.Type(dict, default={})
   """Some metadata to append to the PDF document."""
+
+  covers = c.Choice(['all', 'none', 'limits', 'front', 'back'], default='all')
+  """The behavior of cover pages."""
 
 
 class Config(BaseConfig):
