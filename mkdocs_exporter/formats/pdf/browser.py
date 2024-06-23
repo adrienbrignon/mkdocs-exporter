@@ -15,7 +15,8 @@ class Browser:
   args = [
     '--disable-background-timer-throttling',
     '--disable-renderer-backgrounding',
-    '--allow-file-access-from-files'
+    '--allow-file-access-from-files',
+    '--font-render-hinting=none'
   ]
   """The browser's arguments..."""
 
@@ -38,6 +39,7 @@ class Browser:
     self.debug = options.get('debug', False)
     self.headless = options.get('headless', True)
     self.timeout = options.get('timeout', 60_000)
+    self.args = self.args + options.get('args', [])
     self.levels = {
       'warn': 'warning',
       'error': 'error',

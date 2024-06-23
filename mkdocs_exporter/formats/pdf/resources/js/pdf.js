@@ -3,6 +3,7 @@ window.PagedConfig = {
   /**
    * The settings.
    */
+  auto: true,
   settings: {
     maxChars: 1e32
   },

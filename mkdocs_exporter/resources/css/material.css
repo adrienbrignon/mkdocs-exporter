@@ -1,0 +1,6 @@
+/**
+ * @see https://github.com/adrienbrignon/mkdocs-exporter/issues/26
+ */
+.highlight span.filename+pre {
+  margin-top: 0 !important;
+}

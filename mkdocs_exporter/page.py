@@ -7,6 +7,9 @@ from mkdocs.structure.pages import Page as BasePage
 class Page(BasePage):
   """A page."""
 
+  index: int
+  """The page's index."""
+
   html: Optional[str] = None
   """The page's HTML content."""
 

@@ -63,15 +63,20 @@ class Plugin(BasePlugin[Config]):
     content = markdown
     covers = {**self.config.covers, **{k: os.path.join(os.path.dirname(config['config_file_path']), v) for k, v in page.meta.get('covers', {}).items()}}
 
-    if covers.get('front'):
-      with open(covers['front'], 'r', encoding='utf-8') as file:
-        content = self.renderer.cover(file.read()) + content
-    if covers.get('back'):
-      with open(covers['back'], 'r', encoding='utf-8') as file:
-        content = content + self.renderer.cover(file.read())
-
     for path in [path for path in covers.values() if path is not None]:
       self.watch.append(path)
+
+    if covers.get('front'):
+      page.formats['pdf']['covers'].append('front')
+
+      with open(covers['front'], 'r', encoding='utf-8') as file:
+        content = self.renderer.cover(file.read(), 'front') + content
+
+    if covers.get('back'):
+      page.formats['pdf']['covers'].append('back')
+
+      with open(covers['back'], 'r', encoding='utf-8') as file:
+        content = content + self.renderer.cover(file.read(), 'back')
 
     return content
 
@@ -85,11 +90,10 @@ class Plugin(BasePlugin[Config]):
     self.loop = asyncio.new_event_loop()
     self.renderer = Renderer(options=self.config)
 
-    if self.config.aggregator.get('enabled'):
-      self.aggregator = Aggregator(renderer=self.renderer)
-
     asyncio.set_event_loop(self.loop)
 
+    if self.config.aggregator.get('enabled'):
+      self.aggregator = Aggregator(renderer=self.renderer, config=self.config.get('aggregator'))
     for stylesheet in self.config.stylesheets:
       self.renderer.add_stylesheet(stylesheet)
     for script in self.config.scripts:
@@ -108,7 +112,10 @@ class Plugin(BasePlugin[Config]):
     fullpath = os.path.join(directory, filename)
 
     page.formats['pdf'] = {
+      'pages': 0,
+      'covers': [],
       'path': fullpath,
+      'skipped_pages': 0,
       'url': os.path.relpath(fullpath, config['site_dir'])
     }
 
@@ -131,9 +138,6 @@ class Plugin(BasePlugin[Config]):
 
         with open(page.formats['pdf']['path'], 'wb+') as file:
           file.write(pdf)
-
-        if self.aggregator:
-          self.aggregator.increment_total_pages(pages)
 
       self.tasks.append(render(page))
 
@@ -160,17 +164,19 @@ class Plugin(BasePlugin[Config]):
     output = self.config['aggregator']['output']
     self.pages = [page for page in self.pages if 'pdf' in page.formats]
 
-    logger.info("[mkdocs-exporter.pdf] Aggregating %d pages from %d documents together as '%s'...", self.aggregator.total_pages, len(self.pages), output)
+    self.aggregator.set_pages(self.pages)
 
-    async def render(page: Page, page_number: int) -> None:
-      html = self.aggregator.preprocess(self.renderer.preprocess(page), page_number=page_number)
+    logger.info("[mkdocs-exporter.pdf] Aggregating pages to '%s'...", output)
+
+    async def render(page: Page) -> None:
+      html = self.aggregator.preprocess(page)
       pdf, _ = await self.renderer.render(html)
 
       with open(page.formats['pdf']['path'] + '.aggregate', 'wb+') as file:
         file.write(pdf)
 
-    for n, page in enumerate(self.pages):
-      self.tasks.append(render(page, page_number=sum(page.formats['pdf']['pages'] for page in self.pages[:n])))
+    for page in self.pages:
+      self.tasks.append(render(page))
     while self.tasks:
       self.loop.run_until_complete(asyncio.gather(*concurrently(self.tasks, max(1, self.config.concurrency or 1))))
 
@@ -216,6 +222,9 @@ class Plugin(BasePlugin[Config]):
       return pages
 
     self.pages = flatten(nav)
+
+    for index, page in enumerate(self.pages):
+      page.index = index
 
 
   def _enabled(self, page: Page = None) -> bool:

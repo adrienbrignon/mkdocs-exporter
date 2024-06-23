@@ -4,6 +4,7 @@ import os
 
 from pypdf import PdfWriter
 
+from mkdocs_exporter.page import Page
 from mkdocs_exporter.formats.pdf.renderer import Renderer
 from mkdocs_exporter.formats.pdf.preprocessor import Preprocessor
 
@@ -12,10 +13,11 @@ class Aggregator:
   """Aggregates PDF documents together."""
 
 
-  def __init__(self, renderer: Renderer):
+  def __init__(self, renderer: Renderer, config: dict = {}) -> None:
     """The constructor."""
 
-    self.total_pages = 0
+    self.pages = []
+    self.config = config
     self.renderer = renderer
 
 
@@ -25,20 +27,50 @@ class Aggregator:
     self.path = path
     self.writer = PdfWriter()
 
-
-  def increment_total_pages(self, total_pages: int) -> Aggregator:
-    """Increments the total pages count."""
-
-    self.total_pages = self.total_pages + total_pages
+    return self
 
 
-  def preprocess(self, html: str, page_number: int = 1) -> str:
+  def set_pages(self, pages: list[Page]) -> Aggregator:
+    """Sets the pages."""
+
+    self.pages = pages
+    covers = self.config.get('covers', [])
+
+    for index, page in enumerate(self.pages):
+      if covers == 'none':
+        self._skip(page, ['front', 'back'])
+      elif covers == 'front':
+        self._skip(page, ['back'])
+      elif covers == 'back':
+        self._skip(page, ['front'])
+      elif covers == 'limits':
+        if index == 0:
+          self._skip(page, ['back'])
+        elif index == (len(self.pages) - 1):
+          self._skip(page, ['front'])
+        else:
+          self._skip(page, ['front', 'back'])
+
+    return self
+
+
+  def preprocess(self, page: Page) -> str:
     """Preprocesses the page."""
 
     preprocessor = Preprocessor()
 
-    preprocessor.preprocess(html)
-    preprocessor.metadata({'page': page_number, 'pages': self.total_pages})
+    preprocessor.preprocess(self.renderer.preprocess(page, disable=['teleport']))
+
+    if 'front' not in page.formats['pdf']['covers']:
+      preprocessor.remove('div.mkdocs-exporter-front-cover')
+    if 'back' not in page.formats['pdf']['covers']:
+      preprocessor.remove('div.mkdocs-exporter-back-cover')
+
+    preprocessor.teleport()
+    preprocessor.metadata({
+      'page': sum(page.formats['pdf']['pages'] - page.formats['pdf']['skipped_pages'] for page in self.pages[:page.index]),
+      'pages': sum(page.formats['pdf']['pages'] - page.formats['pdf']['skipped_pages'] for page in self.pages),
+    })
 
     return preprocessor.done()
 
@@ -61,5 +93,16 @@ class Aggregator:
     self.writer.close()
 
     self.writer = None
+
+    return self
+
+
+  def _skip(self, page: Page, covers: list[str]) -> Aggregator:
+    """Skip cover pages."""
+
+    for cover in covers:
+      if cover in page.formats['pdf']['covers']:
+        page.formats['pdf']['covers'].remove(cover)
+        page.formats['pdf']['skipped_pages'] = page.formats['pdf']['skipped_pages'] + 1
 
     return self

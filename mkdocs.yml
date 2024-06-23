@@ -47,7 +47,6 @@ extra:
 
 plugins:
   - privacy:
-      log_level: warn
   - mkdocstrings:
       handlers:
         python:
@@ -76,6 +75,9 @@ plugins:
   - social:
       cards_layout_options:
         background_color: '#EA2027'
+  - git-committers:
+      repository: adrienbrignon/mkdocs-exporter
+      branch: master
   - exporter:
       logging:
         level: debug
@@ -87,13 +89,13 @@ plugins:
             - resources/stylesheets/pdf.scss
           covers:
             front: resources/templates/covers/front.html.j2
+            back: resources/templates/covers/back.html.j2
           browser:
             debug: false
-            headless: true
           aggregator:
-            enabled: true
+            enabled: !ENV [MKDOCS_EXPORTER_PDF_AGGREGATOR, true]
             output: documentation.pdf
-            covers: limits
+            covers: front
       buttons:
         - title: View as PDF
           icon: material-file-move-outline

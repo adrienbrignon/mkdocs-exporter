@@ -3,6 +3,7 @@ ifeq ($(origin .RECIPEPREFIX), undefined)
 endif
 
 PDF = true
+PDF_AGGREGATOR = true
 DEBUG = false
 
 .RECIPEPREFIX = >
@@ -17,10 +18,10 @@ browser:
 > poetry run playwright install $(if $(FORCE),--force,) --with-deps
 
 build:
->@ MKDOCS_EXPORTER_PDF=$(PDF) poetry run mkdocs build
+>@ MKDOCS_EXPORTER_PDF=$(PDF) MKDOCS_EXPORTER_PDF_AGGREGATOR=$(PDF_AGGREGATOR) poetry run mkdocs build
 
 serve:
->@ MKDOCS_EXPORTER_PDF=$(PDF) poetry run mkdocs serve
+>@ MKDOCS_EXPORTER_PDF=$(PDF) MKDOCS_EXPORTER_PDF_AGGREGATOR=$(PDF_AGGREGATOR) poetry run mkdocs serve
 
 clean:
 > $(RM) -rf dist/

@@ -41,15 +41,15 @@ class Renderer(BaseRenderer):
     return self
 
 
-  def cover(self, template: str) -> Renderer:
+  def cover(self, template: str, location: str) -> Renderer:
     """Renders a cover."""
 
     content = template.strip('\n')
 
-    return f'<div data-decompose="true">{content}</div>' + '\n'
+    return f'<div class="mkdocs-exporter-{location}-cover" data-decompose="true">{content}</div>' + '\n'
 
 
-  def preprocess(self, page: Page) -> str:
+  def preprocess(self, page: Page, disable: list = []) -> str:
     """Preprocesses a page, returning HTML that can be printed."""
 
     preprocessor = Preprocessor(theme=page.theme)
@@ -67,9 +67,11 @@ class Renderer(BaseRenderer):
       with open(script, 'r', encoding='utf-8') as file:
         preprocessor.script(file.read(), path=stylesheet)
 
+    if 'teleport' not in disable:
+      preprocessor.teleport()
+
     preprocessor.script(importlib.resources.files(js).joinpath('pdf.js').read_text(encoding='utf-8'))
     preprocessor.script(importlib.resources.files(js).joinpath('pagedjs.min.js').read_text(encoding='utf-8'))
-    preprocessor.teleport()
     preprocessor.update_links(base, root)
 
     if self.options.get('url'):
