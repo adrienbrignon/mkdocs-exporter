@@ -136,13 +136,13 @@ markdown_extensions:
 
 extra_css:
   - assets/stylesheets/custom.css
-  - https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.7/katex.min.css
+  - https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css
 
 extra_javascript:
   - assets/scripts/katex.js
   - assets/scripts/mathjax.js
   - assets/scripts/mkdocs-exporter.js
-  - https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.7/katex.min.js
-  - https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.7/contrib/auto-render.min.js
+  - https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js
+  - https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js
   - https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js
-  - https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.6.1/mermaid.min.js
+  - https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.1/mermaid.min.js
