@@ -102,9 +102,9 @@ class Browser:
     pages = int(await context.locator('body').get_attribute('mkdocs-exporter-pages') or 0)
     pdf = await context.pdf(prefer_css_page_size=True, print_background=True, display_header_footer=False)
 
-    os.unlink(file)
-
     await context.close()
+
+    os.unlink(file.name)
 
     return (pdf, pages)
 
