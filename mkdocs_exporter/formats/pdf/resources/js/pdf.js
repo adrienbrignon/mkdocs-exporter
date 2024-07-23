@@ -36,7 +36,7 @@ window.PagedConfig = {
         }
 
         if ('page' in __MKDOCS_EXPORTER__ && pages.children[0]) {
-          pages.children[0].style.setProperty('counter-reset', `page ${__MKDOCS_EXPORTER__.page}`);
+          pages.children[0].style.setProperty('counter-set', `page ${__MKDOCS_EXPORTER__.page}`);
         }
       }
     }

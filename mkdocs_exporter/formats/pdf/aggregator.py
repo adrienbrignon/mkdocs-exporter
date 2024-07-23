@@ -68,7 +68,7 @@ class Aggregator:
 
     preprocessor.teleport()
     preprocessor.metadata({
-      'page': sum(page.formats['pdf']['pages'] - page.formats['pdf']['skipped_pages'] for page in self.pages[:page.index]),
+      'page': sum(page.formats['pdf']['pages'] - page.formats['pdf']['skipped_pages'] for page in self.pages[:page.index]) + 1,
       'pages': sum(page.formats['pdf']['pages'] - page.formats['pdf']['skipped_pages'] for page in self.pages),
     })
 
@@ -103,6 +103,7 @@ class Aggregator:
     for cover in covers:
       if cover in page.formats['pdf']['covers']:
         page.formats['pdf']['covers'].remove(cover)
+
         page.formats['pdf']['skipped_pages'] = page.formats['pdf']['skipped_pages'] + 1
 
     return self
