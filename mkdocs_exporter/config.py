@@ -44,7 +44,7 @@ class Config(BaseConfig):
   formats = c.SubConfig(FormatsConfig)
   """The formats to generate."""
 
-  buttons = c.ListOfItems(c.SubConfig(ButtonConfig))
+  buttons = c.ListOfItems(c.SubConfig(ButtonConfig), default=[])
   """The buttons to add."""
 
   logging = c.SubConfig(LoggingConfig)
