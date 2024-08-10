@@ -36,6 +36,7 @@ class Browser:
     self._launched = False
     self.playwright = None
     self.lock = asyncio.Lock()
+    self.channel = options.get('channel')
     self.debug = options.get('debug', False)
     self.headless = options.get('headless', True)
     self.timeout = options.get('timeout', 60_000)
@@ -61,7 +62,7 @@ class Browser:
       logger.info('[mkdocs-exporter.pdf] Launching browser...')
 
       self.playwright = await async_playwright().start()
-      self.browser = await self.playwright.chromium.launch(headless=self.headless, args=self.args)
+      self.browser = await self.playwright.chromium.launch(headless=self.headless, args=self.args, channel=self.channel)
       self.context = await self.browser.new_context()
 
       self.context.on('console', self.log)

@@ -46,7 +46,7 @@ class Renderer(BaseRenderer):
 
     content = template.strip('\n')
 
-    return f'<div class="mkdocs-exporter-{location}-cover" data-decompose="true">{content}</div>' + '\n'
+    return f'<div class="mkdocs-exporter-{location}-cover mkdocs-exporter-decompose">{content}</div>' + '\n'
 
 
   def preprocess(self, page: Page, disable: list = []) -> str:
@@ -57,6 +57,7 @@ class Renderer(BaseRenderer):
     root = base.replace(unquote(page.url).rstrip('/'), '', 1).rstrip('/')
 
     preprocessor.preprocess(page.html)
+    preprocessor.remove('.mkdocs-exporter-ignore')
     preprocessor.set_attribute('details:not([open])', 'open', 'open')
     page.theme.preprocess(preprocessor)
 

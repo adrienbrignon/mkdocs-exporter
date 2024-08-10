@@ -17,6 +17,9 @@ class BrowserConfig(BaseConfig):
   args = c.ListOfItems(c.Type(str), default=[])
   """Extra arguments to pass to the browser."""
 
+  channel = c.Choice(['chromium', 'chrome', 'chrome-beta', 'msedge', 'msedge-beta', 'msedge-dev'], default='chromium')
+  """The browser's channel to use."""
+
 
 class CoversConfig(BaseConfig):
   """The cover's configuration."""

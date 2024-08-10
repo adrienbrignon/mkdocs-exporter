@@ -5,7 +5,7 @@ import importlib
 
 from bs4 import BeautifulSoup
 
-from mkdocs_exporter.resources import css
+from mkdocs_exporter.resources.css import themes
 from mkdocs_exporter.theme import Theme as BaseTheme
 from mkdocs_exporter.preprocessor import Preprocessor
 from mkdocs_exporter.themes.material.icons import get_icon
@@ -22,7 +22,7 @@ class Theme(BaseTheme):
     """Preprocesses the DOM before rendering a document."""
 
     preprocessor.remove(['.md-sidebar.md-sidebar--primary', '.md-sidebar.md-sidebar--secondary', 'header.md-header', '.md-container > nav', 'nav.md-tags'])
-    preprocessor.stylesheet(importlib.resources.files(css).joinpath('material.css').read_text(encoding='utf-8'))
+    preprocessor.stylesheet(importlib.resources.files(themes).joinpath('material.css').read_text(encoding='utf-8'))
 
 
   def button(self, preprocessor: Preprocessor, title: str, icon: str, attributes: dict = {}):

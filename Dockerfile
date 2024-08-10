@@ -1,4 +1,4 @@
-FROM docker.io/ubuntu:22.04 as base
+FROM docker.io/ubuntu:24.04 as base
 WORKDIR /usr/src/app
 
 ENV PYTHONFAULTHANDLER=1 \
@@ -33,8 +33,11 @@ COPY pyproject.toml poetry.lock Makefile README.md ./
 
 RUN . .venv/bin/activate \
  && pip install poetry \
- && make install \
- && playwright install chrome
+ && make install
+
+RUN . .venv/bin/activate \
+ && poetry run playwright install chromium --with-deps --force \
+ && rm -rf /var/lib/apt/lists/*
 
 COPY . .
 

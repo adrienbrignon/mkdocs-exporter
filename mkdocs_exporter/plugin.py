@@ -83,7 +83,7 @@ class Plugin(BasePlugin[Config]):
       if resolve(button.get('enabled', True), page=page):
         preprocessor.button(**resolve(button, page=page))
 
-    preprocessor.remove('*[data-decompose="true"]')
+    preprocessor.remove('.mkdocs-exporter-decompose')
     preprocessor.teleport()
 
     return preprocessor.done()

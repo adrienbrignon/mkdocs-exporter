@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
+
 from mkdocs.structure.files import File
 from mkdocs.theme import Theme as BaseTheme
 
@@ -16,7 +17,7 @@ class Theme:
 
 
   @abstractmethod
-  def preprocess():
+  def preprocess(self, preprocessor):
     """Preprocess the page especially for this theme."""
 
     raise NotImplementedError()

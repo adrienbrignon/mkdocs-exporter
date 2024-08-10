@@ -45,9 +45,8 @@ class Plugin(BasePlugin[Config]):
 
     if not self._enabled():
       return
-    for path in [*self.config.stylesheets, *self.config.scripts]:
-      server.watch(path)
-    for path in set(os.path.normpath(path) for path in self.watch):
+
+    for path in set([*self.config.stylesheets, *self.config.scripts, *[os.path.normpath(path) for path in self.watch]]):
       server.watch(path)
 
     return server

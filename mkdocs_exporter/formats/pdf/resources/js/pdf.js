@@ -13,11 +13,13 @@ window.PagedConfig = {
    */
   before: async () => {
     if (window.MkDocsExporter) {
-      if (typeof window.MkDocsExporter.render === 'function') {
+      const fn = window.MkDocsExporter.before ?? window.MkDocsExporter.render;
+
+      if (typeof fn === 'function') {
         try {
-          await window.MkDocsExporter.render(this);
+          await fn(this);
         } catch (error) {
-          console.error('[mkdocs-exporter] Failed to invoke render function:', error);
+          console.error(`[mkdocs-exporter] Failed to invoke 'before' function:`, error);
         }
       }
     }
@@ -26,7 +28,7 @@ window.PagedConfig = {
   /**
    * Invoked once all pages have been rendered.
    */
-  after: () => {
+  after: async () => {
     if ('__MKDOCS_EXPORTER__' in window) {
       const pages = document.getElementsByClassName('pagedjs_pages')[0];
 
@@ -42,6 +44,19 @@ window.PagedConfig = {
     }
 
     document.body.setAttribute('mkdocs-exporter-pages', document.getElementsByClassName('pagedjs_page').length);
+
+    if (window.MkDocsExporter) {
+      const fn = window.MkDocsExporter.after;
+
+      if (typeof fn === 'function') {
+        try {
+          await fn(this);
+        } catch (error) {
+          console.error(`[mkdocs-exporter] Failed to invoke 'after' function:`, error);
+        }
+      }
+    }
+
     document.body.setAttribute('mkdocs-exporter', 'true');
   }
 

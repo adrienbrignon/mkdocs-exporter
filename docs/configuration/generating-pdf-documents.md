@@ -10,8 +10,11 @@ At the time of writing, *Playwright* has the following requirements:
   - Version 3.9 or higher
 - **Operating system**
   - Windows 10+, Windows Server 2016+ or Windows Subsystem for Linux (WSL)
-  - macOS 12 *Monterey*, macOS 13 *Ventura* or macOS 14 *Sonoma*
-  - Debian 11, Debian 12, Ubuntu 20.04 or Ubuntu 22.04, with `x86-64` or `arm64` architecture
+  - macOS 13 (Ventura) or macOS 14 (Sonoma)
+  - Debian 11 or 12 on `x86-64` or `arm64` architecture
+  - Ubuntu 20.04, 22.04 or 24.04 on `x86-64` or `arm64` architecture
+
+For more details, visit [Playwright's documentation](https://playwright.dev/python/docs/intro#system-requirements). 
 
 ???+ question "Is your operating system not compatible?"
 
@@ -21,7 +24,7 @@ At the time of writing, *Playwright* has the following requirements:
 To install the browser and its required dependencies, run:
 
 ```bash
-playwright install chrome --with-deps
+playwright install chromium --with-deps
 ```
 
 ## Configuration
@@ -221,6 +224,8 @@ plugins:
           attributes: !!python/name:mkdocs_exporter.formats.pdf.buttons.download.attributes
 ```
 
+You may find more details about buttons on [this page](../adding-buttons-to-pages).
+
 <div class="page-break-after"></div>
 
 ### Combining pages into a single PDF document
@@ -266,3 +271,24 @@ There are five available options for managing cover pages:
 - `back`: preserves every back cover page from all documents but removes all front cover pages.
 
 Choose the behavior that best aligns with your document aggregation needs to ensure the final PDF meets your requirements.
+
+### Ignoring and decomposing elements
+
+There are two CSS classes available that allow you to control which elements appear in both your documentation and the final PDF output:
+
+- The `mkdocs-exporter-ignore` class can be applied to any HTML element that should be excluded from the document **before** the conversion process begins. This allows you to filter out unnecessary content, such as navigation elements or sections intended only for online viewing, ensuring they don't appear in the final PDF.
+- The `mkdocs-exporter-decompose` class removes elements after the final PDF is generated. This is useful for tasks like managing cover pages or displaying content exclusively in the PDF. Elements with this class will be processed during rendering but will only appear in the final PDF, not on the web. This allows precise control over what content is included in each format.
+
+<div class="mkdocs-exporter-ignore" markdown="1">
+??? example "This content is only displayed on the web"
+
+    If you view this section in the PDF document, it will be presented differently.  
+    This element has the `mkdocs-exporter-ignore` class.
+</div>
+
+<div class="mkdocs-exporter-decompose" markdown="1">
+??? example "This content is only displayed on the PDF document"
+
+    If you view this section on the web, it will be presented differently.  
+    This element has the `mkdocs-exporter-decompose` class.
+</div>

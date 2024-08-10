@@ -5,7 +5,7 @@ import importlib
 
 from mkdocs.structure.files import File
 
-from mkdocs_exporter.resources import css
+from mkdocs_exporter.resources.css import themes
 from mkdocs_exporter.theme import Theme as BaseTheme
 from mkdocs_exporter.preprocessor import Preprocessor
 
@@ -21,7 +21,7 @@ class Theme(BaseTheme):
     """Preprocesses the DOM before rendering a document."""
 
     preprocessor.remove(['.rst-content > div[role="navigation"]', 'nav.wy-nav-side'])
-    preprocessor.stylesheet(importlib.resources.files(css).joinpath('readthedocs.css').read_text(encoding='utf-8'))
+    preprocessor.stylesheet(importlib.resources.files(themes).joinpath('readthedocs.css').read_text(encoding='utf-8'))
 
 
   def button(self, preprocessor: Preprocessor, title: str, icon: str, attributes: dict = {}):
