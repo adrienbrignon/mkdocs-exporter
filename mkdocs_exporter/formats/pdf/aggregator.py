@@ -44,7 +44,9 @@ class Aggregator:
       elif covers == 'back':
         self._skip(page, ['front'])
       elif covers == 'limits':
-        if index == 0:
+        if len(self.pages) == 1:
+          pass
+        elif index == 0:
           self._skip(page, ['back'])
         elif index == (len(self.pages) - 1):
           self._skip(page, ['front'])
