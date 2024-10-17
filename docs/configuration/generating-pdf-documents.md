@@ -169,6 +169,8 @@ This ensures a consistent look and feel across all your PDF documents without ne
 
     > :material-file-code: View the full content of this file [here](https://github.com/adrienbrignon/mkdocs-exporter/blob/master/resources/stylesheets/pdf.scss).
 
+If you use the template **front cover page**, do not forget to copy the  [background image](https://raw.githubusercontent.com/adrienbrignon/mkdocs-exporter/master/docs/assets/images/background.png)  `docs/assets/images/background.png` to your project.
+
 #### Per-page cover pages
 
 While global cover pages provide a uniform look across your documentation, you can override them on a per-page basis using front matter.  
