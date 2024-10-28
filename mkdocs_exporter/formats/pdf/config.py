@@ -40,7 +40,7 @@ class AggregatorConfig(BaseConfig):
   metadata = c.Type(dict, default={})
   """Some metadata to append to the PDF document."""
 
-  covers = c.Choice(['all', 'none', 'limits', 'front', 'back'], default='all')
+  covers = c.Choice(['all', 'none', 'limits', 'book', 'front', 'back'], default='all')
   """The behavior of cover pages."""
 
 

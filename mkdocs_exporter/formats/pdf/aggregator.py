@@ -52,6 +52,13 @@ class Aggregator:
           self._skip(page, ['front'])
         else:
           self._skip(page, ['front', 'back'])
+      elif covers == 'book':
+        if len(self.pages) == 1:
+          pass
+        elif index == 0:
+          self._skip(page, ['back'])
+        elif index < (len(self.pages) - 1):
+          self._skip(page, ['back'])
 
     return self
 

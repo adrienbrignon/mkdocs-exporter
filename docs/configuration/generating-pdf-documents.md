@@ -262,6 +262,7 @@ There are five available options for managing cover pages:
 - `all` (*default*): retains every cover page from all documents.
 - `none`: removes every cover page from the aggregated document, resulting in a compilation that includes only the main content of each PDF.
 - `limits`: retains the front cover of the first document and the back cover of the last document, while removing all other cover pages in between.
+- `book`: retains the front cover of the first document and the back cover of the last document, while keeping only the front cover pages in between.
 - `front`: preserves every front cover page from all documents but removes all back cover pages.
 - `back`: preserves every back cover page from all documents but removes all front cover pages.
 
