@@ -33,7 +33,7 @@ Additionally, it can combine your entire documentation into a single PDF file.
   - Combine all your pages into a single PDF document
   - Create [cover pages](https://adrienbrignon.github.io/mkdocs-exporter/setup/setting-up-documents/#setting-up-cover-pages)
   - Define custom scripts and stylesheets to customize your PDF documents
-  - Add [buttons](https://adrienbrignon.github.io/mkdocs-exporter/setup/setting-up-buttons/) to the top of your pages ([example](https://adrienbrignon.github.io/mkdocs-exporter/setup/setting-up-buttons/))
+  - Add [buttons](https://adrienbrignon.github.io/mkdocs-exporter/configuration/generating-pdf-documents/#buttons) to the top of your pages ([example](https://adrienbrignon.github.io/mkdocs-exporter/configuration/generating-pdf-documents/#buttons))
   - Compatible with [`material`](https://github.com/squidfunk/mkdocs-material) and [`readthedocs`](https://www.mkdocs.org/user-guide/choosing-your-theme/#readthedocs) themes
     - Check out sample PDF documents [here](./examples/themes)
 - ⭐ **Powerful** - it uses a headless browser and some awesome libraries under the hood to generate PDF documents
