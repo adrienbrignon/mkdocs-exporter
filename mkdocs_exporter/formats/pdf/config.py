@@ -8,6 +8,9 @@ class BrowserConfig(BaseConfig):
   debug = c.Type(bool, default=False)
   """Should console messages sent to the browser be logged?"""
 
+  channel = c.Choice(['', 'chrome', 'msedge', 'chrome-beta', 'msedge-beta', 'msedge-dev'], default='')
+  """The browser channel to use. (https://playwright.dev/python/docs/browsers#google-chrome--microsoft-edge)"""
+
   headless = c.Type(bool, default=True)
   """Should the browser start in headless mode?"""
 
