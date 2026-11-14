@@ -94,7 +94,7 @@ select = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["S101"]
+"tests/**" = ["S101", "S603"]
 
 [tool.mypy]
 python_version = "3.11"
@@ -107,3 +107,10 @@ check_untyped_defs = true
 [[tool.mypy.overrides]]
 module = ["material.*", "materialx.*"]
 ignore_missing_imports = true
+
+[tool.pytest]
+minversion = "9.0"
+testpaths = ["tests"]
+addopts = ["-ra", "--strict-markers", "--strict-config"]
+xfail_strict = true
+markers = ["browser: requires Chromium (uv run playwright install chromium)"]
