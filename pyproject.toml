@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mkdocs-exporter"
-version = "7.0.0.dev0"
+version = "7.0.0"
 description = "A highly-configurable plugin for MkDocs that exports your pages to PDF files."
 readme = "README.md"
 license = "MIT"
@@ -41,6 +41,7 @@ Homepage = "https://adrienbrignon.github.io/mkdocs-exporter"
 Documentation = "https://adrienbrignon.github.io/mkdocs-exporter"
 Repository = "https://github.com/adrienbrignon/mkdocs-exporter"
 Issues = "https://github.com/adrienbrignon/mkdocs-exporter/issues"
+Changelog = "https://github.com/adrienbrignon/mkdocs-exporter/blob/master/CHANGELOG.md"
 
 [project.entry-points."mkdocs.plugins"]
 exporter = "mkdocs_exporter.plugin:Plugin"
