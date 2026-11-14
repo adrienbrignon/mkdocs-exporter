@@ -87,6 +87,27 @@ jobs:
       - name: Run tests
         run: uv run --no-sync pytest
 
+  minimal:
+    name: Test (without Material for MkDocs)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v10
+        with:
+          enable-cache: true
+      - name: Install dependencies
+        run: |
+          uv sync --locked --no-default-groups
+          uv pip install pytest pymdown-extensions
+      - name: Install browser
+        run: uv run --no-sync playwright install --with-deps --only-shell chromium
+      - name: Run unit tests
+        run: uv run --no-sync pytest tests/unit
+      - name: Run integration tests (readthedocs theme)
+        run: uv run --no-sync pytest tests/integration -k readthedocs
+
   properdocs:
     name: Test (ProperDocs)
     runs-on: ubuntu-latest
