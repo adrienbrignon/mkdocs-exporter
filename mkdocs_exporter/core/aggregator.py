@@ -29,6 +29,7 @@ from mkdocs_exporter.logging import logger
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from mkdocs_exporter.core.browser import PrintResult
     from mkdocs_exporter.core.renderer import Outcome, Renderer
 
 COVER_MODES = ("all", "none", "limits", "book", "front", "back")
@@ -559,12 +560,14 @@ async def aggregate(
 
     parts = plan(documents, layouts, aggregation.covers, aggregation.start)
     toc = _toc(aggregation, nav, parts, site)
-    attempts = 4 if aggregation.toc is not None else 3
+    results: dict[str, Outcome] = {}
+    rendered: dict[str, Pass] = {}
 
-    for attempt in range(attempts):
+    def passes() -> dict[str, Pass]:
         total = total_pages(parts)
-        passes = [
-            Pass(
+
+        return {
+            part.document.id: Pass(
                 covers=part.covers,
                 page=part.first_page,
                 pages=total,
@@ -574,27 +577,52 @@ async def aggregate(
                 toc=toc if index == 0 else None,
             )
             for index, part in enumerate(parts)
-        ]
-        results = await renderer.render_all(documents, passes)
-        failures = [outcome for outcome in results if outcome.error is not None]
+        }
 
-        if failures:
-            return failures
+    async def render(pending: Sequence[Document], parameters: dict[str, Pass]) -> bool:
+        """Renders documents, returning whether they all succeeded."""
+
+        outcomes = await renderer.render_all(
+            pending, [parameters[document.id] for document in pending]
+        )
+
+        for outcome in outcomes:
+            results[outcome.document.id] = outcome
+            rendered[outcome.document.id] = parameters[outcome.document.id]
+
+        return all(outcome.error is None for outcome in outcomes)
+
+    if toc is not None and len(documents) > 1:
+        # The length of the table of contents shifts every following page: measure it
+        # first, so that the other documents are numbered right from the start.
+        if not await render(documents[:1], passes()):
+            return _failures(results)
+
+        layout = _layout(results[documents[0].id])
+        parts = renumber(
+            parts, [layout, *(part.layout for part in parts[1:])], aggregation.start
+        )
+        toc = _toc(aggregation, nav, parts, site)
+
+    attempts = 4 if aggregation.toc is not None else 3
+
+    for attempt in range(attempts):
+        # Only documents whose numbering (or table of contents) changed are rendered.
+        parameters = passes()
+        pending = [d for d in documents if rendered.get(d.id) != parameters[d.id]]
+
+        if not await render(pending, parameters):
+            return _failures(results)
 
         actual = renumber(
-            parts,
-            [
-                outcome.result.layout
-                for outcome in results
-                if outcome.result is not None
-            ],
-            aggregation.start,
+            parts, [_layout(results[d.id]) for d in documents], aggregation.start
         )
         updated = _toc(aggregation, nav, actual, site)
         stable = [p.pages for p in actual] == [
             p.pages for p in parts
         ] and updated == toc
         parts = actual
+        toc = updated
 
         if stable:
             break
@@ -607,9 +635,8 @@ async def aggregate(
             break
 
         logger.debug("[mkdocs-exporter.pdf] Page numbering of '%s' changed", output)
-        toc = updated
 
-    book = Book(parts, [outcome.result.pdf for outcome in results if outcome.result])
+    book = Book(parts, [_result(results[d.id]).pdf for d in documents])
     base = renderer.options.links or RELATIVE_LINKS_BASE
 
     book.anchor()
@@ -618,6 +645,27 @@ async def aggregate(
     book.write(site.directory / output, aggregation.metadata)
 
     return []
+
+
+def _result(outcome: Outcome) -> PrintResult:
+    """The result of a successful rendering."""
+
+    if outcome.result is None:  # pragma: no cover - failures are handled beforehand
+        raise RuntimeError(f"'{outcome.document.id}' was not rendered")
+
+    return outcome.result
+
+
+def _layout(outcome: Outcome) -> Layout:
+    """The layout of a successfully rendered document."""
+
+    return _result(outcome).layout
+
+
+def _failures(results: Mapping[str, Outcome]) -> list[Outcome]:
+    """The documents that could not be rendered."""
+
+    return [outcome for outcome in results.values() if outcome.error is not None]
 
 
 def _toc(
