@@ -147,7 +147,7 @@ jobs:
           import glob, zipfile
 
           names = zipfile.ZipFile(glob.glob("dist/*.whl")[0]).namelist()
-          required = ("pagedjs.min.js", "pdf.js", "material.css", "readthedocs.css")
+          required = ("pagedjs.min.js", "pdf.js", "material.js", "toc.html", "base.css", "material.css", "readthedocs.css")
           missing = [r for r in required if not any(n.endswith(r) for n in names)]
           assert not missing, f"missing from wheel: {missing}"
           PY

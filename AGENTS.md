@@ -42,11 +42,14 @@ Before considering a change done, run the linter, the formatter check, the type 
 | `core/server.py` | Loopback HTTP server exposing the built site (and in-memory pages) to the browser |
 | `core/browser.py` | Playwright/Chromium: prints a URL to PDF, collects diagnostics |
 | `core/renderer.py` | Prepares a page's print HTML and renders documents concurrently |
-| `core/aggregator.py` | Cover selection, page numbering and merging of the combined document (pypdf) |
+| `core/exporter.py` | Orchestrates an export: server, browser, documents, then aggregations |
+| `core/aggregator.py` | Combined documents: covers, numbering, bookmarks, internal links, table of contents (pypdf) |
+| `core/margins.py` | Headers and footers compiled to CSS page margin boxes |
 | `core/themes/` | Theme adapters (`material`, `readthedocs`, generic fallback) |
 | `core/resources/` | `pdf.js` (Paged.js driver), theme scripts, print CSS, vendored Paged.js |
 | `core/runner.py` | Runs coroutines on an event loop owned by the exporter |
-| `mkdocs_exporter/plugin.py` | The MkDocs plugin (`exporter`): adapts MkDocs pages to core documents |
+| `mkdocs_exporter/plugin.py` | The MkDocs plugin (`exporter`): adapts MkDocs pages and navigation to core data |
+| `mkdocs_exporter/covers.py` | Renders cover templates with Jinja (through mkdocs-macros when enabled) |
 | `mkdocs_exporter/config.py`, `formats/pdf/config.py` | Configuration schema (MkDocs `config_options`) |
 | `mkdocs_exporter/formats/pdf/buttons/download.py` | Callables referenced from users' `mkdocs.yml` via `!!python/name:` |
 | `tests/unit/`, `tests/integration/` | Unit tests; end-to-end tests building `tests/fixtures/site` (marker `browser`) |
@@ -57,15 +60,16 @@ Before considering a change done, run the linter, the formatter check, the type 
 1. `on_startup` / `on_config`: the theme adapter is resolved and per-build state is reset (MkDocs keeps
    the plugin instance across `mkdocs serve` rebuilds because it defines `on_startup`). PDF documents are
    not generated while serving unless `formats.pdf.serve` is enabled.
-2. `on_nav` records the navigation order; `on_pre_page` declares `page.formats["pdf"]`;
-   `on_page_markdown` injects cover pages into the Markdown.
-3. `on_post_page`: the page's HTML is captured (priority 100, before other plugins), then buttons are
-   added to the website's HTML and cover pages removed from it (priority -100).
-4. `on_post_build` (priority -100, after other plugins wrote their files): a `Server` exposes the site
-   directory, a `Browser` is launched and the `Renderer` prints every page concurrently. Each page's print
-   HTML is served from memory at the page's own URL (with a query string), so relative URLs resolve.
-5. The aggregator plans the combined document from the measured layouts (removed covers, page offsets),
-   renders the pages again with continuous numbering (again if a page count changed) and merges them.
+2. `on_nav` records the navigation (order, sections); `on_pre_page` declares `page.formats["pdf"]`.
+3. `on_post_page`: the page's HTML is captured and its cover templates rendered (priority 100, before
+   other plugins), then buttons are added to the website's HTML (priority -100).
+4. `on_post_build` (priority -100, after other plugins wrote their files): the core `Exporter` starts a
+   `Server` exposing the site directory and a `Browser`, and the `Renderer` prints every page
+   concurrently. Each page's print HTML (covers, stylesheets, headers/footers, scripts) is served from
+   memory at the page's own URL (with a query string), so relative URLs resolve.
+5. For each aggregation, pages are rendered again with continuous numbering (again while page counts or
+   the table of contents change), merged with pypdf, then bookmarks and internal links are added from the
+   positions of headings and anchors reported by the browser.
 
 **Browser contract** (see `core/resources/js/pdf.js`): `pdf.js` is the first script of the page. It
 records uncaught errors by phase, loads Paged.js after the website's scripts initialized (`load` event),

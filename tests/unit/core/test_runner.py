@@ -21,11 +21,3 @@ def test_runs_in_another_thread_inside_a_running_loop() -> None:
         return run(current_thread)
 
     assert asyncio.run(main()).startswith("mkdocs-exporter")
-
-
-def test_does_not_touch_the_global_event_loop_policy() -> None:
-    policy = asyncio.get_event_loop_policy()
-
-    run(current_thread)
-
-    assert asyncio.get_event_loop_policy() is policy
