@@ -2,6 +2,23 @@ from mkdocs.config import config_options as c
 from mkdocs.config.base import Config as BaseConfig
 
 
+class Stylesheet(c.File):
+  """A stylesheet (plain CSS only)."""
+
+  def run_validation(self, value: object) -> str:
+    """Validates the stylesheet's location."""
+
+    path = super().run_validation(value)
+
+    if path.lower().endswith(('.scss', '.sass')):
+      raise c.ValidationError(
+        f"Sass stylesheets are no longer supported ('{value}'), use plain CSS instead. "
+        'See https://adrienbrignon.github.io/mkdocs-exporter/migration/v7/'
+      )
+
+    return path
+
+
 class BrowserConfig(BaseConfig):
   """The browser's configuration."""
 
@@ -56,7 +73,7 @@ class Config(BaseConfig):
   concurrency = c.Type(int, default=4)
   """The maximum number of concurrent PDF generation tasks."""
 
-  stylesheets = c.ListOfItems(c.File(exists=True), default=[])
+  stylesheets = c.ListOfItems(Stylesheet(exists=True), default=[])
   """A list of custom stylesheets to apply before rendering documents."""
 
   scripts = c.ListOfItems(c.File(exists=True), default=[])

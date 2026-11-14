@@ -39,7 +39,6 @@ Additionally, it can combine your entire documentation into a single PDF file.
 - ⭐ **Powerful** - it uses a headless browser and some awesome libraries under the hood to generate PDF documents
   - [*Playwright*](https://github.com/microsoft/playwright-python) to automate browsers
   - [*Paged.js*](https://github.com/pagedjs/pagedjs) polyfills included (provide [Paged Media](https://www.w3.org/TR/css-page-3/) and [Generated Content](https://www.w3.org/TR/css-gcpm-3/) CSS modules)
-  - [*Sass*](https://sass-lang.com/) support included for your stylesheets
 
 ## Prerequisites
 
@@ -66,7 +65,7 @@ plugins:
           enabled: !ENV [MKDOCS_EXPORTER_PDF, true]
           concurrency: 8
           stylesheets:
-            - resources/stylesheets/pdf.scss
+            - resources/stylesheets/pdf.css
           covers:
             front: resources/templates/covers/front.html.j2
             back: resources/templates/covers/back.html.j2

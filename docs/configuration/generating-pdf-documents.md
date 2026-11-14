@@ -124,7 +124,7 @@ This ensures a consistent look and feel across all your PDF documents without ne
           formats:
             pdf:
               stylesheets:
-                - resources/stylesheets/pdf.scss
+                - resources/stylesheets/pdf.css
               covers:
                 front: resources/templates/covers/front.html.j2
                 back: resources/templates/covers/back.html.j2
@@ -158,16 +158,16 @@ This ensures a consistent look and feel across all your PDF documents without ne
 
     > :material-file-code: View the full content of this file [here](https://github.com/adrienbrignon/mkdocs-exporter/blob/master/resources/templates/covers/back.html.j2).
 
-=== "`resources/stylesheets/pdf.scss`"
+=== "`resources/stylesheets/pdf.css`"
 
-    ```scss
+    ```css
     @page {
       size: A4;
       margin: 1.20cm;
     }
     ```
 
-    > :material-file-code: View the full content of this file [here](https://github.com/adrienbrignon/mkdocs-exporter/blob/master/resources/stylesheets/pdf.scss).
+    > :material-file-code: View the full content of this file [here](https://github.com/adrienbrignon/mkdocs-exporter/blob/master/resources/stylesheets/pdf.css).
 
 If you use the template **front cover page**, do not forget to copy the  [background image](https://raw.githubusercontent.com/adrienbrignon/mkdocs-exporter/master/docs/assets/images/background.png)  `docs/assets/images/background.png` to your project.
 

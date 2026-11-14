@@ -1,11 +1,9 @@
 from __future__ import annotations
 
 import os
-import sass
 import json
 
 from typing import Union
-from sass import CompileError
 from urllib.parse import urlparse
 from bs4 import BeautifulSoup, Tag
 
@@ -90,18 +88,9 @@ class Preprocessor():
   def stylesheet(self, stylesheet: str, **kwargs) -> Preprocessor:
     """Appends a stylesheet to the document's head."""
 
-    css = None
-
-    try:
-      css = sass.compile(string=stylesheet, output_style='compressed')
-    except CompileError as error:
-      logger.error(error)
-
-      return self
-
     element = self.html.new_tag('style', type='text/css', rel='stylesheet', **kwargs)
 
-    element.string = css
+    element.string = stylesheet
 
     self.html.head.append(element)
 
