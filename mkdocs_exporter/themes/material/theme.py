@@ -4,9 +4,9 @@ import importlib
 
 from bs4 import BeautifulSoup
 
+from mkdocs_exporter.preprocessor import Preprocessor
 from mkdocs_exporter.resources import css
 from mkdocs_exporter.theme import Theme as BaseTheme
-from mkdocs_exporter.preprocessor import Preprocessor
 from mkdocs_exporter.themes.material.icons import get_icon
 
 
@@ -35,10 +35,16 @@ class Theme(BaseTheme):
         )
 
     def button(
-        self, preprocessor: Preprocessor, title: str, icon: str, attributes: dict = {}
+        self,
+        preprocessor: Preprocessor,
+        title: str,
+        icon: str,
+        attributes: dict | None = None,
     ):
         """Inserts a custom themed button."""
 
+        if attributes is None:
+            attributes = {}
         tags = preprocessor.html.find("nav", {"class": "md-tags"})
         button = preprocessor.html.new_tag(
             "a",

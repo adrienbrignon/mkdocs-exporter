@@ -1,3 +1,6 @@
+from typing import ClassVar
+
+
 class HTMLStash:
     """Markdown HTML stash stub."""
 
@@ -22,7 +25,7 @@ class Markdown:
     """Markdown stub."""
 
     htmlStash = HTMLStash()
-    inlinePatterns = {"emoji": MarkdownEmoji()}
+    inlinePatterns: ClassVar[dict] = {"emoji": MarkdownEmoji()}
 
 
 def get_icon(name):

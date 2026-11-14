@@ -1,4 +1,4 @@
-from typing import Callable
+from collections.abc import Callable
 
 from mkdocs.config import config_options as c
 from mkdocs.config.base import Config as BaseConfig

@@ -1,20 +1,19 @@
 from __future__ import annotations
 
-import os
 import json
-
-from typing import Union
+import os
 from urllib.parse import urlparse
+
 from bs4 import BeautifulSoup, Tag
 
-from mkdocs_exporter.theme import Theme
 from mkdocs_exporter.logging import logger
+from mkdocs_exporter.theme import Theme
 
 
 class Preprocessor:
     """The HTML preprocessor."""
 
-    def __init__(self, html: str = None, **kwargs):
+    def __init__(self, html: str | None = None, **kwargs):
         """The constructor."""
 
         self.html = None
@@ -65,17 +64,19 @@ class Preprocessor:
         return self
 
     def button(
-        self, title: str, icon: str, attributes: dict = {}, **kwargs
+        self, title: str, icon: str, attributes: dict | None = None, **kwargs
     ) -> Preprocessor:
         """Adds a button at the top of the page."""
 
+        if attributes is None:
+            attributes = {}
         if kwargs.get("enabled", True) and self.theme:
             self.theme.button(self, title, icon, attributes)
 
         return self
 
     def script(
-        self, script: str = None, type: str = "text/javascript", **kwargs
+        self, script: str | None = None, type: str = "text/javascript", **kwargs
     ) -> Preprocessor:
         """Appends a script to the document's body."""
 
@@ -100,7 +101,7 @@ class Preprocessor:
 
         return self
 
-    def remove(self, selectors: Union[str, list[str]]) -> Preprocessor:
+    def remove(self, selectors: str | list[str]) -> Preprocessor:
         """Removes some elements."""
 
         if isinstance(selectors, str):
@@ -120,7 +121,7 @@ class Preprocessor:
 
         return self
 
-    def update_links(self, base: str, root: str = None) -> Preprocessor:
+    def update_links(self, base: str, root: str | None = None) -> Preprocessor:
         """Updates links to their new base location."""
 
         for element in self.html.find_all("link", href=True):
@@ -144,7 +145,7 @@ class Preprocessor:
 
         return result
 
-    def _resolve_link(self, url: str, base: str, root: str = None) -> str:
+    def _resolve_link(self, url: str, base: str, root: str | None = None) -> str:
         """Resolves a link to its new base location."""
 
         if bool(urlparse(url).netloc):

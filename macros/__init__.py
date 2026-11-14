@@ -1,5 +1,6 @@
-import mkdocs_exporter
 import importlib.metadata
+
+import mkdocs_exporter
 
 
 def define_env(env):

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
+
 from mkdocs.structure.files import File
 from mkdocs.theme import Theme as BaseTheme
 
@@ -20,7 +21,9 @@ class Theme:
         raise NotImplementedError()
 
     @abstractmethod
-    def button(self, preprocessor, title: str, icon: str, attributes: dict = {}):
+    def button(
+        self, preprocessor, title: str, icon: str, attributes: dict | None = None
+    ):
         """Inserts a custom themed button."""
 
         raise NotImplementedError()

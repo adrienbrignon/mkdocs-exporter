@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-import os
 import asyncio
-
+import os
 from tempfile import NamedTemporaryFile
+from typing import ClassVar
+
 from playwright.async_api import async_playwright
 
 from mkdocs_exporter.logging import logger
@@ -12,7 +13,7 @@ from mkdocs_exporter.logging import logger
 class Browser:
     """A web browser instance."""
 
-    args = [
+    args: ClassVar[list[str]] = [
         "--disable-background-timer-throttling",
         "--disable-renderer-backgrounding",
         "--allow-file-access-from-files",
@@ -26,9 +27,11 @@ class Browser:
 
         return self._launched
 
-    def __init__(self, options: dict = {}):
+    def __init__(self, options: dict | None = None):
         """The constructor."""
 
+        if options is None:
+            options = {}
         self.browser = None
         self.context = None
         self._launched = False
@@ -84,16 +87,14 @@ class Browser:
         return self
 
     async def print(self, html: str) -> tuple[bytes, int]:
-        """Prints some HTML to PDF and returns the PDF and the number of pages printed."""
+        """Prints some HTML to PDF, returning the PDF and its number of pages."""
 
         pages = 0
         context = await self.context.new_page()
-        file = NamedTemporaryFile(
+        with NamedTemporaryFile(
             suffix=".html", mode="w+", encoding="utf-8", delete=False
-        )
-
-        file.write(html)
-        file.close()
+        ) as file:
+            file.write(html)
 
         await context.goto(
             "file://" + file.name, wait_until="networkidle", timeout=self.timeout
@@ -131,6 +132,8 @@ class Browser:
             text = msg.text[len(prefix) :].strip()
 
         if self.debug or level == "error":
+            title = await msg.page.title()
+
             getattr(logger, level)(
-                f"[mkdocs-exporter.pdf.browser] ({msg.type}) {await msg.page.title()}\n{text}"
+                f"[mkdocs-exporter.pdf.browser] ({msg.type}) {title}\n{text}"
             )

@@ -1,19 +1,16 @@
+import asyncio
 import os
 import types
-import asyncio
 
-from typing import Optional
-
-from mkdocs.plugins import event_priority
 from mkdocs.livereload import LiveReloadServer
-from mkdocs.plugins import BasePlugin, CombinedEvent
+from mkdocs.plugins import BasePlugin, CombinedEvent, event_priority
 
-from mkdocs_exporter.page import Page
-from mkdocs_exporter.helpers import concurrently
-from mkdocs_exporter.logging import logger
+from mkdocs_exporter.formats.pdf.aggregator import Aggregator
 from mkdocs_exporter.formats.pdf.config import Config
 from mkdocs_exporter.formats.pdf.renderer import Renderer
-from mkdocs_exporter.formats.pdf.aggregator import Aggregator
+from mkdocs_exporter.helpers import concurrently
+from mkdocs_exporter.logging import logger
+from mkdocs_exporter.page import Page
 
 
 class Plugin(BasePlugin[Config]):
@@ -23,10 +20,10 @@ class Plugin(BasePlugin[Config]):
         """The constructor."""
 
         self.watch: list[str] = []
-        self.renderer: Optional[Renderer] = None
+        self.renderer: Renderer | None = None
         self.tasks: list[types.CoroutineType] = []
-        self.aggregator: Optional[Aggregator] = None
-        self.loop: Optional[asyncio.AbstractEventLoopPolicy] = None
+        self.aggregator: Aggregator | None = None
+        self.loop: asyncio.AbstractEventLoopPolicy | None = None
         self.on_post_build = CombinedEvent(
             self._on_post_build_1, self._on_post_build_2, self._on_post_build_3
         )
@@ -46,7 +43,7 @@ class Plugin(BasePlugin[Config]):
             return
         for path in [*self.config.stylesheets, *self.config.scripts]:
             server.watch(path)
-        for path in set(os.path.normpath(path) for path in self.watch):
+        for path in {os.path.normpath(path) for path in self.watch}:
             server.watch(path)
 
         return server
@@ -75,13 +72,13 @@ class Plugin(BasePlugin[Config]):
         if covers.get("front"):
             page.formats["pdf"]["covers"].append("front")
 
-            with open(covers["front"], "r", encoding="utf-8") as file:
+            with open(covers["front"], encoding="utf-8") as file:
                 content = self.renderer.cover(file.read(), "front") + "\n" + content
 
         if covers.get("back"):
             page.formats["pdf"]["covers"].append("back")
 
-            with open(covers["back"], "r", encoding="utf-8") as file:
+            with open(covers["back"], encoding="utf-8") as file:
                 content = content + "\n" + self.renderer.cover(file.read(), "back")
 
         return content
@@ -128,7 +125,7 @@ class Plugin(BasePlugin[Config]):
         }
 
     @event_priority(90)
-    def on_post_page(self, html: str, page: Page, **kwargs) -> Optional[str]:
+    def on_post_page(self, html: str, page: Page, **kwargs) -> str | None:
         """Invoked after a page has been built."""
 
         if not self._enabled(page) and "pdf" in page.formats:
@@ -245,7 +242,4 @@ class Plugin(BasePlugin[Config]):
 
         if not self.config.enabled:
             return False
-        if page and not page.meta.get("pdf", not self.config.explicit):
-            return False
-
-        return True
+        return not (page and not page.meta.get("pdf", not self.config.explicit))

@@ -4,17 +4,19 @@ import os
 
 from pypdf import PdfWriter
 
-from mkdocs_exporter.page import Page
-from mkdocs_exporter.formats.pdf.renderer import Renderer
 from mkdocs_exporter.formats.pdf.preprocessor import Preprocessor
+from mkdocs_exporter.formats.pdf.renderer import Renderer
+from mkdocs_exporter.page import Page
 
 
 class Aggregator:
     """Aggregates PDF documents together."""
 
-    def __init__(self, renderer: Renderer, config: dict = {}) -> None:
+    def __init__(self, renderer: Renderer, config: dict | None = None) -> None:
         """The constructor."""
 
+        if config is None:
+            config = {}
         self.pages = []
         self.config = config
         self.renderer = renderer
@@ -52,9 +54,7 @@ class Aggregator:
             elif covers == "book":
                 if len(self.pages) == 1:
                     pass
-                elif index == 0:
-                    self._skip(page, ["back"])
-                elif index < (len(self.pages) - 1):
+                elif index == 0 or index < (len(self.pages) - 1):
                     self._skip(page, ["back"])
 
         return self
@@ -95,9 +95,11 @@ class Aggregator:
 
         return self
 
-    def save(self, metadata={}) -> Aggregator:
+    def save(self, metadata=None) -> Aggregator:
         """Saves the aggregated document."""
 
+        if metadata is None:
+            metadata = {}
         os.makedirs(os.path.dirname(self.path), exist_ok=True)
 
         self.writer.add_metadata({"/Producer": "MkDocs Exporter", **metadata})

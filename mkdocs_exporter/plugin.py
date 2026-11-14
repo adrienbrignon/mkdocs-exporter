@@ -1,18 +1,15 @@
 import logging
 
-from typing import Type
-
-from mkdocs.plugins import event_priority
+from mkdocs.plugins import BasePlugin, CombinedEvent, event_priority
 from mkdocs.structure.files import File, Files
-from mkdocs.plugins import BasePlugin, CombinedEvent
 
-from mkdocs_exporter.page import Page
 from mkdocs_exporter.config import Config
-from mkdocs_exporter.logging import logger
+from mkdocs_exporter.formats.pdf.plugin import Plugin as PDFFormatPlugin
 from mkdocs_exporter.helpers import resolve
+from mkdocs_exporter.logging import logger
+from mkdocs_exporter.page import Page
 from mkdocs_exporter.preprocessor import Preprocessor
 from mkdocs_exporter.themes.factory import Factory as ThemeFactory
-from mkdocs_exporter.formats.pdf.plugin import Plugin as PDFFormatPlugin
 
 
 class Plugin(BasePlugin[Config]):
@@ -33,7 +30,7 @@ class Plugin(BasePlugin[Config]):
         if "level" in self.config.logging:
             logger.setLevel(logging.getLevelName(self.config.logging.level.upper()))
 
-        def register(key, plugin: Type[Plugin], config_data: dict) -> Plugin:
+        def register(key, plugin: type[Plugin], config_data: dict) -> Plugin:
             """Registers a MkDocs plugin dynamically."""
 
             key = "exporter-" + key
@@ -96,7 +93,7 @@ class Plugin(BasePlugin[Config]):
         for stylesheet in self.stylesheets:
             content = None
 
-            with open(stylesheet.abs_dest_path, "r", encoding="utf-8") as reader:
+            with open(stylesheet.abs_dest_path, encoding="utf-8") as reader:
                 content = self.theme.stylesheet(stylesheet, reader.read())
             with open(stylesheet.abs_dest_path, "w+", encoding="utf-8") as writer:
                 writer.write(content)

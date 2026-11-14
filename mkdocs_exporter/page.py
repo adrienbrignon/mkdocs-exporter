@@ -1,7 +1,6 @@
-from typing import Optional
+from mkdocs.structure.pages import Page as BasePage
 
 from mkdocs_exporter.theme import Theme
-from mkdocs.structure.pages import Page as BasePage
 
 
 class Page(BasePage):
@@ -10,11 +9,11 @@ class Page(BasePage):
     index: int
     """The page's index."""
 
-    html: Optional[str] = None
+    html: str | None = None
     """The page's HTML content."""
 
     formats: dict[str, dict]
-    """The documents that have been generated for this page (format as key, path to the file as value)."""
+    """The documents generated for this page (format as key, details as value)."""
 
     theme: Theme = None
     """The theme of the page."""

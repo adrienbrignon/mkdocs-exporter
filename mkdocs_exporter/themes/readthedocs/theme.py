@@ -4,9 +4,9 @@ import importlib
 
 from mkdocs.structure.files import File
 
+from mkdocs_exporter.preprocessor import Preprocessor
 from mkdocs_exporter.resources import css
 from mkdocs_exporter.theme import Theme as BaseTheme
-from mkdocs_exporter.preprocessor import Preprocessor
 
 
 class Theme(BaseTheme):
@@ -28,10 +28,16 @@ class Theme(BaseTheme):
         )
 
     def button(
-        self, preprocessor: Preprocessor, title: str, icon: str, attributes: dict = {}
+        self,
+        preprocessor: Preprocessor,
+        title: str,
+        icon: str,
+        attributes: dict | None = None,
     ):
         """Inserts a custom themed button."""
 
+        if attributes is None:
+            attributes = {}
         button = preprocessor.html.new_tag(
             "a",
             title=title,

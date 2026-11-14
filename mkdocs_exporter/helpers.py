@@ -1,7 +1,6 @@
 import asyncio
-
-from typing import Coroutine, Sequence
 from collections import UserDict
+from collections.abc import Coroutine, Sequence
 
 
 def resolve(object, *args, **kwargs):

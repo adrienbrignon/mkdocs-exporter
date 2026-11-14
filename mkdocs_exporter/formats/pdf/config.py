@@ -12,7 +12,8 @@ class Stylesheet(c.File):
 
         if path.lower().endswith((".scss", ".sass")):
             raise c.ValidationError(
-                f"Sass stylesheets are no longer supported ('{value}'), use plain CSS instead. "
+                f"Sass stylesheets are no longer supported ('{value}'), "
+                "use plain CSS instead. "
                 "See https://adrienbrignon.github.io/mkdocs-exporter/migration/v7/"
             )
 
