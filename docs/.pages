@@ -1,5 +1,7 @@
 nav:
   - getting-started.md
   - configuration
+  - guides
+  - migration
   - reference
   - samples

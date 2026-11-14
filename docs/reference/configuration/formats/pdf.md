@@ -4,6 +4,10 @@
 
 ::: mkdocs_exporter.formats.pdf.config.CoversConfig
 
+::: mkdocs_exporter.formats.pdf.config.MarginsConfig
+
 ::: mkdocs_exporter.formats.pdf.config.BrowserConfig
 
 ::: mkdocs_exporter.formats.pdf.config.AggregatorConfig
+
+::: mkdocs_exporter.formats.pdf.config.TocConfig
