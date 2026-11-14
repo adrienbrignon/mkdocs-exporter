@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NO_MKDOCS_2_WARNING: '1'
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v10
+        with:
+          enable-cache: true
+      - name: Install dependencies
+        run: uv sync --locked --no-default-groups --group dev
+      - name: Run Ruff linter
+        run: uv run --no-sync ruff check --output-format github
+      - name: Run Ruff formatter
+        run: uv run --no-sync ruff format --check
+
+  typecheck:
+    name: Type check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v10
+        with:
+          enable-cache: true
+      - name: Install dependencies
+        run: uv sync --locked --no-default-groups --group dev
+      - name: Run mypy
+        run: uv run --no-sync mypy
+
+  package:
+    name: Package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v10
+        with:
+          enable-cache: true
+      - name: Build distributions
+        run: uv build
+      - name: Check bundled resources
+        run: |
+          python3 - <<'PY'
+          import glob, zipfile
+
+          names = zipfile.ZipFile(glob.glob("dist/*.whl")[0]).namelist()
+          required = ("pagedjs.min.js", "pdf.js", "material.css", "readthedocs.css")
+          missing = [r for r in required if not any(n.endswith(r) for n in names)]
+          assert not missing, f"missing from wheel: {missing}"
+          PY
+      - name: Upload distributions
+        uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dist/
