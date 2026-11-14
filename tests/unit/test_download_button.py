@@ -44,3 +44,9 @@ def test_download_file_name_uses_the_page_title() -> None:
 def test_icon_can_be_overridden_by_the_page() -> None:
     assert download.icon(page("", "index.pdf")) == "material-file-download-outline"
     assert download.icon(page("", "index.pdf", **{"pdf-icon": "custom"})) == "custom"
+
+
+def test_pages_without_formats_have_no_button() -> None:
+    """Pages created by other plugins don't go through the exporter (#48)."""
+
+    assert download.enabled(SimpleNamespace(url="print_page/", meta={})) is False

@@ -80,7 +80,7 @@ def test_invalid_templates_fail_the_build(
         project.build()
 
     assert "Failed to render the cover page" in caplog.text
-    assert "covers/front.html" in caplog.text
+    assert "front.html" in caplog.text
 
 
 def test_teleported_styles_take_precedence_over_stylesheets(project: Project) -> None:

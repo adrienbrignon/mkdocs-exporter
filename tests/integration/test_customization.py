@@ -120,3 +120,18 @@ def test_shadow_trees_are_printed(project: Project) -> None:
     )
 
     assert "SHADOW-MARKER" in site.pdf("index.pdf").text
+
+
+def test_elements_can_be_ignored(project: Project) -> None:
+    """Elements with the `mkdocs-exporter-ignore` class aren't printed (#33)."""
+
+    project.write(
+        "docs/reference.md",
+        "# Reference\n\nPlain reference page.\n\n"
+        '<p class="mkdocs-exporter-ignore">IGNORED-MARKER</p>\n',
+    )
+
+    site = project.build()
+
+    assert "IGNORED-MARKER" not in site.pdf("reference/index.pdf").text
+    assert "IGNORED-MARKER" in site.html("reference/index.html")

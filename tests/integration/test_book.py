@@ -110,6 +110,25 @@ class TestLinks:
             link for link in links if link.startswith("https://example.org/docs/")
         ]
 
+    def test_anchors_repeated_across_pages_stay_in_their_page(
+        self, project: Project
+    ) -> None:
+        """Footnotes of every page share identifiers (`fn:1`)."""
+
+        project.write(
+            "docs/reference.md",
+            "# Reference\n\nPlain reference page.[^1]\n\n[^1]: REFERENCE-NOTE\n",
+        )
+
+        site = project.build(exporter=aggregator(covers="none"))
+        combined = site.pdf("combined.pdf")
+        reference = page_of(combined, "Plain reference page")
+        links = [link for link in combined.internal_links if link.page >= reference]
+
+        assert links
+        assert all(link.target_page is not None for link in links)
+        assert all(link.target_page >= reference for link in links)  # type: ignore[operator]
+
     def test_links_to_other_pages_point_to_the_website(self, project: Project) -> None:
         site = project.build(exporter=aggregator(covers="none", exclude=["guide/*"]))
 

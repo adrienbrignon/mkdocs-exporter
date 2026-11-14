@@ -19,7 +19,7 @@ from mkdocs_exporter.page import Page
 def enabled(page: Page, **kwargs: Any) -> bool:
     """Is the button enabled (does the page have a PDF document)?"""
 
-    return "pdf" in page.formats
+    return "pdf" in getattr(page, "formats", {})
 
 
 def href(page: Page, **kwargs: Any) -> str:

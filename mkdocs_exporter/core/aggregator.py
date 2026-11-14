@@ -384,6 +384,64 @@ class Book:
 
         return index, Fit.xyz(left=0, top=top)
 
+    def _destination(self, part: Part, position: Position) -> ArrayObject:
+        """An explicit destination (page and position) within a part."""
+
+        index, fit = self.locate(part, position)
+
+        return ArrayObject(
+            [
+                self.writer.pages[index].indirect_reference,
+                NameObject("/XYZ"),
+                FloatObject(0),
+                FloatObject(fit.fit_args[1]),
+                NullObject(),
+            ]
+        )
+
+    def anchor(self) -> None:
+        """Resolves the links to named destinations within each part.
+
+        Chromium names destinations after the identifiers of elements: once documents are
+        merged, names repeated across documents (e.g. footnotes) would all point to the
+        first document. They are replaced by explicit destinations in their own part.
+        """
+
+        bounds = sorted(
+            (start, part)
+            for part in self.parts
+            for start in [self.starts[part.document.id]]
+        )
+
+        for index, page in enumerate(self.writer.pages):
+            part = next((p for start, p in reversed(bounds) if start <= index), None)
+
+            if part is None:
+                continue
+
+            for reference in page.get("/Annots") or []:
+                annotation = reference.get_object()
+                action = annotation.get("/A")
+                action = action.get_object() if action is not None else None
+                name = annotation.get("/Dest")
+
+                if name is None and action is not None and action.get("/S") == "/GoTo":
+                    name = action.get("/D")
+                if not isinstance(name, str):
+                    continue
+
+                position = part.layout.anchors.get(str(name).lstrip("/"))
+
+                if position is None:
+                    continue
+
+                destination = self._destination(part, position)
+
+                if "/Dest" in annotation:
+                    annotation[NameObject("/Dest")] = destination
+                else:
+                    action[NameObject("/D")] = destination
+
     def link(self, base: str, relative_to: str | None) -> None:
         """Turns links to aggregated documents into links within the document.
 
@@ -403,16 +461,7 @@ class Book:
 
             if part is not None:
                 position = part.layout.anchors.get(fragment) if fragment else None
-                index, fit = self.locate(part, position or part.start())
-                destination = ArrayObject(
-                    [
-                        self.writer.pages[index].indirect_reference,
-                        NameObject("/XYZ"),
-                        FloatObject(0),
-                        FloatObject(fit.fit_args[1]),
-                        NullObject(),
-                    ]
-                )
+                destination = self._destination(part, position or part.start())
                 annotation[NameObject("/A")] = DictionaryObject(
                     {
                         NameObject("/S"): NameObject("/GoTo"),
@@ -563,6 +612,7 @@ async def aggregate(
     book = Book(parts, [outcome.result.pdf for outcome in results if outcome.result])
     base = renderer.options.links or RELATIVE_LINKS_BASE
 
+    book.anchor()
     book.link(base, directory if renderer.options.links is None else None)
     book.outline(nav, aggregation.outline)
     book.write(site.directory / output, aggregation.metadata)
