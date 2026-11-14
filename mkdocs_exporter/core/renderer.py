@@ -127,7 +127,6 @@ class Renderer:
                     content.append(cover)
 
         html.set_attribute("details:not([open])", "open", "")
-        html.teleport()
 
         for stylesheet in self.stylesheets:
             if stylesheet:
@@ -135,6 +134,10 @@ class Renderer:
 
         if hidden:
             html.add_style(", ".join(hidden) + " { display: none !important; }")
+
+        # After the stylesheets, so that styles teleported to the head (e.g. by cover
+        # pages) take precedence over them.
+        html.teleport()
 
         # Inserted first in the head (hence in reverse order) to run before any script of
         # the website, so that errors are recorded from the start (Paged.js is loaded by

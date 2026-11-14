@@ -81,3 +81,18 @@ def test_invalid_templates_fail_the_build(
 
     assert "Failed to render the cover page" in caplog.text
     assert "covers/front.html" in caplog.text
+
+
+def test_teleported_styles_take_precedence_over_stylesheets(project: Project) -> None:
+    css = (project.path / "pdf.css").read_text()
+
+    project.write("pdf.css", css + "\n.cover-marker { display: block; }\n")
+    project.write(
+        "covers/front.html",
+        '<style data-teleport="head">.cover-marker { display: none; }</style>\n'
+        '<p class="cover-marker">HIDDEN-BY-COVER</p><h1>FRONT-COVER</h1>\n',
+    )
+
+    site = project.build()
+
+    assert "HIDDEN-BY-COVER" not in site.pdf("index.pdf").text
