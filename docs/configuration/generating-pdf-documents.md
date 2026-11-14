@@ -121,13 +121,13 @@ This ensures a consistent look and feel across all your PDF documents without ne
     ```yaml
     plugins:
       - exporter:
-        formats:
-          pdf:
-            stylesheets:
-              - resources/stylesheets/pdf.scss
-            covers:
-              front: resources/templates/covers/front.html.j2
-              back: resources/templates/covers/back.html.j2
+          formats:
+            pdf:
+              stylesheets:
+                - resources/stylesheets/pdf.scss
+              covers:
+                front: resources/templates/covers/front.html.j2
+                back: resources/templates/covers/back.html.j2
     ```
 
     > :material-file-code: View the full content of this file [here](https://github.com/adrienbrignon/mkdocs-exporter/blob/master/mkdocs.yml).
