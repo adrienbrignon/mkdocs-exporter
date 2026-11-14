@@ -70,13 +70,13 @@ class Plugin(BasePlugin[Config]):
       page.formats['pdf']['covers'].append('front')
 
       with open(covers['front'], 'r', encoding='utf-8') as file:
-        content = self.renderer.cover(file.read(), 'front') + content
+        content = self.renderer.cover(file.read(), 'front') + '\n' + content
 
     if covers.get('back'):
       page.formats['pdf']['covers'].append('back')
 
       with open(covers['back'], 'r', encoding='utf-8') as file:
-        content = content + self.renderer.cover(file.read(), 'back')
+        content = content + '\n' + self.renderer.cover(file.read(), 'back')
 
     return content
 
