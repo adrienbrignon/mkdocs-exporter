@@ -67,4 +67,4 @@ target/
 .python-version
 
 # MkDocs
-site/
+/site/

@@ -1,0 +1,12 @@
+@page {
+  size: A4;
+  margin: 1.5cm;
+
+  @bottom-center {
+    content: counter(page) " / " counter(pages);
+  }
+}
+
+.front-cover {
+  page-break-after: always;
+}
