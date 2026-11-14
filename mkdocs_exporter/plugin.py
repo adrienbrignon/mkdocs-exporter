@@ -16,95 +16,87 @@ from mkdocs_exporter.formats.pdf.plugin import Plugin as PDFFormatPlugin
 
 
 class Plugin(BasePlugin[Config]):
-  """The plugin."""
+    """The plugin."""
 
+    def __init__(self) -> None:
+        """The constructor."""
 
-  def __init__(self) -> None:
-    """The constructor."""
+        self.stylesheets: list[File] = []
+        self.on_post_page = CombinedEvent(self._on_post_page_1, self._on_post_page_2)
 
-    self.stylesheets: list[File] = []
-    self.on_post_page = CombinedEvent(self._on_post_page_1, self._on_post_page_2)
+    @event_priority(100)
+    def on_config(self, config: dict, *args, **kwargs) -> None:
+        """Invoked when the configuration has been loaded."""
 
+        self.theme = ThemeFactory.create(self.config.theme or config["theme"])
 
-  @event_priority(100)
-  def on_config(self, config: dict, *args, **kwargs) -> None:
-    """Invoked when the configuration has been loaded."""
+        if "level" in self.config.logging:
+            logger.setLevel(logging.getLevelName(self.config.logging.level.upper()))
 
-    self.theme = ThemeFactory.create(self.config.theme or config['theme'])
+        def register(key, plugin: Type[Plugin], config_data: dict) -> Plugin:
+            """Registers a MkDocs plugin dynamically."""
 
-    if 'level' in self.config.logging:
-      logger.setLevel(logging.getLevelName(self.config.logging.level.upper()))
+            key = "exporter-" + key
 
-    def register(key, plugin: Type[Plugin], config_data: dict) -> Plugin:
-      """Registers a MkDocs plugin dynamically."""
+            config.plugins[key] = plugin()
+            config.plugins[key].config = config_data
 
-      key = 'exporter-' + key
+            config.plugins[key].on_config(config, *args, **kwargs)
 
-      config.plugins[key] = plugin()
-      config.plugins[key].config = config_data
+        if "pdf" in self.config.formats:
+            register("pdf", PDFFormatPlugin, self.config["formats"]["pdf"])
 
-      config.plugins[key].on_config(config, *args, **kwargs)
+    def on_pre_build(self, **kwargs) -> None:
+        """Invoked before the build process starts."""
 
-    if 'pdf' in self.config.formats:
-      register('pdf', PDFFormatPlugin, self.config['formats']['pdf'])
+        self.stylesheets.clear()
 
+    @event_priority(100)
+    def on_pre_page(self, page: Page, **kwargs) -> None:
+        """Invoked before a page has been built."""
 
-  def on_pre_build(self, **kwargs) -> None:
-    """Invoked before the build process starts."""
+        page.html = None
+        page.formats = {}
+        page.theme = self.theme
 
-    self.stylesheets.clear()
+    @event_priority(100)
+    def _on_post_page_1(self, html: str, page: Page, **kwargs) -> str:
+        """Invoked after a page has been built (and before all other plugins)."""
 
+        page.html = html
 
-  @event_priority(100)
-  def on_pre_page(self, page: Page, **kwargs) -> None:
-    """Invoked before a page has been built."""
+    @event_priority(-100)
+    def _on_post_page_2(self, html: str, page: Page, **kwargs) -> str:
+        """Invoked after a page has been built (and after all other plugins)."""
 
-    page.html = None
-    page.formats = {}
-    page.theme = self.theme
+        preprocessor = Preprocessor(theme=page.theme)
 
+        preprocessor.preprocess(html)
 
-  @event_priority(100)
-  def _on_post_page_1(self, html: str, page: Page, **kwargs) -> str:
-    """Invoked after a page has been built (and before all other plugins)."""
+        for button in [*self.config.buttons, *page.meta.get("buttons", [])]:
+            if resolve(button.get("enabled", True), page=page):
+                preprocessor.button(**resolve(button, page=page))
 
-    page.html = html
+        preprocessor.remove('*[data-decompose="true"]')
+        preprocessor.teleport()
 
+        return preprocessor.done()
 
-  @event_priority(-100)
-  def _on_post_page_2(self, html: str, page: Page, **kwargs) -> str:
-    """Invoked after a page has been built (and after all other plugins)."""
+    def on_files(self, files: Files, **kwargs) -> Files:
+        """Invoked when files are ready to be manipulated."""
 
-    preprocessor = Preprocessor(theme=page.theme)
+        self.stylesheets.extend(files.css_files())
 
-    preprocessor.preprocess(html)
+        return files
 
-    for button in [*self.config.buttons, *page.meta.get('buttons', [])]:
-      if resolve(button.get('enabled', True), page=page):
-        preprocessor.button(**resolve(button, page=page))
+    @event_priority(100)
+    def on_post_build(self, **kwargs) -> None:
+        """Invoked when the build process is done."""
 
-    preprocessor.remove('*[data-decompose="true"]')
-    preprocessor.teleport()
+        for stylesheet in self.stylesheets:
+            content = None
 
-    return preprocessor.done()
-
-
-  def on_files(self, files: Files, **kwargs) -> Files:
-    """Invoked when files are ready to be manipulated."""
-
-    self.stylesheets.extend(files.css_files())
-
-    return files
-
-
-  @event_priority(100)
-  def on_post_build(self, **kwargs) -> None:
-    """Invoked when the build process is done."""
-
-    for stylesheet in self.stylesheets:
-      content = None
-
-      with open(stylesheet.abs_dest_path, 'r', encoding='utf-8') as reader:
-        content = self.theme.stylesheet(stylesheet, reader.read())
-      with open(stylesheet.abs_dest_path, 'w+', encoding='utf-8') as writer:
-        writer.write(content)
+            with open(stylesheet.abs_dest_path, "r", encoding="utf-8") as reader:
+                content = self.theme.stylesheet(stylesheet, reader.read())
+            with open(stylesheet.abs_dest_path, "w+", encoding="utf-8") as writer:
+                writer.write(content)

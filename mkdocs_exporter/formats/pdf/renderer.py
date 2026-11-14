@@ -13,86 +13,88 @@ from mkdocs_exporter.formats.pdf.preprocessor import Preprocessor
 
 
 class Renderer(BaseRenderer):
-  """The renderer."""
+    """The renderer."""
 
+    def __init__(self, browser: Browser = None, options: dict = None):
+        """The constructor."""
 
-  def __init__(self, browser: Browser = None, options: dict = None):
-    """The constructor."""
+        self.options: dict = options
+        self.scripts: list[str] = []
+        self.stylesheets: list[str] = []
+        self.browser = browser or Browser(self.options.get("browser", {}))
 
-    self.options: dict = options
-    self.scripts: list[str] = []
-    self.stylesheets: list[str] = []
-    self.browser = browser or Browser(self.options.get('browser', {}))
+    def add_stylesheet(self, path: str) -> Renderer:
+        """Adds a stylesheet to the renderer."""
 
+        self.stylesheets.append(path)
 
-  def add_stylesheet(self, path: str) -> Renderer:
-    """Adds a stylesheet to the renderer."""
+        return self
 
-    self.stylesheets.append(path)
+    def add_script(self, path: str) -> Renderer:
+        """Adds a script to the renderer."""
 
-    return self
+        self.scripts.append(path)
 
+        return self
 
-  def add_script(self, path: str) -> Renderer:
-    """Adds a script to the renderer."""
+    def cover(self, template: str, location: str) -> Renderer:
+        """Renders a cover."""
 
-    self.scripts.append(path)
+        content = template.strip("\n")
 
-    return self
+        return (
+            f'<div class="mkdocs-exporter-{location}-cover" data-decompose="true">{content}</div>'
+            + "\n"
+        )
 
+    def preprocess(self, page: Page, disable: list = []) -> str:
+        """Preprocesses a page, returning HTML that can be printed."""
 
-  def cover(self, template: str, location: str) -> Renderer:
-    """Renders a cover."""
+        preprocessor = Preprocessor(theme=page.theme)
+        base = os.path.dirname(page.file.abs_dest_path)
+        root = base.replace(unquote(page.url).rstrip("/"), "", 1).rstrip("/")
 
-    content = template.strip('\n')
+        preprocessor.preprocess(page.html)
+        preprocessor.set_attribute("details:not([open])", "open", "open")
+        page.theme.preprocess(preprocessor)
 
-    return f'<div class="mkdocs-exporter-{location}-cover" data-decompose="true">{content}</div>' + '\n'
+        for stylesheet in self.stylesheets:
+            with open(stylesheet, "r", encoding="utf-8") as file:
+                preprocessor.stylesheet(file.read())
+        for script in self.scripts:
+            with open(script, "r", encoding="utf-8") as file:
+                preprocessor.script(file.read(), path=stylesheet)
 
+        if "teleport" not in disable:
+            preprocessor.teleport()
 
-  def preprocess(self, page: Page, disable: list = []) -> str:
-    """Preprocesses a page, returning HTML that can be printed."""
+        preprocessor.script(
+            importlib.resources.files(js).joinpath("pdf.js").read_text(encoding="utf-8")
+        )
+        preprocessor.script(
+            importlib.resources.files(js)
+            .joinpath("pagedjs.min.js")
+            .read_text(encoding="utf-8")
+        )
+        preprocessor.update_links(base, root)
 
-    preprocessor = Preprocessor(theme=page.theme)
-    base = os.path.dirname(page.file.abs_dest_path)
-    root = base.replace(unquote(page.url).rstrip('/'), '', 1).rstrip('/')
+        if self.options.get("url"):
+            preprocessor.rewrite_links(page.abs_url, self.options["url"])
 
-    preprocessor.preprocess(page.html)
-    preprocessor.set_attribute('details:not([open])', 'open', 'open')
-    page.theme.preprocess(preprocessor)
+        return preprocessor.done()
 
-    for stylesheet in self.stylesheets:
-      with open(stylesheet, 'r', encoding='utf-8') as file:
-        preprocessor.stylesheet(file.read())
-    for script in self.scripts:
-      with open(script, 'r', encoding='utf-8') as file:
-        preprocessor.script(file.read(), path=stylesheet)
+    async def render(self, page: str | Page) -> tuple[bytes, int]:
+        """Renders a page as a PDF document."""
 
-    if 'teleport' not in disable:
-      preprocessor.teleport()
+        if not self.browser.launched:
+            await self.browser.launch()
 
-    preprocessor.script(importlib.resources.files(js).joinpath('pdf.js').read_text(encoding='utf-8'))
-    preprocessor.script(importlib.resources.files(js).joinpath('pagedjs.min.js').read_text(encoding='utf-8'))
-    preprocessor.update_links(base, root)
+        html = page if isinstance(page, str) else self.preprocess(page)
 
-    if self.options.get('url'):
-      preprocessor.rewrite_links(page.abs_url, self.options['url'])
+        return await self.browser.print(html)
 
-    return preprocessor.done()
+    async def dispose(self) -> None:
+        """Dispose of the renderer."""
 
-
-  async def render(self, page: str | Page) -> tuple[bytes, int]:
-    """Renders a page as a PDF document."""
-
-    if not self.browser.launched:
-      await self.browser.launch()
-
-    html = page if isinstance(page, str) else self.preprocess(page)
-
-    return await self.browser.print(html)
-
-
-  async def dispose(self) -> None:
-    """Dispose of the renderer."""
-
-    if self.browser:
-      await self.browser.close()
+        if self.browser:
+            await self.browser.close()

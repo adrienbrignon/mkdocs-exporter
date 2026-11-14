@@ -3,11 +3,10 @@ from mkdocs_exporter.page import Page
 
 
 class Renderer:
-  """A generic renderer."""
+    """A generic renderer."""
 
+    @abstractmethod
+    def render(self, page: Page) -> any:
+        """Renders the given page."""
 
-  @abstractmethod
-  def render(self, page: Page) -> any:
-    """Renders the given page."""
-
-    raise NotImplementedError()
+        raise NotImplementedError()

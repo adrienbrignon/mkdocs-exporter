@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import importlib
@@ -12,37 +11,54 @@ from mkdocs_exporter.themes.material.icons import get_icon
 
 
 class Theme(BaseTheme):
-  """The "material" theme."""
+    """The "material" theme."""
 
-  name = 'material'
-  """The name of the theme."""
+    name = "material"
+    """The name of the theme."""
 
+    def preprocess(self, preprocessor: Preprocessor) -> None:
+        """Preprocesses the DOM before rendering a document."""
 
-  def preprocess(self, preprocessor: Preprocessor) -> None:
-    """Preprocesses the DOM before rendering a document."""
+        preprocessor.remove(
+            [
+                ".md-sidebar.md-sidebar--primary",
+                ".md-sidebar.md-sidebar--secondary",
+                "header.md-header",
+                ".md-container > nav",
+                "nav.md-tags",
+            ]
+        )
+        preprocessor.stylesheet(
+            importlib.resources.files(css)
+            .joinpath("material.css")
+            .read_text(encoding="utf-8")
+        )
 
-    preprocessor.remove(['.md-sidebar.md-sidebar--primary', '.md-sidebar.md-sidebar--secondary', 'header.md-header', '.md-container > nav', 'nav.md-tags'])
-    preprocessor.stylesheet(importlib.resources.files(css).joinpath('material.css').read_text(encoding='utf-8'))
+    def button(
+        self, preprocessor: Preprocessor, title: str, icon: str, attributes: dict = {}
+    ):
+        """Inserts a custom themed button."""
 
+        tags = preprocessor.html.find("nav", {"class": "md-tags"})
+        button = preprocessor.html.new_tag(
+            "a",
+            title=title,
+            attrs={"class": "md-content__button md-icon", **attributes},
+        )
+        icon = self.icon(icon) or self.icon("material-progress-question")
 
-  def button(self, preprocessor: Preprocessor, title: str, icon: str, attributes: dict = {}):
-    """Inserts a custom themed button."""
+        button.append(BeautifulSoup(icon, "lxml"))
 
-    tags = preprocessor.html.find('nav', {'class': 'md-tags'})
-    button = preprocessor.html.new_tag('a', title=title, attrs={'class': 'md-content__button md-icon', **attributes})
-    icon = self.icon(icon) or self.icon('material-progress-question')
+        if tags:
+            tags.insert_after(button)
+        else:
+            preprocessor.html.find("article", {"class": "md-content__inner"}).insert(
+                0, button
+            )
 
-    button.append(BeautifulSoup(icon, 'lxml'))
+        return self
 
-    if tags:
-      tags.insert_after(button)
-    else:
-      preprocessor.html.find('article', {'class': 'md-content__inner'}).insert(0, button)
+    def icon(self, name: str):
+        """Gets a themed icon."""
 
-    return self
-
-
-  def icon(self, name: str):
-    """Gets a themed icon."""
-
-    return get_icon(name)
+        return get_icon(name)

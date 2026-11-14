@@ -6,30 +6,26 @@ from mkdocs.theme import Theme as BaseTheme
 
 
 class Theme:
-  """A theme."""
+    """A theme."""
 
+    def __init__(self, theme: BaseTheme):
+        """The constructor."""
 
-  def __init__(self, theme: BaseTheme):
-    """The constructor."""
+        self.theme = theme
 
-    self.theme = theme
+    @abstractmethod
+    def preprocess():
+        """Preprocess the page especially for this theme."""
 
+        raise NotImplementedError()
 
-  @abstractmethod
-  def preprocess():
-    """Preprocess the page especially for this theme."""
+    @abstractmethod
+    def button(self, preprocessor, title: str, icon: str, attributes: dict = {}):
+        """Inserts a custom themed button."""
 
-    raise NotImplementedError()
+        raise NotImplementedError()
 
+    def stylesheet(self, stylesheet: File, content: str) -> str:
+        """Transforms a stylesheet."""
 
-  @abstractmethod
-  def button(self, preprocessor, title: str, icon: str, attributes: dict = {}):
-    """Inserts a custom themed button."""
-
-    raise NotImplementedError()
-
-
-  def stylesheet(self, stylesheet: File, content: str) -> str:
-    """Transforms a stylesheet."""
-
-    return content
+        return content

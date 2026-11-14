@@ -44,10 +44,11 @@ To begin with, let's write the function that will return the button's `href` att
 from urllib.parse import urlencode
 from mkdocs_exporter.page import Page
 
-def href(page: Page, **kwargs) -> str:
-  """The button's 'href' attribute."""
 
-  return 'https://google.com/search?' + urlencode({'q': page.title})
+def href(page: Page, **kwargs) -> str:
+    """The button's 'href' attribute."""
+
+    return "https://google.com/search?" + urlencode({"q": page.title})
 ```
 
 Next, we can define the button and specify the path to the function previously defined (assuming it has been saved in the `button.py` file under the `my_module` module):
