@@ -16,15 +16,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-python@v6
-        with:
-          python-version: '3.13'
+      - uses: astral-sh/setup-uv@v10
       - name: Install dependencies
-        run: pip install mkdocs-material mkdocs-exporter
+        run: uv venv && uv pip install mkdocs-material mkdocs-exporter
       - name: Install the browser
-        run: playwright install --with-deps --only-shell chromium
+        run: .venv/bin/playwright install --with-deps --only-shell chromium
       - name: Build the documentation
-        run: mkdocs build
+        run: .venv/bin/mkdocs build
       - uses: actions/upload-pages-artifact@v5
         with:
           path: site
@@ -35,13 +33,13 @@ jobs:
 
 ## GitLab CI
 
-The official Playwright image ships the browser and its dependencies. Use the tag matching the version of Playwright installed by your project (`pip show playwright`):
+The official Playwright image ships the browser and its dependencies: install the version of Playwright matching the image's tag.
 
 ```yaml
 pages:
   image: mcr.microsoft.com/playwright/python:v1.65.2-noble
   script:
-    - pip install mkdocs-material mkdocs-exporter
+    - pip install mkdocs-material mkdocs-exporter playwright==1.65.2
     - mkdocs build --site-dir public
   artifacts:
     paths:
@@ -56,17 +54,20 @@ If your website is published under a sub-path (e.g. `https://group.gitlab.io/pro
 FROM mcr.microsoft.com/playwright/python:v1.65.2-noble
 
 WORKDIR /docs
-RUN pip install mkdocs-material mkdocs-exporter
+RUN pip install mkdocs-material mkdocs-exporter playwright==1.65.2
 COPY . .
 RUN mkdocs build
 ```
 
-Or, starting from a smaller image:
+Or, starting from a smaller image (Playwright's driver needs `libatomic1` to install the browser):
 
 ```dockerfile
 FROM python:3.13-slim
 
 WORKDIR /docs
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends libatomic1 \
+ && rm -rf /var/lib/apt/lists/*
 RUN pip install mkdocs-material mkdocs-exporter \
  && playwright install --with-deps --only-shell chromium
 COPY . .
