@@ -26,6 +26,7 @@ from mkdocs_exporter.core.renderer import Outcome, Pass, Renderer, RenderOptions
 from mkdocs_exporter.core.runner import run
 from mkdocs_exporter.core.server import Server
 from mkdocs_exporter.core.themes import Theme, get_theme
+from mkdocs_exporter.covers import CoverRenderer
 from mkdocs_exporter.helpers import resolve
 from mkdocs_exporter.logging import logger
 
@@ -48,6 +49,7 @@ class Plugin(BasePlugin[Config]):
         self.exports: dict[str, Export] = {}
         self.order: list[str] = []
         self.watched: set[str] = set()
+        self.covers: CoverRenderer
 
     def on_startup(
         self, *, command: Literal["build", "gh-deploy", "serve"], dirty: bool
@@ -70,6 +72,7 @@ class Plugin(BasePlugin[Config]):
         self.exports = {}
         self.order = []
         self.watched = set()
+        self.covers = CoverRenderer(config)
         self.pdf = options.enabled and (self.command != "serve" or options.serve)
 
         if type(self.theme) is Theme:
@@ -131,69 +134,35 @@ class Plugin(BasePlugin[Config]):
             }
 
     @event_priority(100)
-    def on_page_markdown(
-        self, markdown: str, *, page: Page, config: MkDocsConfig, files: Files
-    ) -> str:
-        """Injects the cover pages into the page's Markdown."""
+    def _capture_page(self, output: str, *, page: Page, config: MkDocsConfig) -> str:
+        """Captures the page's HTML (before other plugins alter it) and its covers."""
 
         formats: dict[str, Any] = getattr(page, "formats", {})
 
         if "pdf" in formats and not self._exported(page):
             del formats["pdf"]
-        if "pdf" not in formats or "covers" in page.meta.get("hide", []):
-            return markdown
+        if "pdf" not in formats:
+            return output
 
-        root = os.path.dirname(config.config_file_path or "")
+        templates = self.covers.locations(dict(self.config.formats.pdf.covers), page)
         covers = {
-            **self.config.formats.pdf.covers,
-            **{
-                key: os.path.join(root, value)
-                for key, value in page.meta.get("covers", {}).items()
-            },
+            key: self.covers.render(path, page) for key, path in templates.items()
         }
 
-        for location in ("front", "back"):
-            path = covers.get(location)
-
-            if not path:
-                continue
-
-            self.watched.add(path)
-            formats["pdf"]["covers"].append(location)
-
-            with open(path, encoding="utf-8") as file:
-                cover = (
-                    f'<div class="mkdocs-exporter-{location}-cover" data-decompose="true">'
-                    f"{file.read().strip()}</div>"
-                )
-
-            markdown = (
-                f"{cover}\n\n{markdown}"
-                if location == "front"
-                else f"{markdown}\n\n{cover}\n"
-            )
-
-        return markdown
-
-    @event_priority(100)
-    def _capture_page(self, output: str, *, page: Page, config: MkDocsConfig) -> str:
-        """Captures the page's HTML before other plugins alter it."""
-
-        formats: dict[str, Any] = getattr(page, "formats", {})
-
-        if "pdf" in formats:
-            self.exports[page.file.src_uri] = Export(
-                page=page,
-                document=Document(
-                    id=page.file.src_uri,
-                    url=page.url,
-                    path=formats["pdf"]["url"],
-                    title=page.title or "",
-                    html=output,
-                    meta=dict(page.meta),
-                    covers=list(formats["pdf"]["covers"]),
-                ),
-            )
+        self.watched.update(templates.values())
+        formats["pdf"]["covers"] = list(covers)
+        self.exports[page.file.src_uri] = Export(
+            page=page,
+            document=Document(
+                id=page.file.src_uri,
+                url=page.url,
+                path=formats["pdf"]["url"],
+                title=page.title or "",
+                html=output,
+                meta=dict(page.meta),
+                covers=covers,
+            ),
+        )
 
         return output
 

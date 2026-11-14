@@ -3,7 +3,8 @@
 FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim AS builder
 WORKDIR /usr/src/app
 
-ENV NO_MKDOCS_2_WARNING=1 \
+ENV DISABLE_MKDOCS_2_WARNING=true \
+    NO_MKDOCS_2_WARNING=1 \
     PATH="/usr/src/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
     UV_COMPILE_BYTECODE=1 \

@@ -107,9 +107,24 @@ class Renderer:
         hidden = [*self.theme.hidden, *self.options.hidden]
         base = self.options.links or RELATIVE_LINKS_BASE
 
+        kept = set(document.covers)
+
         if render_pass.covers is not None:
-            for location in set(COVER_LOCATIONS) - set(render_pass.covers):
-                html.remove(f"div.mkdocs-exporter-{location}-cover")
+            kept &= set(render_pass.covers)
+
+        content = self.theme.content_element(html)
+
+        for location in COVER_LOCATIONS:
+            if location in kept:
+                cover = html.fragment(
+                    document.covers[location],
+                    **{"class": f"mkdocs-exporter-{location}-cover"},
+                )
+
+                if location == "front":
+                    content.insert(0, cover)
+                else:
+                    content.append(cover)
 
         html.set_attribute("details:not([open])", "open", "")
         html.teleport()

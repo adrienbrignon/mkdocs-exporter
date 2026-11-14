@@ -52,7 +52,6 @@ class TestPages:
     def test_all_tabs_are_printed(self, site: Site) -> None:
         assert "TAB-TWO-MARKER" in site.pdf("guide/intro/index.pdf").text
 
-    @pytest.mark.xfail(reason="#17: the back cover is injected before footnotes")
     def test_footnotes_come_before_the_back_cover(self, site: Site) -> None:
         text = site.pdf("index.pdf").text
 

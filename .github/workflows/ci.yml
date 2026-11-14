@@ -15,6 +15,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
+  DISABLE_MKDOCS_2_WARNING: 'true'
   NO_MKDOCS_2_WARNING: '1'
 
 jobs:

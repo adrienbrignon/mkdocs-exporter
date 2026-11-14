@@ -50,8 +50,8 @@ class Document:
     meta: dict[str, Any] = field(default_factory=dict)
     """The page's metadata."""
 
-    covers: list[str] = field(default_factory=list)
-    """The cover pages of the document (`front`, `back`)."""
+    covers: dict[str, str] = field(default_factory=dict)
+    """The HTML of the document's cover pages, by location (`front`, `back`)."""
 
     @property
     def directory(self) -> str:

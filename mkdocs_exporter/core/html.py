@@ -39,6 +39,16 @@ class HtmlDocument:
 
         return self.soup.body  # type: ignore[return-value]
 
+    def fragment(self, html: str, **attributes: str) -> Tag:
+        """Creates a `<div>` element holding an HTML fragment."""
+
+        element = self.soup.new_tag("div", attrs=attributes)
+
+        for node in list(BeautifulSoup(html, "html.parser").contents):
+            element.append(node.extract())
+
+        return element
+
     def select(self, selector: str) -> list[Tag]:
         """Selects elements with a CSS selector."""
 
