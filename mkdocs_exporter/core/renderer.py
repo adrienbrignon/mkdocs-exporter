@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import asyncio
 import importlib.resources
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 
+from mkdocs_exporter.core import margins
 from mkdocs_exporter.core.browser import Browser, PrintResult, RenderError
 from mkdocs_exporter.core.document import Document, Site
 from mkdocs_exporter.core.html import HtmlDocument, resolve_link
@@ -38,8 +39,14 @@ class RenderOptions:
     concurrency: int = 4
     """The maximum number of documents rendered at once."""
 
-    hidden: Sequence[str] = (".mkdocs-exporter-ignore",)
+    hidden: Sequence[str] = (".mkdocs-exporter-ignore", ".headerlink")
     """Selectors of elements that must not appear in documents (besides the theme's)."""
+
+    margins: Mapping[str, Mapping[str, str | None]] = field(default_factory=dict)
+    """Headers and footers (see `mkdocs_exporter.core.margins.stylesheet`)."""
+
+    variables: Mapping[str, str] = field(default_factory=dict)
+    """Values of the placeholders of headers and footers (e.g. `site_name`)."""
 
 
 @dataclass
@@ -97,12 +104,11 @@ class Renderer:
 
         from mkdocs_exporter.core.resources import css
 
-        self.stylesheets = [
+        self.base_stylesheets = [
             importlib.resources.files(css)
             .joinpath("base.css")
             .read_text(encoding="utf-8"),
             theme.print_stylesheet(),
-            *self.options.stylesheets,
         ]
 
     def prepare(self, document: Document, render_pass: Pass | None = None) -> str:
@@ -139,7 +145,17 @@ class Renderer:
 
         html.set_attribute("details:not([open])", "open", "")
 
-        for stylesheet in self.stylesheets:
+        stylesheets = [
+            *self.base_stylesheets,
+            margins.stylesheet(
+                self.options.margins,
+                {**self.options.variables, "page_title": document.title},
+                front_cover="front" in kept,
+            ),
+            *self.options.stylesheets,
+        ]
+
+        for stylesheet in stylesheets:
             if stylesheet:
                 html.add_style(self.theme.transform_stylesheet(stylesheet))
 

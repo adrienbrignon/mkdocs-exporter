@@ -286,6 +286,11 @@ class Plugin(BasePlugin[Config]):
                 links=links if links is None or links.endswith("/") else links + "/",
                 delay=options.browser.delay,
                 concurrency=options.concurrency,
+                margins={
+                    "header": dict(options.header),
+                    "footer": dict(options.footer),
+                },
+                variables={"site_name": config.site_name},
             ),
         )
         report = await exporter.export([e.document for e in exports], aggregations)

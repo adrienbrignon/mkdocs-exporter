@@ -51,3 +51,12 @@ def test_defaults(tmp_path: Path) -> None:
     assert plugin.config.buttons == []
     assert plugin.config.formats.pdf.enabled is True
     assert plugin.config.formats.pdf.explicit is False
+
+
+def test_headers_and_footers_placeholders_are_validated(tmp_path: Path) -> None:
+    errors, _ = load(
+        tmp_path, {"formats": {"pdf": {"footer": {"center": "{page_no}"}}}}
+    )
+
+    assert len(errors) == 1
+    assert "unknown placeholder '{page_no}'" in str(errors[0][1])

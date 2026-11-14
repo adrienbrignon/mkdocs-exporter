@@ -1,6 +1,7 @@
 from mkdocs.config import config_options as c
 from mkdocs.config.base import Config as BaseConfig
 
+from mkdocs_exporter.core import margins
 from mkdocs_exporter.core.aggregator import COVER_MODES, START_MODES
 
 
@@ -37,6 +38,38 @@ class PositiveInteger(c.Type[int]):
             raise c.ValidationError(f"Expected a positive integer, got {number}")
 
         return number
+
+
+class MarginText(c.Type[str]):
+    """The text of a header or a footer (with placeholders)."""
+
+    def __init__(self) -> None:
+        super().__init__(str)
+
+    def run_validation(self, value: object) -> str:
+        """Validates the text's placeholders."""
+
+        text = super().run_validation(value)
+
+        try:
+            margins.validate(text)
+        except ValueError as error:
+            raise c.ValidationError(str(error)) from error
+
+        return text
+
+
+class MarginsConfig(BaseConfig):
+    """A header or a footer: texts with placeholders such as `{page}` / `{pages}`."""
+
+    left = c.Optional(MarginText())
+    """The text on the left."""
+
+    center = c.Optional(MarginText())
+    """The text in the center."""
+
+    right = c.Optional(MarginText())
+    """The text on the right."""
 
 
 class BrowserConfig(BaseConfig):
@@ -148,6 +181,12 @@ class Config(BaseConfig):
 
     covers = c.SubConfig(CoversConfig)
     """The document's cover pages."""
+
+    header = c.SubConfig(MarginsConfig)
+    """The header of pages (`{site_name}`, `{page_title}`, `{section}`, `{page}`, `{pages}`)."""
+
+    footer = c.SubConfig(MarginsConfig)
+    """The footer of pages (same placeholders as the header)."""
 
     browser = c.SubConfig(BrowserConfig)
     """The browser's configuration."""
