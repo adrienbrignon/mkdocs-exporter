@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from mkdocs_exporter.core.browser import Browser, PrintResult, RenderError
 from mkdocs_exporter.core.document import Document, Site
 from mkdocs_exporter.core.html import HtmlDocument, resolve_link
-from mkdocs_exporter.core.pdf import RELATIVE_LINKS_BASE, relativize_links
+from mkdocs_exporter.core.pdf import RELATIVE_LINKS_BASE, relative_url, rewrite_links
 from mkdocs_exporter.core.server import RESERVED, Server
 from mkdocs_exporter.core.themes import Theme
 from mkdocs_exporter.logging import logger
@@ -60,6 +60,12 @@ class Pass:
 
     directory: str | None = None
     """The directory relative links are resolved from (defaults to the document's)."""
+
+    relativize: bool = True
+    """Should links be made relative when the website has no URL?"""
+
+    toc: str | None = None
+    """The HTML of a table of contents, inserted after the front cover."""
 
 
 @dataclass
@@ -113,6 +119,11 @@ class Renderer:
             kept &= set(render_pass.covers)
 
         content = self.theme.content_element(html)
+
+        if render_pass.toc is not None:
+            content.insert(
+                0, html.fragment(render_pass.toc, **{"class": "mkdocs-exporter-toc"})
+            )
 
         for location in COVER_LOCATIONS:
             if location in kept:
@@ -183,13 +194,41 @@ class Renderer:
         finally:
             self.server.unpublish(path)
 
-        if self.options.links is None:
-            directory = render_pass.directory
-            result.pdf = relativize_links(
-                result.pdf, document.directory if directory is None else directory
-            )
+        result.pdf = self._rewrite_links(result.pdf, document, render_pass)
 
         return result
+
+    def _rewrite_links(
+        self, pdf: bytes, document: Document, render_pass: Pass
+    ) -> bytes:
+        """Fixes links to the local server and makes links relative when needed."""
+
+        origin = self.server.origin
+        base = self.options.links or RELATIVE_LINKS_BASE
+        relativize = self.options.links is None and render_pass.relativize
+        directory = (
+            document.directory
+            if render_pass.directory is None
+            else render_pass.directory
+        )
+
+        if origin.encode() not in pdf and not (
+            relativize and RELATIVE_LINKS_BASE.encode() in pdf
+        ):
+            return pdf
+
+        def rewrite(uri: str) -> str | None:
+            if uri.startswith(origin):
+                # A link created by a script after the page's links were resolved.
+                uri = (
+                    resolve_link(uri[len(origin) :], "", self.site.prefix, base) or uri
+                )
+            if relativize and uri.startswith(RELATIVE_LINKS_BASE):
+                return relative_url(uri[len(RELATIVE_LINKS_BASE) :], directory)
+
+            return uri
+
+        return rewrite_links(pdf, rewrite)
 
     async def render_all(
         self, documents: Sequence[Document], passes: Sequence[Pass] | None = None

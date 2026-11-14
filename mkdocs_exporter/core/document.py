@@ -60,6 +60,27 @@ class Document:
         return posixpath.dirname(self.path)
 
 
+@dataclass(frozen=True)
+class Position:
+    """A position in a rendered document."""
+
+    page: int
+    """The index of the page (0-based)."""
+
+    top: float
+    """The distance from the top of the page, in CSS pixels."""
+
+
+@dataclass(frozen=True)
+class Heading:
+    """A heading of a rendered document."""
+
+    level: int
+    title: str
+    id: str | None
+    position: Position
+
+
 @dataclass
 class Layout:
     """The layout of a rendered document."""
@@ -69,3 +90,31 @@ class Layout:
 
     cover_pages: dict[str, int] = field(default_factory=dict)
     """The number of pages that only hold a cover, by cover location."""
+
+    headings: list[Heading] = field(default_factory=list)
+    """The headings, in order (outside of covers)."""
+
+    anchors: dict[str, Position] = field(default_factory=dict)
+    """The position of the elements having an identifier (outside of covers)."""
+
+    @classmethod
+    def parse(cls, data: dict[str, Any]) -> Layout:
+        """Creates a layout from the data reported by the browser."""
+
+        return cls(
+            pages=int(data["pages"]),
+            cover_pages={k: int(v) for k, v in data.get("coverPages", {}).items()},
+            headings=[
+                Heading(
+                    level=int(h["level"]),
+                    title=str(h["title"]),
+                    id=h.get("id"),
+                    position=Position(page=int(h["page"]), top=float(h["top"])),
+                )
+                for h in data.get("headings", [])
+            ],
+            anchors={
+                key: Position(page=int(value["page"]), top=float(value["top"]))
+                for key, value in data.get("anchors", {}).items()
+            },
+        )

@@ -1,7 +1,7 @@
 from mkdocs.config import config_options as c
 from mkdocs.config.base import Config as BaseConfig
 
-from mkdocs_exporter.core.aggregator import COVER_MODES
+from mkdocs_exporter.core.aggregator import COVER_MODES, START_MODES
 
 
 class Stylesheet(c.File):
@@ -71,10 +71,26 @@ class CoversConfig(BaseConfig):
     """The back cover template location."""
 
 
+class TocConfig(BaseConfig):
+    """The table of contents of an aggregated document."""
+
+    enabled = c.Type(bool, default=False)
+    """Should a table of contents be inserted after the first document's front cover?"""
+
+    title = c.Type(str, default="Table of contents")
+    """The title of the table of contents."""
+
+    depth = PositiveInteger(default=2)
+    """The depth of entries: 1 for pages only, 2 to add their second-level headings..."""
+
+    template = c.Optional(c.File(exists=True))
+    """A Jinja template replacing the default one (variables: `title`, `entries`)."""
+
+
 class AggregatorConfig(BaseConfig):
     """The aggregator's configuration."""
 
-    enabled = c.Type(bool, default=False)
+    enabled = c.Type(bool, default=True)
     """Is the aggregator enabled?"""
 
     output = c.Type(str, default="combined.pdf")
@@ -85,6 +101,28 @@ class AggregatorConfig(BaseConfig):
 
     covers = c.Choice(COVER_MODES, default="all")
     """The behavior of cover pages."""
+
+    include = c.ListOfItems(c.Type(str), default=["*"])
+    """Patterns of the source paths of the pages to aggregate (`*` matches any text)."""
+
+    exclude = c.ListOfItems(c.Type(str), default=[])
+    """Patterns of the source paths of the pages not to aggregate."""
+
+    start = c.Choice(START_MODES, default="any")
+    """`odd` to start every page on an odd (right-hand) page, inserting blank pages."""
+
+    outline = c.Type(int, default=3)
+    """The depth of bookmarks: 0 for none, 1 for pages, 2 to add their `h2` headings..."""
+
+    toc = c.SubConfig(TocConfig)
+    """The table of contents."""
+
+
+class SingleAggregatorConfig(AggregatorConfig):
+    """The configuration of the main aggregated document."""
+
+    enabled = c.Type(bool, default=False)
+    """Is the aggregator enabled?"""
 
 
 class Config(BaseConfig):
@@ -117,5 +155,8 @@ class Config(BaseConfig):
     url = c.Optional(c.Type(str))
     """The URL replacing the website's root in links (defaults to `site_url`)."""
 
-    aggregator = c.SubConfig(AggregatorConfig)
-    """The aggregator's configuration."""
+    aggregator = c.SubConfig(SingleAggregatorConfig)
+    """The aggregated document combining pages (shorthand for a single aggregator)."""
+
+    aggregators = c.ListOfItems(c.SubConfig(AggregatorConfig), default=[])
+    """Aggregated documents combining pages."""

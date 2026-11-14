@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import os
 import posixpath
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
 from dataclasses import dataclass
+from fnmatch import fnmatchcase
 from pathlib import Path
 from typing import Any, Literal
 
@@ -18,7 +19,7 @@ from mkdocs.structure.nav import Navigation, Section
 from mkdocs.structure.pages import Page
 
 from mkdocs_exporter.config import Config
-from mkdocs_exporter.core.aggregator import Aggregation
+from mkdocs_exporter.core.aggregator import Aggregation, NavNode, TocOptions
 from mkdocs_exporter.core.browser import Browser
 from mkdocs_exporter.core.document import Document, Site
 from mkdocs_exporter.core.exporter import Exporter
@@ -48,6 +49,7 @@ class Plugin(BasePlugin[Config]):
         self.pdf = False
         self.exports: dict[str, Export] = {}
         self.order: list[str] = []
+        self.nav: list[NavNode] = []
         self.watched: set[str] = set()
         self.covers: CoverRenderer
 
@@ -71,10 +73,22 @@ class Plugin(BasePlugin[Config]):
         self.theme = get_theme(theme.name)
         self.exports = {}
         self.order = []
+        self.nav = []
         self.watched = set()
         self.covers = CoverRenderer(config)
         self.pdf = options.enabled and (self.command != "serve" or options.serve)
 
+        outputs = [
+            aggregator.output
+            for aggregator in [options.aggregator, *options.aggregators]
+            if aggregator.enabled
+        ]
+
+        if len(outputs) != len(set(outputs)):
+            raise PluginError(
+                "[mkdocs-exporter.pdf] Several aggregators write to the same file: "
+                + ", ".join(sorted({o for o in outputs if outputs.count(o) > 1}))
+            )
         if type(self.theme) is Theme:
             logger.info(
                 "[mkdocs-exporter] The '%s' theme has no dedicated support, "
@@ -104,18 +118,30 @@ class Plugin(BasePlugin[Config]):
     def on_nav(self, nav: Navigation, *, config: MkDocsConfig, files: Files) -> None:
         """Records the order of the pages in the navigation."""
 
-        def walk(items: Sequence[Any]) -> list[str]:
-            pages: list[str] = []
+        def walk(items: Sequence[Any]) -> list[NavNode]:
+            nodes: list[NavNode] = []
 
             for item in items:
                 if isinstance(item, Page) and item.file is not None:
-                    pages.append(item.file.src_uri)
+                    nodes.append(
+                        NavNode(title=item.title or "", document=item.file.src_uri)
+                    )
                 elif isinstance(item, Section):
-                    pages.extend(walk(item.children))
+                    nodes.append(
+                        NavNode(title=item.title, children=walk(item.children))
+                    )
 
-            return pages
+            return nodes
 
-        self.order = list(dict.fromkeys(walk(nav.items)))
+        def documents(nodes: Sequence[NavNode]) -> Iterator[str]:
+            for node in nodes:
+                if node.document is not None:
+                    yield node.document
+
+                yield from documents(node.children)
+
+        self.nav = walk(nav.items)
+        self.order = list(dict.fromkeys(documents(self.nav)))
 
     @event_priority(100)
     def on_pre_page(self, page: Page, *, config: MkDocsConfig, files: Files) -> None:
@@ -238,25 +264,11 @@ class Plugin(BasePlugin[Config]):
         links = options.url or config.site_url or None
         exports = [self.exports[key] for key in self.order if key in self.exports]
         exports += [e for key, e in self.exports.items() if key not in set(self.order)]
-        aggregations = []
-
-        if options.aggregator.enabled:
-            aggregations.append(
-                Aggregation(
-                    output=options.aggregator.output.replace(os.sep, "/"),
-                    documents=[
-                        self.exports[key].document
-                        for key in self.order
-                        if key in self.exports
-                    ],
-                    covers=options.aggregator.covers,
-                    metadata={
-                        "title": config.site_name,
-                        "author": config.site_author,
-                        **options.aggregator.metadata,
-                    },
-                )
-            )
+        aggregations = [
+            self._aggregation(config, aggregator)
+            for aggregator in [options.aggregator, *options.aggregators]
+            if aggregator.enabled
+        ]
 
         exporter = Exporter(
             site,
@@ -284,6 +296,42 @@ class Plugin(BasePlugin[Config]):
                 formats["pdf"]["pages"] = report.layouts[export.document.id].pages
 
         return report.failures
+
+    def _aggregation(self, config: MkDocsConfig, options: Any) -> Aggregation:
+        """Describes an aggregated document."""
+
+        def selected(key: str) -> bool:
+            return any(
+                fnmatchcase(key, pattern) for pattern in options.include
+            ) and not any(fnmatchcase(key, pattern) for pattern in options.exclude)
+
+        toc = None
+
+        if options.toc.enabled:
+            toc = TocOptions(
+                title=options.toc.title,
+                depth=options.toc.depth,
+                template=_read(options.toc.template) if options.toc.template else None,
+            )
+
+        return Aggregation(
+            output=options.output.replace(os.sep, "/"),
+            documents=[
+                self.exports[key].document
+                for key in self.order
+                if key in self.exports and selected(key)
+            ],
+            covers=options.covers,
+            start=options.start,
+            metadata={
+                "title": config.site_name,
+                "author": config.site_author,
+                **options.metadata,
+            },
+            nav=self.nav,
+            outline=options.outline,
+            toc=toc,
+        )
 
     def _exported(self, page: Page) -> bool:
         """Should a PDF document be generated for the page?"""

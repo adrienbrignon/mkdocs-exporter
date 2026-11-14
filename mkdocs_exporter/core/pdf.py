@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import io
 import posixpath
+from collections.abc import Callable
+from typing import cast
 
 from pypdf import PdfReader, PdfWriter
-from pypdf.generic import NameObject, TextStringObject
+from pypdf.generic import DictionaryObject, NameObject, TextStringObject
 
 RELATIVE_LINKS_BASE = "https://mkdocs-exporter.invalid/"
 """A placeholder base URL for links that must end up relative to the PDF document."""
@@ -31,31 +33,44 @@ def relative_url(target: str, directory: str) -> str:
     )
 
 
-def relativize_links(pdf: bytes, directory: str) -> bytes:
-    """Turns links to the placeholder base into links relative to the document's directory."""
+def link_actions(writer: PdfWriter) -> list[tuple[int, DictionaryObject, str]]:
+    """The URI link annotations of a document: (page index, annotation, URI)."""
 
-    reader = PdfReader(io.BytesIO(pdf))
-    changed = False
+    links = []
 
-    for page in reader.pages:
+    for index, page in enumerate(writer.pages):
         for reference in page.get("/Annots") or []:
-            action = reference.get_object().get("/A")
+            annotation = reference.get_object()
+            action = annotation.get("/A")
 
             if action is None:
                 continue
 
-            action = action.get_object()
-            uri = str(action.get("/URI", ""))
+            uri = action.get_object().get("/URI")
 
-            if uri.startswith(RELATIVE_LINKS_BASE):
-                target = relative_url(uri[len(RELATIVE_LINKS_BASE) :], directory)
-                action[NameObject("/URI")] = TextStringObject(target)
-                changed = True
+            if uri is not None:
+                links.append((index, annotation, str(uri)))
+
+    return links
+
+
+def rewrite_links(pdf: bytes, rewrite: Callable[[str], str | None]) -> bytes:
+    """Rewrites the URIs of a document's links (`None` keeps a link untouched)."""
+
+    writer = PdfWriter(clone_from=PdfReader(io.BytesIO(pdf)))
+    changed = False
+
+    for _, annotation, uri in link_actions(writer):
+        target = rewrite(uri)
+
+        if target is not None and target != uri:
+            action = cast(DictionaryObject, annotation["/A"].get_object())
+            action[NameObject("/URI")] = TextStringObject(target)
+            changed = True
 
     if not changed:
         return pdf
 
-    writer = PdfWriter(clone_from=reader)
     output = io.BytesIO()
 
     writer.write(output)

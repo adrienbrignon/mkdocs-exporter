@@ -93,7 +93,17 @@
       pending.push(window.MathJax.startup.promise);
     }
 
-    await Promise.race([Promise.all(pending), sleep(10000)]);
+    const settled = await Promise.race([
+      Promise.all(pending).then(() => true),
+      sleep(10000).then(() => false),
+    ]);
+
+    if (!settled) {
+      errors.push({
+        phase: 'hook',
+        message: 'Gave up waiting for fonts, images or diagrams after 10 seconds',
+      });
+    }
   };
 
   /**
@@ -156,7 +166,51 @@
    */
   const measure = () => {
     const pages = [...document.querySelectorAll('.pagedjs_page')];
+    const indexes = new Map(pages.map((page, index) => [page, index]));
     const coverPages = {};
+    const excluded = '.mkdocs-exporter-front-cover, .mkdocs-exporter-back-cover, .mkdocs-exporter-toc';
+    const locate = (element) => {
+      const page = element.closest('.pagedjs_page');
+
+      if (!page || element.closest(excluded)) {
+        return null;
+      }
+
+      const top = element.getBoundingClientRect().top - page.getBoundingClientRect().top;
+
+      return { page: indexes.get(page), top: Math.max(0, top) };
+    };
+
+    const anchors = {};
+
+    for (const element of document.querySelectorAll('.pagedjs_page [id]')) {
+      const position = !(element.id in anchors) && locate(element);
+
+      if (position) {
+        anchors[element.id] = position;
+      }
+    }
+
+    const headings = [];
+
+    for (const element of document.querySelectorAll('.pagedjs_page_content :is(h1, h2, h3, h4, h5, h6)')) {
+      const position = !element.hasAttribute('data-split-from') && locate(element);
+
+      if (!position) {
+        continue;
+      }
+
+      const clone = element.cloneNode(true);
+
+      clone.querySelectorAll('.headerlink, .anchorlink').forEach((link) => link.remove());
+
+      headings.push({
+        level: Number(element.tagName.substring(1)),
+        title: clone.textContent.replace(/\s+/g, ' ').trim(),
+        id: element.id || null,
+        ...position,
+      });
+    }
 
     for (const [location, selector] of Object.entries(COVERS)) {
       coverPages[location] = pages.filter((page) => {
@@ -176,7 +230,7 @@
       }).length;
     }
 
-    return { pages: pages.length, coverPages };
+    return { pages: pages.length, coverPages, anchors, headings };
   };
 
   const run = async () => {

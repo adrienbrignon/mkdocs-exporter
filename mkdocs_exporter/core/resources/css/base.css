@@ -10,3 +10,47 @@
 .avoid-page-break {
   break-inside: avoid;
 }
+
+/* Table of contents of aggregated documents. */
+
+.mkdocs-exporter-toc {
+  break-after: page;
+}
+
+.mkdocs-exporter-toc ol.mkdocs-exporter-toc-entries {
+  list-style: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.mkdocs-exporter-toc ol.mkdocs-exporter-toc-entries ol.mkdocs-exporter-toc-entries {
+  padding-left: 1.5em !important;
+}
+
+.mkdocs-exporter-toc li.mkdocs-exporter-toc-entry {
+  margin: 0.25em 0 !important;
+  padding: 0 !important;
+}
+
+.mkdocs-exporter-toc li.mkdocs-exporter-toc-level-1 > a {
+  font-weight: bold;
+}
+
+.mkdocs-exporter-toc li.mkdocs-exporter-toc-entry > a {
+  display: flex;
+  align-items: baseline;
+  color: inherit;
+  text-decoration: none;
+}
+
+.mkdocs-exporter-toc li.mkdocs-exporter-toc-entry > a::after {
+  content: "";
+  order: 1;
+  flex: 1;
+  margin: 0 0.4em;
+  border-bottom: 1px dotted currentColor;
+}
+
+.mkdocs-exporter-toc .mkdocs-exporter-toc-page {
+  order: 2;
+}

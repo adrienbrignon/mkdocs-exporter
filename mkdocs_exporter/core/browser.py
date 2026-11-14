@@ -236,9 +236,7 @@ class Browser:
         finally:
             await page.close()
 
-        layout = Layout(
-            pages=int(result["pages"]), cover_pages=dict(result["coverPages"])
-        )
+        layout = Layout.parse(result)
 
         return PrintResult(pdf=pdf, layout=layout, diagnostics=diagnostics)
 

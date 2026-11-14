@@ -1,16 +1,29 @@
-"""Combines documents into a single PDF document."""
+"""Combines documents into a single PDF document (a "book")."""
 
 from __future__ import annotations
 
+import importlib.resources
 import io
 import posixpath
-from collections.abc import Mapping, Sequence
-from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from collections.abc import Iterator, Mapping, Sequence
+from dataclasses import dataclass, field, replace
+from typing import TYPE_CHECKING, cast
 
+from jinja2 import Environment
 from pypdf import PdfWriter
+from pypdf.generic import (
+    ArrayObject,
+    DictionaryObject,
+    Fit,
+    FloatObject,
+    IndirectObject,
+    NameObject,
+    NullObject,
+    TextStringObject,
+)
 
-from mkdocs_exporter.core.document import Document, Layout, Site
+from mkdocs_exporter.core.document import Document, Heading, Layout, Position, Site
+from mkdocs_exporter.core.pdf import RELATIVE_LINKS_BASE, link_actions, relative_url
 from mkdocs_exporter.logging import logger
 
 if TYPE_CHECKING:
@@ -20,6 +33,12 @@ if TYPE_CHECKING:
 
 COVER_MODES = ("all", "none", "limits", "book", "front", "back")
 """How cover pages are handled when aggregating documents."""
+
+START_MODES = ("any", "odd")
+"""On which pages documents start in an aggregated document."""
+
+POINTS_PER_PIXEL = 0.75
+"""PDF points (1/72 in) per CSS pixel (1/96 in)."""
 
 
 def kept_covers(mode: str, index: int, count: int) -> set[str]:
@@ -49,6 +68,29 @@ def kept_covers(mode: str, index: int, count: int) -> set[str]:
 
 
 @dataclass
+class NavNode:
+    """An entry of the navigation: a section or a document."""
+
+    title: str
+    document: str | None = None
+    """The identifier of the document (`None` for sections)."""
+
+    children: list[NavNode] = field(default_factory=list)
+
+
+@dataclass
+class TocOptions:
+    """Options of the table of contents of an aggregated document."""
+
+    title: str = "Table of contents"
+    depth: int = 2
+    """The depth of the entries: 1 for documents only, 2 to add their `h2` headings..."""
+
+    template: str | None = None
+    """A Jinja template replacing the default one."""
+
+
+@dataclass
 class Aggregation:
     """A document combining several documents."""
 
@@ -61,8 +103,20 @@ class Aggregation:
     covers: str = "all"
     """How cover pages are handled (see `kept_covers`)."""
 
+    start: str = "any"
+    """`odd` to start every document on an odd (right-hand) page, adding blank pages."""
+
     metadata: Mapping[str, object] = field(default_factory=dict)
     """The document information (title, author...)."""
+
+    nav: Sequence[NavNode] | None = None
+    """The navigation, used for bookmarks and the table of contents (flat by default)."""
+
+    outline: int = 3
+    """The depth of bookmarks: 0 for none, 1 for documents, 2 to add `h2` headings..."""
+
+    toc: TocOptions | None = None
+    """The table of contents, inserted after the first document's front cover."""
 
 
 @dataclass
@@ -79,46 +133,87 @@ class Part:
     pages: int
     """Its (expected) number of pages in the aggregated document."""
 
+    layout: Layout
+    """Its (expected) layout in the aggregated document."""
+
+    blank_before: bool = False
+    """Is it preceded by a blank page?"""
+
+    def start(self) -> Position:
+        """Where its content starts: its title, or the page following its front cover."""
+
+        headings = self.layout.headings
+
+        if headings and headings[0].level == 1:
+            return headings[0].position
+
+        covers = (
+            self.layout.cover_pages.get("front", 0) if "front" in self.covers else 0
+        )
+
+        return Position(page=min(covers, max(0, self.pages - 1)), top=0)
+
+
+def _number(parts: list[Part], start: str) -> list[Part]:
+    """Numbers the pages of the parts (inserting blank pages if needed)."""
+
+    page = 1
+
+    for part in parts:
+        part.blank_before = start == "odd" and page % 2 == 0
+        part.first_page = page + part.blank_before
+        page = part.first_page + part.pages
+
+    return parts
+
 
 def plan(
-    documents: Sequence[Document], layouts: Mapping[str, Layout], mode: str
+    documents: Sequence[Document],
+    layouts: Mapping[str, Layout],
+    mode: str,
+    start: str = "any",
 ) -> list[Part]:
     """Plans the aggregated document from the layout of each rendered document."""
 
     parts = []
-    page = 1
 
     for index, document in enumerate(documents):
         layout = layouts[document.id]
         covers = kept_covers(mode, index, len(documents)) & set(document.covers)
         removed = set(document.covers) - covers
-        pages = layout.pages - sum(
-            layout.cover_pages.get(cover, 0) for cover in removed
-        )
+        pages = layout.pages - sum(layout.cover_pages.get(c, 0) for c in removed)
 
         parts.append(
-            Part(document=document, covers=covers, first_page=page, pages=pages)
-        )
-        page += pages
-
-    return parts
-
-
-def renumber(parts: Sequence[Part], pages: Sequence[int]) -> list[Part]:
-    """Plans the aggregated document again from the actual page count of each part."""
-
-    result = []
-    page = 1
-
-    for part, count in zip(parts, pages, strict=True):
-        result.append(
             Part(
-                document=part.document, covers=part.covers, first_page=page, pages=count
+                document=document,
+                covers=covers,
+                first_page=0,
+                pages=pages,
+                layout=layout,
             )
         )
-        page += count
 
-    return result
+    return _number(parts, start)
+
+
+def renumber(
+    parts: Sequence[Part], layouts: Sequence[Layout], start: str = "any"
+) -> list[Part]:
+    """Plans the aggregated document again from the actual layout of each part."""
+
+    return _number(
+        [
+            replace(part, pages=layout.pages, layout=layout)
+            for part, layout in zip(parts, layouts, strict=True)
+        ],
+        start,
+    )
+
+
+def total_pages(parts: Sequence[Part]) -> int:
+    """The number of pages of the aggregated document."""
+
+    return parts[-1].first_page + parts[-1].pages - 1 if parts else 0
 
 
 def metadata(values: Mapping[str, object]) -> dict[str, str]:
@@ -136,19 +231,249 @@ def metadata(values: Mapping[str, object]) -> dict[str, str]:
     return result
 
 
-def combine(pdfs: Sequence[bytes], output: Path, info: Mapping[str, object]) -> None:
-    """Writes the concatenation of PDF documents."""
+def flat_nav(documents: Sequence[Document]) -> list[NavNode]:
+    """A navigation listing documents."""
 
-    writer = PdfWriter()
+    return [
+        NavNode(title=document.title, document=document.id) for document in documents
+    ]
 
-    for pdf in pdfs:
-        writer.append(io.BytesIO(pdf))
 
-    writer.add_metadata({"/Producer": "MkDocs Exporter", **metadata(info)})
-    output.parent.mkdir(parents=True, exist_ok=True)
+def _nested(
+    headings: Sequence[Heading], depth: int
+) -> Iterator[tuple[int, Heading, int]]:
+    """Headings up to a level: (index, heading, index of the parent heading or -1)."""
 
-    with output.open("wb") as file:
-        writer.write(file)
+    stack: list[tuple[int, int]] = []
+
+    for index, heading in enumerate(headings):
+        if heading.level > depth:
+            continue
+
+        while stack and stack[-1][0] >= heading.level:
+            stack.pop()
+
+        yield index, heading, stack[-1][1] if stack else -1
+        stack.append((heading.level, index))
+
+
+def _sub_headings(part: Part) -> list[Heading]:
+    """The headings of a part, without its title."""
+
+    headings = part.layout.headings
+
+    return list(headings[1:] if headings and headings[0].level == 1 else headings)
+
+
+def _first(node: NavNode, parts: Mapping[str, Part]) -> Part | None:
+    """The first part of a navigation entry."""
+
+    if node.document is not None:
+        return parts.get(node.document)
+
+    for child in node.children:
+        if (part := _first(child, parts)) is not None:
+            return part
+
+    return None
+
+
+@dataclass
+class TocEntry:
+    """An entry of the table of contents."""
+
+    title: str
+    page: int
+    href: str
+    children: list[TocEntry] = field(default_factory=list)
+
+
+def toc_entries(
+    nav: Sequence[NavNode], parts: Sequence[Part], depth: int, prefix: str
+) -> list[TocEntry]:
+    """The entries of the table of contents (`prefix` is the website's path)."""
+
+    by_id = {part.document.id: part for part in parts}
+
+    def href(part: Part, anchor: str | None = None) -> str:
+        return prefix + part.document.url + (f"#{anchor}" if anchor else "")
+
+    def entries(nodes: Sequence[NavNode]) -> list[TocEntry]:
+        result = []
+
+        for node in nodes:
+            part = _first(node, by_id)
+
+            if part is None:
+                continue
+
+            entry = TocEntry(
+                title=node.title or part.document.title,
+                page=part.first_page + part.start().page,
+                href=href(part),
+            )
+
+            if node.document is None:
+                entry.children = entries(node.children)
+            else:
+                created: dict[int, TocEntry] = {}
+
+                for index, heading, parent in _nested(_sub_headings(part), depth):
+                    child = TocEntry(
+                        title=heading.title,
+                        page=part.first_page + heading.position.page,
+                        href=href(part, heading.id),
+                    )
+                    created[index] = child
+                    siblings = (
+                        created[parent].children if parent >= 0 else entry.children
+                    )
+                    siblings.append(child)
+
+            result.append(entry)
+
+        return result
+
+    return entries(nav)
+
+
+def render_toc(options: TocOptions, entries: Sequence[TocEntry]) -> str:
+    """Renders the table of contents."""
+
+    from mkdocs_exporter.core import resources
+
+    source = options.template or (
+        importlib.resources.files(resources)
+        .joinpath("toc.html")
+        .read_text(encoding="utf-8")
+    )
+
+    return (
+        Environment(autoescape=True)
+        .from_string(source)
+        .render(title=options.title, entries=entries)
+    )
+
+
+class Book:
+    """Writes an aggregated document."""
+
+    def __init__(self, parts: Sequence[Part], pdfs: Sequence[bytes]) -> None:
+        self.parts = list(parts)
+        self.writer = PdfWriter()
+        self.starts: dict[str, int] = {}
+
+        for part, pdf in zip(self.parts, pdfs, strict=True):
+            if part.blank_before and len(self.writer.pages):
+                box = self.writer.pages[-1].mediabox
+                self.writer.add_blank_page(
+                    width=float(box.width), height=float(box.height)
+                )
+
+            self.starts[part.document.id] = len(self.writer.pages)
+            self.writer.append(io.BytesIO(pdf), import_outline=False)
+
+    def locate(self, part: Part, position: Position) -> tuple[int, Fit]:
+        """The page index and destination fit of a position within a part."""
+
+        index = min(
+            self.starts[part.document.id] + position.page, len(self.writer.pages) - 1
+        )
+        height = float(self.writer.pages[index].mediabox.height)
+        top = max(0.0, height - position.top * POINTS_PER_PIXEL)
+
+        return index, Fit.xyz(left=0, top=top)
+
+    def link(self, base: str, relative_to: str | None) -> None:
+        """Turns links to aggregated documents into links within the document.
+
+        Links to other pages of the website are made relative to the document's
+        directory when `relative_to` is set.
+        """
+
+        parts = {part.document.url: part for part in self.parts}
+
+        for _, annotation, uri in link_actions(self.writer):
+            if not uri.startswith(base):
+                continue
+
+            target = uri[len(base) :]
+            path, _, fragment = target.partition("#")
+            part = parts.get(path.partition("?")[0])
+
+            if part is not None:
+                position = part.layout.anchors.get(fragment) if fragment else None
+                index, fit = self.locate(part, position or part.start())
+                destination = ArrayObject(
+                    [
+                        self.writer.pages[index].indirect_reference,
+                        NameObject("/XYZ"),
+                        FloatObject(0),
+                        FloatObject(fit.fit_args[1]),
+                        NullObject(),
+                    ]
+                )
+                annotation[NameObject("/A")] = DictionaryObject(
+                    {
+                        NameObject("/S"): NameObject("/GoTo"),
+                        NameObject("/D"): destination,
+                    }
+                )
+            elif relative_to is not None:
+                action = cast(DictionaryObject, annotation["/A"].get_object())
+                action[NameObject("/URI")] = TextStringObject(
+                    relative_url(target, relative_to)
+                )
+
+    def outline(self, nav: Sequence[NavNode], depth: int) -> None:
+        """Adds bookmarks: sections, documents and their headings."""
+
+        if depth < 1:
+            return
+
+        parts = {part.document.id: part for part in self.parts}
+
+        def add(nodes: Sequence[NavNode], parent: IndirectObject | None) -> None:
+            for node in nodes:
+                part = _first(node, parts)
+
+                if part is None:
+                    continue
+
+                index, fit = self.locate(part, part.start())
+                item = self.writer.add_outline_item(
+                    title=node.title or part.document.title,
+                    page_number=index,
+                    parent=parent,
+                    fit=fit,
+                )
+
+                if node.document is None:
+                    add(node.children, item)
+                    continue
+
+                items: dict[int, IndirectObject] = {}
+
+                for index, heading, parent_index in _nested(_sub_headings(part), depth):
+                    page, heading_fit = self.locate(part, heading.position)
+                    items[index] = self.writer.add_outline_item(
+                        title=heading.title,
+                        page_number=page,
+                        parent=items[parent_index] if parent_index >= 0 else item,
+                        fit=heading_fit,
+                        is_open=False,
+                    )
+
+        add(nav, None)
+
+    def write(self, output: Path, info: Mapping[str, object]) -> None:
+        """Writes the document."""
+
+        self.writer.add_metadata({"/Producer": "MkDocs Exporter", **metadata(info)})
+        output.parent.mkdir(parents=True, exist_ok=True)
+
+        with output.open("wb") as file:
+            self.writer.write(file)
 
 
 async def aggregate(
@@ -161,8 +486,9 @@ async def aggregate(
     """Renders the documents of an aggregation again and combines them.
 
     Page counts are predicted from the documents rendered with all their covers. When
-    removing covers changes the layout (e.g. content reflowing onto a cover's page), the
-    documents are numbered from their actual page counts and rendered again.
+    removing covers changes the layout (e.g. content reflowing onto a cover's page), or
+    when the table of contents changes, the documents are numbered from their actual
+    layout and rendered again.
 
     Returns:
         The documents that could not be rendered (the aggregation is then not written).
@@ -174,25 +500,31 @@ async def aggregate(
         document for document in aggregation.documents if document.id in layouts
     ]
     output = aggregation.output.lstrip("/")
+    directory = posixpath.dirname(output)
+    nav = aggregation.nav if aggregation.nav is not None else flat_nav(documents)
 
     if not documents:
         return []
 
     logger.info("[mkdocs-exporter.pdf] Aggregating pages to '%s'...", output)
 
-    parts = plan(documents, layouts, aggregation.covers)
+    parts = plan(documents, layouts, aggregation.covers, aggregation.start)
+    toc = _toc(aggregation, nav, parts, site)
+    attempts = 4 if aggregation.toc is not None else 3
 
-    for attempt in range(3):
-        total = sum(part.pages for part in parts)
+    for attempt in range(attempts):
+        total = total_pages(parts)
         passes = [
             Pass(
                 covers=part.covers,
                 page=part.first_page,
                 pages=total,
                 name=name,
-                directory=posixpath.dirname(output),
+                directory=directory,
+                relativize=False,
+                toc=toc if index == 0 else None,
             )
-            for part in parts
+            for index, part in enumerate(parts)
         ]
         results = await renderer.render_all(documents, passes)
         failures = [outcome for outcome in results if outcome.error is not None]
@@ -200,11 +532,24 @@ async def aggregate(
         if failures:
             return failures
 
-        pages = [o.result.layout.pages for o in results if o.result is not None]
+        actual = renumber(
+            parts,
+            [
+                outcome.result.layout
+                for outcome in results
+                if outcome.result is not None
+            ],
+            aggregation.start,
+        )
+        updated = _toc(aggregation, nav, actual, site)
+        stable = [p.pages for p in actual] == [
+            p.pages for p in parts
+        ] and updated == toc
+        parts = actual
 
-        if pages == [part.pages for part in parts]:
+        if stable:
             break
-        if attempt == 2:
+        if attempt == attempts - 1:
             logger.warning(
                 "[mkdocs-exporter.pdf] The page numbering of '%s' did not stabilize, "
                 "page numbers may be inaccurate",
@@ -213,12 +558,26 @@ async def aggregate(
             break
 
         logger.debug("[mkdocs-exporter.pdf] Page numbering of '%s' changed", output)
-        parts = renumber(parts, pages)
+        toc = updated
 
-    combine(
-        [outcome.result.pdf for outcome in results if outcome.result is not None],
-        site.directory / output,
-        aggregation.metadata,
-    )
+    book = Book(parts, [outcome.result.pdf for outcome in results if outcome.result])
+    base = renderer.options.links or RELATIVE_LINKS_BASE
+
+    book.link(base, directory if renderer.options.links is None else None)
+    book.outline(nav, aggregation.outline)
+    book.write(site.directory / output, aggregation.metadata)
 
     return []
+
+
+def _toc(
+    aggregation: Aggregation, nav: Sequence[NavNode], parts: Sequence[Part], site: Site
+) -> str | None:
+    """Renders the table of contents of an aggregation, if any."""
+
+    if aggregation.toc is None:
+        return None
+
+    entries = toc_entries(nav, parts, aggregation.toc.depth, site.prefix)
+
+    return render_toc(aggregation.toc, entries)
