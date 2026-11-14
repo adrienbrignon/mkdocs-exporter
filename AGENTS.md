@@ -23,7 +23,8 @@ third-party plugins, so neither is supported as a plugin host.
 | Lint | `uv run ruff check` |
 | Format | `uv run ruff format` |
 | Type check | `uv run mypy` |
-| Tests | `uv run pytest` |
+| Tests | `uv run pytest` (`-m "not browser"` to skip the end-to-end tests) |
+| Tests on ProperDocs | `MKDOCS_EXPORTER_TEST_PROPERDOCS=1 uv run --with properdocs --with properdocs-theme-mkdocs --with properdocs-theme-readthedocs pytest` |
 | Build / serve the documentation | `make build` / `make serve` (`PDF=false` or `PDF_AGGREGATOR=false` to speed things up) |
 | Build distributions | `uv build` |
 
@@ -35,31 +36,54 @@ Before considering a change done, run the linter, the formatter check, the type 
 
 | Path | Contents |
 |---|---|
-| `mkdocs_exporter/plugin.py` | The plugin registered as `exporter`: theme resolution, buttons, page HTML capture |
+| `mkdocs_exporter/core/` | **Engine-agnostic core** (must never import `mkdocs`, enforced by ruff `TID251`) |
+| `core/document.py` | `Site` and `Document`: the plain data the core works on |
+| `core/html.py` | HTML manipulation (BeautifulSoup + lxml), link resolution |
+| `core/server.py` | Loopback HTTP server exposing the built site (and in-memory pages) to the browser |
+| `core/browser.py` | Playwright/Chromium: prints a URL to PDF, collects diagnostics |
+| `core/renderer.py` | Prepares a page's print HTML and renders documents concurrently |
+| `core/aggregator.py` | Cover selection, page numbering and merging of the combined document (pypdf) |
+| `core/themes/` | Theme adapters (`material`, `readthedocs`, generic fallback) |
+| `core/resources/` | `pdf.js` (Paged.js driver), theme scripts, print CSS, vendored Paged.js |
+| `core/runner.py` | Runs coroutines on an event loop owned by the exporter |
+| `mkdocs_exporter/plugin.py` | The MkDocs plugin (`exporter`): adapts MkDocs pages to core documents |
 | `mkdocs_exporter/config.py`, `formats/pdf/config.py` | Configuration schema (MkDocs `config_options`) |
-| `mkdocs_exporter/formats/pdf/` | PDF format: plugin events, renderer, browser (Playwright), aggregator (pypdf) |
 | `mkdocs_exporter/formats/pdf/buttons/download.py` | Callables referenced from users' `mkdocs.yml` via `!!python/name:` |
-| `mkdocs_exporter/formats/pdf/resources/js/` | `pdf.js` (glue with Paged.js) and the vendored Paged.js polyfill |
-| `mkdocs_exporter/preprocessor.py` | HTML manipulation helpers (BeautifulSoup + lxml) |
-| `mkdocs_exporter/themes/` | Theme-specific adjustments (`material`, `readthedocs`) |
+| `tests/unit/`, `tests/integration/` | Unit tests; end-to-end tests building `tests/fixtures/site` (marker `browser`) |
 | `docs/`, `mkdocs.yml`, `resources/`, `macros/`, `overrides/` | This project's own documentation site (it dogfoods the plugin) |
-| `examples/` | Sample PDF documents linked from the README |
 
 ## How it works
 
-1. `on_config`: resolves the theme adapter and registers the PDF sub-plugin (`exporter-pdf`).
-2. `on_page_markdown`: cover page templates are injected into the page's Markdown.
-3. `on_post_page`: the page's HTML is captured (priority 100, before other plugins), download buttons are
-   added to the website's HTML (priority -100) and a rendering task is queued.
-4. `on_post_build`: queued pages are rendered concurrently. For each page, the HTML is preprocessed
-   (theme cleanup, custom stylesheets and scripts, Paged.js), written to a temporary file, opened in
-   Chromium and printed once `pdf.js` reports Paged.js is done.
-5. When the aggregator is enabled, every page is rendered again with continuous page numbering and the
-   resulting PDF documents are merged.
+1. `on_startup` / `on_config`: the theme adapter is resolved and per-build state is reset (MkDocs keeps
+   the plugin instance across `mkdocs serve` rebuilds because it defines `on_startup`). PDF documents are
+   not generated while serving unless `formats.pdf.serve` is enabled.
+2. `on_nav` records the navigation order; `on_pre_page` declares `page.formats["pdf"]`;
+   `on_page_markdown` injects cover pages into the Markdown.
+3. `on_post_page`: the page's HTML is captured (priority 100, before other plugins), then buttons are
+   added to the website's HTML and cover pages removed from it (priority -100).
+4. `on_post_build` (priority -100, after other plugins wrote their files): a `Server` exposes the site
+   directory, a `Browser` is launched and the `Renderer` prints every page concurrently. Each page's print
+   HTML is served from memory at the page's own URL (with a query string), so relative URLs resolve.
+5. The aggregator plans the combined document from the measured layouts (removed covers, page offsets),
+   renders the pages again with continuous numbering (again if a page count changed) and merges them.
 
-**Readiness contract:** `pdf.js` sets `body[mkdocs-exporter="true"]` and `body[mkdocs-exporter-pages]` in
-Paged.js' `after` hook; Python waits for that attribute before printing. Users can hook into rendering by
-defining `window.MkDocsExporter.render` (an async function awaited before pagination).
+**Browser contract** (see `core/resources/js/pdf.js`): `pdf.js` is the first script of the page. It
+records uncaught errors by phase, loads Paged.js after the website's scripts initialized (`load` event),
+runs `window.MkDocsExporter.before/render` hooks, flattens shadow trees, removes hidden elements,
+paginates (`PagedConfig.auto = false`), then sets `body[mkdocs-exporter]` to `true` or `error`.
+
+Design decisions backed by measurements (don't revert them without measuring again):
+
+- **Loopback HTTP server**, not Playwright routing (+55 % per page) nor `file://` (broken absolute paths,
+  CORS, fetches).
+- **Hide theme chrome with CSS, remove it right before pagination**: removing it from the DOM up front
+  breaks the theme's scripts; leaving it in the DOM makes Paged.js repeat `position: fixed` elements on
+  every page.
+- **Load Paged.js after the website's scripts**: its polyfills break some of them (Bootstrap modals).
+- **`wait_until="load"`**: identical output to `networkidle`, about 35 % faster.
+- Uncaught errors of the website's scripts are logged at debug level (they also happen on the website);
+  errors in `MkDocsExporter` hooks and missing same-origin resources are warnings; only pagination failures
+  and timeouts fail the build.
 
 ## Conventions
 
@@ -67,6 +91,8 @@ defining `window.MkDocsExporter.render` (an async function awaited before pagina
 - Type hints on all new code; keep `mypy` clean.
 - Docstrings on public classes and functions.
 - Log through `mkdocs_exporter.logging.logger`; prefix messages with `[mkdocs-exporter.<area>]`.
+- Keep the core free of `mkdocs` imports: it is meant to be driven by other engines (a standalone
+  command for Zensical and MkDocs 2.0 is planned).
 - Do not use `asyncio.get_event_loop()` / `asyncio.set_event_loop()`: the plugin runs inside other tools'
   processes (`mkdocs serve`, other plugins, notebooks).
 - MkDocs reuses plugin instances across rebuilds (`mkdocs serve`): reset per-build state in `on_config` /
@@ -80,9 +106,23 @@ defining `window.MkDocsExporter.render` (an async function awaited before pagina
   `BREAKING CHANGE:` footer; reference issues with `Fixes #N` / `Refs #N`.
 - Formatting-only commits go into `.git-blame-ignore-revs`.
 
+## Testing
+
+- Unit tests (`tests/unit/`) cover pure logic; prefer them for anything in `core/` that doesn't need a
+  browser.
+- Integration tests (`tests/integration/`, marker `browser`) copy `tests/fixtures/site` and build it:
+  `project.build(exporter={...}, **mkdocs_config)` merges options into the defaults of
+  `tests/conftest.py`; `project.serve(builds=2, dirty=False)` reproduces `mkdocs serve` rebuilds;
+  `project.write(path, content)` customizes the project first.
+- Inspect output with `site.pdf(path)` (`tests/support/pdf.py`): text per page, links, outline, metadata,
+  images. Never compare PDF bytes (pypdf output isn't deterministic).
+- A known, unfixed bug gets a test marked `@pytest.mark.xfail(reason="#N: ...")`; xfail is strict, so the
+  fix must remove the marker.
+- Browser tests are skipped when Chromium is missing, except on CI (`CI` set) where they fail.
+
 ## Vendored Paged.js
 
-`mkdocs_exporter/formats/pdf/resources/js/pagedjs.min.js` is the Paged.js **v0.4.3** polyfill build (the
+`mkdocs_exporter/core/resources/js/pagedjs.min.js` is the Paged.js **v0.4.3** polyfill build (the
 latest stable release). Do not edit it by hand. To update it, replace it with
 `https://unpkg.com/pagedjs@<version>/dist/paged.polyfill.min.js`, then run the full test suite (including
 browser tests) and compare a few generated PDF documents. Resource files are marked `-diff` in
