@@ -1,99 +1,394 @@
-import logging
+"""The MkDocs plugin (registered as `exporter`)."""
 
+from __future__ import annotations
+
+import os
+import posixpath
+from collections.abc import Sequence
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Literal
+
+from mkdocs.config.defaults import MkDocsConfig
+from mkdocs.exceptions import PluginError
+from mkdocs.livereload import LiveReloadServer
 from mkdocs.plugins import BasePlugin, CombinedEvent, event_priority
-from mkdocs.structure.files import File, Files
+from mkdocs.structure.files import Files
+from mkdocs.structure.nav import Navigation, Section
+from mkdocs.structure.pages import Page
 
 from mkdocs_exporter.config import Config
-from mkdocs_exporter.formats.pdf.plugin import Plugin as PDFFormatPlugin
+from mkdocs_exporter.core.aggregator import combine, plan, renumber
+from mkdocs_exporter.core.browser import Browser
+from mkdocs_exporter.core.document import Document, Site
+from mkdocs_exporter.core.html import HtmlDocument
+from mkdocs_exporter.core.renderer import Outcome, Pass, Renderer, RenderOptions
+from mkdocs_exporter.core.runner import run
+from mkdocs_exporter.core.server import Server
+from mkdocs_exporter.core.themes import Theme, get_theme
 from mkdocs_exporter.helpers import resolve
 from mkdocs_exporter.logging import logger
-from mkdocs_exporter.page import Page
-from mkdocs_exporter.preprocessor import Preprocessor
-from mkdocs_exporter.themes.factory import Factory as ThemeFactory
+
+
+@dataclass
+class Export:
+    """What is exported for a page."""
+
+    page: Page
+    document: Document
 
 
 class Plugin(BasePlugin[Config]):
-    """The plugin."""
+    """Exports pages to PDF documents."""
 
     def __init__(self) -> None:
-        """The constructor."""
+        self.command = "build"
+        self.theme: Theme = Theme()
+        self.pdf = False
+        self.exports: dict[str, Export] = {}
+        self.order: list[str] = []
+        self.watched: set[str] = set()
 
-        self.stylesheets: list[File] = []
-        self.on_post_page = CombinedEvent(self._on_post_page_1, self._on_post_page_2)
+    def on_startup(
+        self, *, command: Literal["build", "gh-deploy", "serve"], dirty: bool
+    ) -> None:
+        """Invoked once per process (MkDocs then keeps this instance across rebuilds)."""
 
-    @event_priority(100)
-    def on_config(self, config: dict, *args, **kwargs) -> None:
-        """Invoked when the configuration has been loaded."""
-
-        self.theme = ThemeFactory.create(self.config.theme or config["theme"])
-
-        if "level" in self.config.logging:
-            logger.setLevel(logging.getLevelName(self.config.logging.level.upper()))
-
-        def register(key, plugin: type[Plugin], config_data: dict) -> Plugin:
-            """Registers a MkDocs plugin dynamically."""
-
-            key = "exporter-" + key
-
-            config.plugins[key] = plugin()
-            config.plugins[key].config = config_data
-
-            config.plugins[key].on_config(config, *args, **kwargs)
-
-        if "pdf" in self.config.formats:
-            register("pdf", PDFFormatPlugin, self.config["formats"]["pdf"])
-
-    def on_pre_build(self, **kwargs) -> None:
-        """Invoked before the build process starts."""
-
-        self.stylesheets.clear()
+        self.command = command
 
     @event_priority(100)
-    def on_pre_page(self, page: Page, **kwargs) -> None:
-        """Invoked before a page has been built."""
+    def on_config(self, config: MkDocsConfig) -> None:
+        """Invoked when the configuration is loaded: resets the per-build state."""
 
-        page.html = None
-        page.formats = {}
-        page.theme = self.theme
+        if self.config.logging.level:
+            logger.setLevel(self.config.logging.level.upper())
 
-    @event_priority(100)
-    def _on_post_page_1(self, html: str, page: Page, **kwargs) -> str:
-        """Invoked after a page has been built (and before all other plugins)."""
+        theme = self.config.theme or config.theme
+        options = self.config.formats.pdf
 
-        page.html = html
+        self.theme = get_theme(theme.name)
+        self.exports = {}
+        self.order = []
+        self.watched = set()
+        self.pdf = options.enabled and (self.command != "serve" or options.serve)
+
+        if type(self.theme) is Theme:
+            logger.info(
+                "[mkdocs-exporter] The '%s' theme has no dedicated support, "
+                "generic adjustments will be used",
+                theme.name,
+            )
+        if options.enabled and not self.pdf:
+            logger.info(
+                "[mkdocs-exporter.pdf] PDF documents are not generated while serving "
+                "(enable 'formats.pdf.serve' to change this)"
+            )
+
+    def on_serve(
+        self, server: LiveReloadServer, *, config: MkDocsConfig, builder: Any
+    ) -> LiveReloadServer:
+        """Watches the files used to generate documents."""
+
+        if self.pdf:
+            options = self.config.formats.pdf
+
+            for path in {*options.stylesheets, *options.scripts, *self.watched}:
+                server.watch(path)
+
+        return server
 
     @event_priority(-100)
-    def _on_post_page_2(self, html: str, page: Page, **kwargs) -> str:
-        """Invoked after a page has been built (and after all other plugins)."""
+    def on_nav(self, nav: Navigation, *, config: MkDocsConfig, files: Files) -> None:
+        """Records the order of the pages in the navigation."""
 
-        preprocessor = Preprocessor(theme=page.theme)
+        def walk(items: Sequence[Any]) -> list[str]:
+            pages: list[str] = []
 
-        preprocessor.preprocess(html)
+            for item in items:
+                if isinstance(item, Page) and item.file is not None:
+                    pages.append(item.file.src_uri)
+                elif isinstance(item, Section):
+                    pages.extend(walk(item.children))
 
-        for button in [*self.config.buttons, *page.meta.get("buttons", [])]:
-            if resolve(button.get("enabled", True), page=page):
-                preprocessor.button(**resolve(button, page=page))
+            return pages
 
-        preprocessor.remove('*[data-decompose="true"]')
-        preprocessor.teleport()
-
-        return preprocessor.done()
-
-    def on_files(self, files: Files, **kwargs) -> Files:
-        """Invoked when files are ready to be manipulated."""
-
-        self.stylesheets.extend(files.css_files())
-
-        return files
+        self.order = list(dict.fromkeys(walk(nav.items)))
 
     @event_priority(100)
-    def on_post_build(self, **kwargs) -> None:
-        """Invoked when the build process is done."""
+    def on_pre_page(self, page: Page, *, config: MkDocsConfig, files: Files) -> None:
+        """Declares the documents generated for a page."""
 
-        for stylesheet in self.stylesheets:
-            content = None
+        page.formats = {}  # type: ignore[attr-defined]
 
-            with open(stylesheet.abs_dest_path, encoding="utf-8") as reader:
-                content = self.theme.stylesheet(stylesheet, reader.read())
-            with open(stylesheet.abs_dest_path, "w+", encoding="utf-8") as writer:
-                writer.write(content)
+        if self.pdf:
+            path = posixpath.splitext(page.file.dest_uri)[0] + ".pdf"
+
+            page.formats["pdf"] = {  # type: ignore[attr-defined]
+                "path": os.path.join(config.site_dir, *path.split("/")),
+                "url": path,
+                "pages": 0,
+                "covers": [],
+            }
+
+    @event_priority(100)
+    def on_page_markdown(
+        self, markdown: str, *, page: Page, config: MkDocsConfig, files: Files
+    ) -> str:
+        """Injects the cover pages into the page's Markdown."""
+
+        formats: dict[str, Any] = getattr(page, "formats", {})
+
+        if "pdf" in formats and not self._exported(page):
+            del formats["pdf"]
+        if "pdf" not in formats or "covers" in page.meta.get("hide", []):
+            return markdown
+
+        root = os.path.dirname(config.config_file_path or "")
+        covers = {
+            **self.config.formats.pdf.covers,
+            **{
+                key: os.path.join(root, value)
+                for key, value in page.meta.get("covers", {}).items()
+            },
+        }
+
+        for location in ("front", "back"):
+            path = covers.get(location)
+
+            if not path:
+                continue
+
+            self.watched.add(path)
+            formats["pdf"]["covers"].append(location)
+
+            with open(path, encoding="utf-8") as file:
+                cover = (
+                    f'<div class="mkdocs-exporter-{location}-cover" data-decompose="true">'
+                    f"{file.read().strip()}</div>"
+                )
+
+            markdown = (
+                f"{cover}\n\n{markdown}"
+                if location == "front"
+                else f"{markdown}\n\n{cover}\n"
+            )
+
+        return markdown
+
+    @event_priority(100)
+    def _capture_page(self, output: str, *, page: Page, config: MkDocsConfig) -> str:
+        """Captures the page's HTML before other plugins alter it."""
+
+        formats: dict[str, Any] = getattr(page, "formats", {})
+
+        if "pdf" in formats:
+            self.exports[page.file.src_uri] = Export(
+                page=page,
+                document=Document(
+                    id=page.file.src_uri,
+                    url=page.url,
+                    path=formats["pdf"]["url"],
+                    title=page.title or "",
+                    html=output,
+                    meta=dict(page.meta),
+                    covers=list(formats["pdf"]["covers"]),
+                ),
+            )
+
+        return output
+
+    @event_priority(-100)
+    def _decorate_page(self, output: str, *, page: Page, config: MkDocsConfig) -> str:
+        """Adds buttons to the page and removes what is meant for documents only."""
+
+        buttons = [
+            button
+            for button in [*self.config.buttons, *page.meta.get("buttons", [])]
+            if resolve(button.get("enabled", True), page=page)
+        ]
+
+        if (
+            not buttons
+            and "data-decompose" not in output
+            and "data-teleport" not in output
+        ):
+            return output
+
+        html = HtmlDocument(output)
+
+        for button in buttons:
+            options = resolve(dict(button), page=page)
+            attributes = {
+                str(key): str(value)
+                for key, value in (options.get("attributes") or {}).items()
+                if value is not None
+            }
+
+            self.theme.button(
+                html, str(options["title"]), str(options["icon"]), attributes
+            )
+
+        html.remove('[data-decompose="true"]')
+        html.teleport()
+
+        return str(html)
+
+    on_post_page = CombinedEvent(_capture_page, _decorate_page)
+    """Captures pages before other plugins, decorates them after."""
+
+    @event_priority(-100)
+    def on_post_build(self, *, config: MkDocsConfig) -> None:
+        """Generates the PDF documents."""
+
+        if not self.pdf:
+            return
+        if not self.exports:
+            if self.config.formats.pdf.explicit:
+                logger.warning(
+                    "[mkdocs-exporter.pdf] No page has been rendered: in explicit mode, "
+                    "pages must enable PDF generation with 'pdf: true' in their metadata"
+                )
+            return
+
+        failures = run(lambda: self._export(config))
+
+        if failures:
+            details = "\n".join(
+                f"- {outcome.document.id}: {outcome.error}" for outcome in failures
+            )
+
+            raise PluginError(
+                f"[mkdocs-exporter.pdf] Failed to render pages:\n{details}"
+            )
+
+    async def _export(self, config: MkDocsConfig) -> list[Outcome]:
+        """Renders and aggregates documents, returning the failures."""
+
+        options = self.config.formats.pdf
+        site = Site(directory=Path(config.site_dir), url=config.site_url or None)
+        links = options.url or config.site_url or None
+        render_options = RenderOptions(
+            stylesheets=[_read(path) for path in options.stylesheets],
+            scripts=[_read(path) for path in options.scripts],
+            links=links if links is None or links.endswith("/") else links + "/",
+            delay=options.browser.delay,
+            concurrency=options.concurrency,
+        )
+        browser = Browser(
+            headless=options.browser.headless,
+            timeout=options.browser.timeout,
+            args=options.browser.args,
+            channel=options.browser.channel,
+            debug=options.browser.debug,
+        )
+        exports = [self.exports[key] for key in self.order if key in self.exports]
+        exports += [
+            export for key, export in self.exports.items() if key not in set(self.order)
+        ]
+
+        async with browser:
+            with Server(
+                site.directory, site.prefix, self.theme.transform_stylesheet
+            ) as server:
+                renderer = Renderer(site, self.theme, browser, server, render_options)
+                outcomes = await renderer.render_all([e.document for e in exports])
+                failures = [
+                    outcome for outcome in outcomes if outcome.error is not None
+                ]
+
+                for export, outcome in zip(exports, outcomes, strict=True):
+                    if outcome.result is not None:
+                        formats = getattr(export.page, "formats", {})
+                        formats["pdf"]["pages"] = outcome.result.layout.pages
+                        _write(
+                            site.directory / export.document.path, outcome.result.pdf
+                        )
+
+                if failures or not options.aggregator.enabled:
+                    return failures
+
+                return await self._aggregate(config, renderer, outcomes)
+
+    async def _aggregate(
+        self, config: MkDocsConfig, renderer: Renderer, outcomes: list[Outcome]
+    ) -> list[Outcome]:
+        """Combines the documents of the pages in the navigation."""
+
+        options = self.config.formats.pdf.aggregator
+        output = options.output.replace(os.sep, "/").lstrip("/")
+        rendered = {o.document.id: o for o in outcomes if o.result is not None}
+        documents = [rendered[key].document for key in self.order if key in rendered]
+
+        if not documents:
+            return []
+
+        logger.info("[mkdocs-exporter.pdf] Aggregating pages to '%s'...", output)
+
+        layouts = {
+            key: outcome.result.layout
+            for key, outcome in rendered.items()
+            if outcome.result is not None
+        }
+        parts = plan(documents, layouts, options.covers)
+
+        # Page counts are predicted from the documents rendered with their covers: when
+        # removing covers changes the layout (content reflowing onto a cover's page), the
+        # documents are numbered again from their actual page counts and rendered again.
+        for _ in range(3):
+            total = sum(part.pages for part in parts)
+            passes = [
+                Pass(
+                    covers=part.covers,
+                    page=part.first_page,
+                    pages=total,
+                    name="aggregate",
+                    directory=posixpath.dirname(output),
+                )
+                for part in parts
+            ]
+            results = await renderer.render_all(documents, passes)
+            failures = [outcome for outcome in results if outcome.error is not None]
+
+            if failures:
+                return failures
+
+            pages = [o.result.layout.pages for o in results if o.result is not None]
+
+            if pages == [part.pages for part in parts]:
+                break
+
+            logger.debug(
+                "[mkdocs-exporter.pdf] Page numbering changed, rendering again"
+            )
+            parts = renumber(parts, pages)
+
+        combine(
+            [outcome.result.pdf for outcome in results if outcome.result is not None],
+            Path(config.site_dir) / output,
+            {
+                "title": config.site_name,
+                "author": config.site_author,
+                **options.metadata,
+            },
+        )
+
+        return []
+
+    def _exported(self, page: Page) -> bool:
+        """Should a PDF document be generated for the page?"""
+
+        return bool(page.meta.get("pdf", not self.config.formats.pdf.explicit))
+
+
+def _read(path: str) -> str:
+    """Reads a text file."""
+
+    with open(path, encoding="utf-8") as file:
+        return file.read()
+
+
+def _write(path: Path, data: bytes) -> None:
+    """Writes a binary file, creating its directory."""
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(data)

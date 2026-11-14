@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import posixpath
 import re
@@ -59,6 +58,17 @@ class TestPages:
 
         assert text.index("This is the footnote text") < text.index("BACK-COVER")
 
+    def test_documents_have_bookmarks(self, site: Site) -> None:
+        titles = [item.title for item in site.pdf("guide/intro/index.pdf").outline]
+
+        assert "Introduction" in titles
+
+    def test_links_never_target_the_local_server(self, site: Site) -> None:
+        for path in site.pdfs():
+            assert not any(
+                "127.0.0.1" in link for link in site.pdf(path).external_links
+            )
+
     def test_images_are_embedded(self, site: Site) -> None:
         assert site.pdf("index.pdf").image_count() >= 2
 
@@ -68,7 +78,6 @@ class TestPages:
         assert "https://example.org/docs/guide/intro/" in links
         assert "https://example.org/docs/guide/advanced/#deep-dive" in links
 
-    @pytest.mark.xfail(reason="#62: non-HTTP links are rewritten")
     def test_mailto_links_are_preserved(self, site: Site) -> None:
         assert "mailto:support@example.org" in site.pdf("index.pdf").external_links
 
@@ -132,7 +141,6 @@ def test_aggregator_cover_modes(
     assert combined.count("BACK-COVER") == back
 
 
-@pytest.mark.xfail(reason="#66: removed covers are assumed to be exactly one page")
 def test_page_numbers_are_continuous_without_covers(project: Project) -> None:
     site = project.build(
         exporter={"formats": {"pdf": {"aggregator": {"covers": "limits"}}}}
@@ -143,7 +151,6 @@ def test_page_numbers_are_continuous_without_covers(project: Project) -> None:
         assert f"{index + 1} / {combined.page_count}" in text
 
 
-@pytest.mark.xfail(reason="the aggregator's metadata option is ignored")
 def test_aggregator_metadata(project: Project) -> None:
     site = project.build(
         exporter={
@@ -208,47 +215,21 @@ class TestDirectoryUrlsDisabled:
             "reference.pdf",
         ]
 
-    @pytest.mark.xfail(reason="#60: one '../' too many")
     def test_download_buttons_point_to_the_documents(self, flat_site: Site) -> None:
         html = flat_site.html("guide/intro.html")
 
         assert 'href="intro.pdf"' in html
 
 
-@pytest.mark.parametrize(
-    "use_directory_urls",
-    [True, pytest.param(False, marks=pytest.mark.xfail(reason="#62: wrong site root"))],
-)
+@pytest.mark.parametrize("use_directory_urls", [True, False])
 def test_no_browser_errors(
     project: Project, exporter_logs, use_directory_urls: bool
 ) -> None:
     project.build(use_directory_urls=use_directory_urls)
 
-    assert exporter_logs(logging.ERROR) == []
+    assert exporter_logs(logging.WARNING) == []
 
 
-def test_consecutive_builds_in_the_same_process(project: Project) -> None:
-    """`mkdocs serve` rebuilds the site in the same process (#47)."""
-
-    project.build()
-    site = project.build()
-
-    assert "combined.pdf" in site.pdfs()
-
-
-@pytest.mark.xfail(
-    reason="#45: the plugin drives its own event loop in the caller's thread"
-)
-def test_build_inside_a_running_event_loop(project: Project) -> None:
-    async def main() -> Site:
-        return project.build()
-
-    site = asyncio.run(main())
-
-    assert "combined.pdf" in site.pdfs()
-
-
-@pytest.mark.xfail(reason="#85: stylesheets excluded from the build are rewritten")
 def test_excluded_stylesheets(project: Project) -> None:
     project.write("docs/drafts/excluded.css", "body { color: red; }")
 
@@ -257,8 +238,36 @@ def test_excluded_stylesheets(project: Project) -> None:
     assert "combined.pdf" in site.pdfs()
 
 
-@pytest.mark.xfail(reason="#68: only material and readthedocs are supported")
 def test_unsupported_themes_fall_back_to_a_generic_theme(project: Project) -> None:
     site = project.build(theme={"name": "mkdocs"})
 
     assert "index.pdf" in site.pdfs()
+
+
+def test_removed_covers_on_their_own_page_are_not_counted(project: Project) -> None:
+    """Hidden content next to a cover doesn't make its page count as content."""
+
+    css = (project.path / "pdf.css").read_text()
+
+    project.write("pdf.css", css + "\n.back-cover { break-before: page; }\n")
+    project.write(
+        "scripts/hidden.js",
+        "document.querySelector('article, [role=\"main\"], body')"
+        ".insertAdjacentHTML('beforeend', '<p style=\"display: none\">HIDDEN</p>');\n",
+    )
+
+    site = project.build(
+        exporter={
+            "formats": {
+                "pdf": {
+                    "scripts": ["scripts/hidden.js"],
+                    "aggregator": {"covers": "front"},
+                }
+            }
+        }
+    )
+    combined = site.pdf("combined.pdf")
+    pages = sum(site.pdf(path).page_count for path in PAGES.values())
+
+    assert combined.page_count == pages - len(PAGES)
+    assert f"{combined.page_count} / {combined.page_count}" in combined.pages_text[-1]

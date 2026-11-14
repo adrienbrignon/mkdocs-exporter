@@ -22,18 +22,8 @@ def page(
     [
         ("", "index.pdf", "index.pdf"),
         ("guide/intro/", "guide/intro/index.pdf", "index.pdf"),
-        pytest.param(
-            "index.html",
-            "index.pdf",
-            "index.pdf",
-            marks=pytest.mark.xfail(reason="#60: one '../' too many"),
-        ),
-        pytest.param(
-            "guide/intro.html",
-            "guide/intro.pdf",
-            "intro.pdf",
-            marks=pytest.mark.xfail(reason="#60: one '../' too many"),
-        ),
+        ("index.html", "index.pdf", "index.pdf"),
+        ("guide/intro.html", "guide/intro.pdf", "intro.pdf"),
     ],
 )
 def test_href_is_relative_to_the_page(url: str, pdf: str, expected: str) -> None:

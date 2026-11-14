@@ -1,0 +1,14 @@
+/* Applied to every PDF document. */
+
+.page-break,
+.page-break-after {
+  break-after: page;
+}
+
+.page-break-before {
+  break-before: page;
+}
+
+.avoid-page-break {
+  break-inside: avoid;
+}

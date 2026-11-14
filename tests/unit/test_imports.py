@@ -3,10 +3,7 @@
 import subprocess
 import sys
 
-import pytest
 
-
-@pytest.mark.xfail(reason="the Material theme adapter imports mkdocs-material eagerly")
 def test_plugin_imports_without_mkdocs_material() -> None:
     code = (
         "import sys\n"

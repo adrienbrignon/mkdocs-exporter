@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from typing import cast
 
 from mkdocs.config import config_options as c
 from mkdocs.config.base import Config as BaseConfig
@@ -11,19 +12,23 @@ class FormatsConfig(BaseConfig):
     """The PDF format configuration."""
 
 
+CALLABLE = cast(type, Callable)
+"""Any callable (`typing` special forms are not types for type checkers)."""
+
+
 class ButtonConfig(BaseConfig):
     """The configuration of a button."""
 
-    enabled = c.Type((bool, Callable), default=True)
+    enabled = c.Type((bool, CALLABLE), default=True)
     """Is the button enabled?"""
 
-    title = c.Type((str, Callable))
+    title = c.Type((str, CALLABLE))
     """The button's title."""
 
-    icon = c.Type((str, Callable))
+    icon = c.Type((str, CALLABLE))
     """The button's icon (typically, an SVG element)."""
 
-    attributes = c.Type((dict, Callable), default={})
+    attributes = c.Type((dict, CALLABLE), default={})
     """Some extra attributes to add to the button."""
 
 

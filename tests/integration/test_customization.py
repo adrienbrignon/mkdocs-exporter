@@ -34,9 +34,6 @@ def test_custom_scripts_are_executed(project: Project) -> None:
     assert "SCRIPT-MARKER" in site.pdf("index.pdf").text
 
 
-@pytest.mark.xfail(
-    reason="scripts are tagged with an undefined variable (path=stylesheet)"
-)
 def test_custom_scripts_without_stylesheets(project: Project) -> None:
     project.write("scripts/extra.js", SCRIPT)
 
@@ -90,9 +87,6 @@ def test_pages_can_override_covers(project: Project) -> None:
     assert document.count("BACK-COVER") == 1
 
 
-@pytest.mark.xfail(
-    reason="the path of site_url is kept when rewriting links with 'url'"
-)
 def test_links_can_target_another_url(project: Project) -> None:
     site = project.build(
         exporter={"formats": {"pdf": {"url": "https://docs.example.com/"}}}
@@ -103,10 +97,26 @@ def test_links_can_target_another_url(project: Project) -> None:
     )
 
 
-@pytest.mark.xfail(reason="links resolve to temporary file:// locations")
 def test_links_without_site_url_are_relative(project: Project) -> None:
     site = project.build(site_url="")
     links = site.pdf("index.pdf").external_links
 
     assert "guide/intro/" in links
     assert not any(link.startswith(("file:", "http://127.")) for link in links)
+
+
+def test_shadow_trees_are_printed(project: Project) -> None:
+    """Content rendered in (closed) shadow trees, like Material's diagrams, is printed."""
+
+    project.write(
+        "scripts/shadow.js",
+        "const host = document.createElement('div');\n"
+        "host.attachShadow({ mode: 'closed' }).innerHTML = '<p>SHADOW-MARKER</p>';\n"
+        "document.querySelector('article, [role=\"main\"], body').appendChild(host);\n",
+    )
+
+    site = project.build(
+        exporter={"formats": {"pdf": {"scripts": ["scripts/shadow.js"]}}}
+    )
+
+    assert "SHADOW-MARKER" in site.pdf("index.pdf").text

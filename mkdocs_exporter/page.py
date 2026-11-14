@@ -1,19 +1,17 @@
-from mkdocs.structure.pages import Page as BasePage
+"""Typing helpers for the pages handed to user-defined callables."""
 
-from mkdocs_exporter.theme import Theme
+from typing import Any, Protocol
 
 
-class Page(BasePage):
-    """A page."""
+class Page(Protocol):
+    """A MkDocs page, as seen by button callables.
 
-    index: int
-    """The page's index."""
+    Besides MkDocs' own attributes, the exporter sets `formats`: the documents generated
+    for the page, by format. For instance, `page.formats["pdf"]` holds the `path` of the
+    PDF document on disk and its `url` relative to the website's root.
+    """
 
-    html: str | None = None
-    """The page's HTML content."""
-
-    formats: dict[str, dict]
-    """The documents generated for this page (format as key, details as value)."""
-
-    theme: Theme = None
-    """The theme of the page."""
+    title: str
+    url: str
+    meta: dict[str, Any]
+    formats: dict[str, dict[str, Any]]

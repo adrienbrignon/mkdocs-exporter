@@ -1,28 +1,41 @@
-import os
+"""Callables for a "download as PDF" button, to reference from `mkdocs.yml`.
+
+```yaml
+buttons:
+  - title: Download as PDF
+    icon: material-file-download-outline
+    enabled: !!python/name:mkdocs_exporter.formats.pdf.buttons.download.enabled
+    attributes: !!python/name:mkdocs_exporter.formats.pdf.buttons.download.attributes
+```
+"""
+
+from typing import Any
+
+from mkdocs.utils import get_relative_url
 
 from mkdocs_exporter.page import Page
 
 
-def enabled(page: Page, **kwargs) -> bool:
-    """Is the button enabled?"""
+def enabled(page: Page, **kwargs: Any) -> bool:
+    """Is the button enabled (does the page have a PDF document)?"""
 
     return "pdf" in page.formats
 
 
-def href(page: Page, **kwargs) -> str:
-    """The value of the 'href' attribute."""
+def href(page: Page, **kwargs: Any) -> str:
+    """The URL of the page's PDF document, relative to the page."""
 
-    return os.path.relpath(page.formats["pdf"]["url"], page.url)
-
-
-def download(page: Page, **kwargs) -> str:
-    """The value of the 'download' attribute."""
-
-    return page.title + os.path.extsep + "pdf"
+    return get_relative_url(page.formats["pdf"]["url"], page.url)
 
 
-def attributes(page: Page, **kwargs) -> dict:
-    """The button's 'href' attribute."""
+def download(page: Page, **kwargs: Any) -> str:
+    """The name of the downloaded file."""
+
+    return page.title + ".pdf"
+
+
+def attributes(page: Page, **kwargs: Any) -> dict[str, str]:
+    """The button's attributes."""
 
     return {
         "href": href(page, **kwargs),
@@ -30,7 +43,7 @@ def attributes(page: Page, **kwargs) -> dict:
     }
 
 
-def icon(page: Page, **kwargs) -> str:
+def icon(page: Page, **kwargs: Any) -> str:
     """The button's icon."""
 
-    return page.meta.get("pdf-icon", "material-file-download-outline")
+    return str(page.meta.get("pdf-icon", "material-file-download-outline"))

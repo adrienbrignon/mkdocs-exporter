@@ -150,14 +150,7 @@ class Project:
     ) -> Site:
         """Builds the project (like `mkdocs build` does)."""
 
-        site_dir = self.path / "site"
-        options = merge(DEFAULT_EXPORTER, exporter or {})
-        cfg = load_config(
-            config_file=str(self.path / "mkdocs.yml"),
-            site_dir=str(site_dir),
-            plugins=[*(plugins or []), {"exporter": options}],
-            **config,
-        )
+        cfg = self.config(exporter, plugins, **config)
 
         cfg.plugins.on_startup(command="build", dirty=False)
 
@@ -166,7 +159,55 @@ class Project:
         finally:
             cfg.plugins.on_shutdown()
 
-        return Site(project=self.path, path=site_dir)
+        return Site(project=self.path, path=Path(cfg.site_dir))
+
+    def serve(
+        self,
+        builds: int = 2,
+        dirty: bool = False,
+        exporter: dict[str, Any] | None = None,
+        **config: Any,
+    ) -> Site:
+        """Builds the project several times, like `mkdocs serve` does when files change.
+
+        The configuration is loaded again for every build while MkDocs keeps the plugin
+        instances that define `on_startup`.
+        """
+
+        url = "http://127.0.0.1:8000/docs/"
+        cfg = self.config(exporter, **config)
+
+        cfg.plugins.on_startup(command="serve", dirty=dirty)
+
+        try:
+            for index in range(builds):
+                if index:
+                    cfg = self.config(exporter, **config)
+
+                cfg.site_url = url
+                build(cfg, serve_url=url, dirty=dirty)
+        finally:
+            cfg.plugins.on_shutdown()
+
+        return Site(project=self.path, path=Path(cfg.site_dir))
+
+    def config(
+        self,
+        exporter: dict[str, Any] | None = None,
+        plugins: list[Any] | None = None,
+        **config: Any,
+    ) -> Any:
+        """Loads the project's configuration."""
+
+        return load_config(
+            config_file=str(self.path / "mkdocs.yml"),
+            site_dir=str(self.path / "site"),
+            plugins=[
+                *(plugins or []),
+                {"exporter": merge(DEFAULT_EXPORTER, exporter or {})},
+            ],
+            **config,
+        )
 
 
 @pytest.fixture
