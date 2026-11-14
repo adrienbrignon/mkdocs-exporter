@@ -10,6 +10,7 @@ def test_core_imports_without_mkdocs() -> None:
         "sys.modules['mkdocs'] = None\n"
         "import mkdocs_exporter.core.aggregator\n"
         "import mkdocs_exporter.core.browser\n"
+        "import mkdocs_exporter.core.exporter\n"
         "import mkdocs_exporter.core.renderer\n"
         "import mkdocs_exporter.core.runner\n"
         "import mkdocs_exporter.core.server\n"

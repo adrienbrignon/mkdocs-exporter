@@ -18,13 +18,13 @@ from mkdocs.structure.nav import Navigation, Section
 from mkdocs.structure.pages import Page
 
 from mkdocs_exporter.config import Config
-from mkdocs_exporter.core.aggregator import combine, plan, renumber
+from mkdocs_exporter.core.aggregator import Aggregation
 from mkdocs_exporter.core.browser import Browser
 from mkdocs_exporter.core.document import Document, Site
+from mkdocs_exporter.core.exporter import Exporter
 from mkdocs_exporter.core.html import HtmlDocument
-from mkdocs_exporter.core.renderer import Outcome, Pass, Renderer, RenderOptions
+from mkdocs_exporter.core.renderer import Outcome, RenderOptions
 from mkdocs_exporter.core.runner import run
-from mkdocs_exporter.core.server import Server
 from mkdocs_exporter.core.themes import Theme, get_theme
 from mkdocs_exporter.covers import CoverRenderer
 from mkdocs_exporter.helpers import resolve
@@ -236,112 +236,54 @@ class Plugin(BasePlugin[Config]):
         options = self.config.formats.pdf
         site = Site(directory=Path(config.site_dir), url=config.site_url or None)
         links = options.url or config.site_url or None
-        render_options = RenderOptions(
-            stylesheets=[_read(path) for path in options.stylesheets],
-            scripts=[_read(path) for path in options.scripts],
-            links=links if links is None or links.endswith("/") else links + "/",
-            delay=options.browser.delay,
-            concurrency=options.concurrency,
-        )
-        browser = Browser(
-            headless=options.browser.headless,
-            timeout=options.browser.timeout,
-            args=options.browser.args,
-            channel=options.browser.channel,
-            debug=options.browser.debug,
-        )
         exports = [self.exports[key] for key in self.order if key in self.exports]
-        exports += [
-            export for key, export in self.exports.items() if key not in set(self.order)
-        ]
+        exports += [e for key, e in self.exports.items() if key not in set(self.order)]
+        aggregations = []
 
-        async with browser:
-            with Server(
-                site.directory, site.prefix, self.theme.transform_stylesheet
-            ) as server:
-                renderer = Renderer(site, self.theme, browser, server, render_options)
-                outcomes = await renderer.render_all([e.document for e in exports])
-                failures = [
-                    outcome for outcome in outcomes if outcome.error is not None
-                ]
-
-                for export, outcome in zip(exports, outcomes, strict=True):
-                    if outcome.result is not None:
-                        formats = getattr(export.page, "formats", {})
-                        formats["pdf"]["pages"] = outcome.result.layout.pages
-                        _write(
-                            site.directory / export.document.path, outcome.result.pdf
-                        )
-
-                if failures or not options.aggregator.enabled:
-                    return failures
-
-                return await self._aggregate(config, renderer, outcomes)
-
-    async def _aggregate(
-        self, config: MkDocsConfig, renderer: Renderer, outcomes: list[Outcome]
-    ) -> list[Outcome]:
-        """Combines the documents of the pages in the navigation."""
-
-        options = self.config.formats.pdf.aggregator
-        output = options.output.replace(os.sep, "/").lstrip("/")
-        rendered = {o.document.id: o for o in outcomes if o.result is not None}
-        documents = [rendered[key].document for key in self.order if key in rendered]
-
-        if not documents:
-            return []
-
-        logger.info("[mkdocs-exporter.pdf] Aggregating pages to '%s'...", output)
-
-        layouts = {
-            key: outcome.result.layout
-            for key, outcome in rendered.items()
-            if outcome.result is not None
-        }
-        parts = plan(documents, layouts, options.covers)
-
-        # Page counts are predicted from the documents rendered with their covers: when
-        # removing covers changes the layout (content reflowing onto a cover's page), the
-        # documents are numbered again from their actual page counts and rendered again.
-        for _ in range(3):
-            total = sum(part.pages for part in parts)
-            passes = [
-                Pass(
-                    covers=part.covers,
-                    page=part.first_page,
-                    pages=total,
-                    name="aggregate",
-                    directory=posixpath.dirname(output),
+        if options.aggregator.enabled:
+            aggregations.append(
+                Aggregation(
+                    output=options.aggregator.output.replace(os.sep, "/"),
+                    documents=[
+                        self.exports[key].document
+                        for key in self.order
+                        if key in self.exports
+                    ],
+                    covers=options.aggregator.covers,
+                    metadata={
+                        "title": config.site_name,
+                        "author": config.site_author,
+                        **options.aggregator.metadata,
+                    },
                 )
-                for part in parts
-            ]
-            results = await renderer.render_all(documents, passes)
-            failures = [outcome for outcome in results if outcome.error is not None]
-
-            if failures:
-                return failures
-
-            pages = [o.result.layout.pages for o in results if o.result is not None]
-
-            if pages == [part.pages for part in parts]:
-                break
-
-            logger.debug(
-                "[mkdocs-exporter.pdf] Page numbering changed, rendering again"
             )
-            parts = renumber(parts, pages)
 
-        combine(
-            [outcome.result.pdf for outcome in results if outcome.result is not None],
-            Path(config.site_dir) / output,
-            {
-                "title": config.site_name,
-                "author": config.site_author,
-                **options.metadata,
-            },
+        exporter = Exporter(
+            site,
+            self.theme,
+            Browser(
+                headless=options.browser.headless,
+                timeout=options.browser.timeout,
+                args=options.browser.args,
+                channel=options.browser.channel,
+                debug=options.browser.debug,
+            ),
+            RenderOptions(
+                stylesheets=[_read(path) for path in options.stylesheets],
+                scripts=[_read(path) for path in options.scripts],
+                links=links if links is None or links.endswith("/") else links + "/",
+                delay=options.browser.delay,
+                concurrency=options.concurrency,
+            ),
         )
+        report = await exporter.export([e.document for e in exports], aggregations)
 
-        return []
+        for export in exports:
+            if export.document.id in report.layouts:
+                formats = getattr(export.page, "formats", {})
+                formats["pdf"]["pages"] = report.layouts[export.document.id].pages
+
+        return report.failures
 
     def _exported(self, page: Page) -> bool:
         """Should a PDF document be generated for the page?"""
@@ -354,10 +296,3 @@ def _read(path: str) -> str:
 
     with open(path, encoding="utf-8") as file:
         return file.read()
-
-
-def _write(path: Path, data: bytes) -> None:
-    """Writes a binary file, creating its directory."""
-
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(data)
