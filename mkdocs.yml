@@ -3,7 +3,7 @@ site_url: https://adrienbrignon.github.io/mkdocs-exporter
 repo_url: https://github.com/adrienbrignon/mkdocs-exporter
 repo_name: adrienbrignon/mkdocs-exporter
 edit_uri: edit/master/docs/
-site_dir: dist
+site_dir: site
 
 validation:
   absolute_links: ignore
@@ -50,7 +50,7 @@ plugins:
   - mkdocstrings:
       handlers:
         python:
-          import:
+          inventories:
             - https://docs.python.org/3/objects.inv
             - https://installer.readthedocs.io/en/stable/objects.inv
           options:
