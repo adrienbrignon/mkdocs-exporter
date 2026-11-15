@@ -115,7 +115,7 @@ class CacheConfig(BaseConfig):
 
 
 class TocConfig(BaseConfig):
-    """A table of contents (of a document's headings, or of an aggregated document)."""
+    """A table of contents (of a document's headings, or of a book)."""
 
     enabled = c.Type(bool, default=False)
     """Should a table of contents be inserted after the (first) front cover?"""

@@ -8,6 +8,8 @@
 
 ::: mkdocs_exporter.formats.pdf.config.BrowserConfig
 
-::: mkdocs_exporter.formats.pdf.config.AggregatorConfig
+::: mkdocs_exporter.formats.pdf.config.CacheConfig
+
+::: mkdocs_exporter.formats.pdf.config.BookConfig
 
 ::: mkdocs_exporter.formats.pdf.config.TocConfig
