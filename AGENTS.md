@@ -48,7 +48,8 @@ Before considering a change done, run the linter, the formatter check, the type 
 | `core/margins.py` | Headers and footers compiled to CSS page margin boxes |
 | `core/themes/` | Theme adapters (`material`, `readthedocs`, generic fallback) |
 | `core/resources/` | `pdf.js` (gets pages ready, reports readiness), theme scripts, print CSS, TOC template |
-| `core/runner.py` | Runs coroutines on an event loop owned by the exporter |
+| `core/runner.py` | Runs coroutines on an event loop owned by the exporter (`Loop`: kept across `serve` rebuilds) |
+| `core/cache.py` | Cache of printed documents (`.cache/plugin/exporter`), checked against the resources they loaded |
 | `mkdocs_exporter/plugin.py` | The MkDocs plugin (`exporter`): adapts MkDocs pages and navigation to core data |
 | `mkdocs_exporter/covers.py` | Renders cover templates with Jinja (through mkdocs-macros when enabled) |
 | `mkdocs_exporter/config.py`, `formats/pdf/config.py` | Configuration schema (MkDocs `config_options`) |
@@ -60,14 +61,17 @@ Before considering a change done, run the linter, the formatter check, the type 
 
 1. `on_startup` / `on_config`: the theme adapter is resolved and per-build state is reset (MkDocs keeps
    the plugin instance across `mkdocs serve` rebuilds because it defines `on_startup`). PDF documents are
-   not generated while serving unless `formats.pdf.serve` is enabled.
+   not generated while serving unless `formats.pdf.serve` is enabled; then the browser is kept open on a
+   `Loop` thread until `on_shutdown` (with a fresh browser context for each build).
 2. `on_nav` records the navigation (order, sections); `on_pre_page` declares `page.formats["pdf"]`.
 3. `on_post_page`: the page's HTML is captured and its cover templates rendered (priority 100, before
    other plugins), then buttons are added to the website's HTML (priority -100).
 4. `on_post_build` (priority -100, after other plugins wrote their files): the core `Exporter` starts a
    `Server` exposing the site directory and a `Browser`, and the `Renderer` prints every page
    concurrently. Each page's print HTML (covers, stylesheets, headers/footers, scripts) is served from
-   memory at the page's own URL (with a query string), so relative URLs resolve.
+   memory at the page's own URL (with a query string), so relative URLs resolve. Unchanged documents are
+   reused from the cache: the key is a fingerprint of the page and options (before preparing it), and an
+   entry is valid while the same-origin resources the page loaded hash the same.
 5. For each aggregation, pages are rendered again with continuous numbering (again while page counts or
    the table of contents change), merged with pypdf, then bookmarks and internal links are added from the
    positions of headings and anchors reported by the browser.
@@ -75,7 +79,8 @@ Before considering a change done, run the linter, the formatter check, the type 
 **Browser contract** (see `core/resources/js/pdf.js`): `pdf.js` is the first script of the page. It
 records uncaught errors by phase, waits for the `load` event, fonts, images, MathJax and the theme
 (`window.MkDocsExporterTheme.settle`), runs the `window.MkDocsExporter.before/render/after` hooks, then
-sets `body[mkdocs-exporter]` to `true` or `error`.
+sets `body[mkdocs-exporter]` to `true` or `error` and resolves `window.__MKDOCS_EXPORTER_READY__` (awaited by
+`Browser.print` in a single round-trip).
 
 **Layout data** comes from the printed PDF, never from the DOM: hidden links to every heading make
 Chromium create named destinations (`core/pdf.py:read_layout`). Features browsers lack are computed from
@@ -88,7 +93,13 @@ Design decisions backed by measurements (don't revert them without measuring aga
   CORS, fetches).
 - **Native printing, no Paged.js**: about 2.4x faster per page than Paged.js; missing
   features (running heads, TOC page numbers) are rebuilt from a measuring print.
-- **Hide theme chrome with CSS**: removing it from the DOM breaks the theme's scripts.
+- **Hide theme chrome with CSS**: removing it from the DOM breaks the theme's scripts. Exception:
+  `Theme.removed` (Material's search box, whose index would otherwise be loaded by every page).
+- **Prepare pages on the event loop**, not in a thread: BeautifulSoup work waits for the GIL in a thread
+  (about 5x slower at concurrency 4). Preparing pages is now the main cost of a build.
+- **Chromium shrinks every page** when anything overflows horizontally or when flex containers start on a
+  page of another width: `base.css` clips overflow on `body > *`, `material.css` lays out the main
+  containers as blocks.
 - **`wait_until="load"`**: identical output to `networkidle`, about 35 % faster.
 - Uncaught errors of the website's scripts are logged at debug level (they also happen on the website);
   errors in `MkDocsExporter` hooks and missing same-origin resources are warnings; only pagination failures
