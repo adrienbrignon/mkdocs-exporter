@@ -390,3 +390,19 @@ def test_wide_content_does_not_shrink_other_documents(project: Project) -> None:
     assert site.pdf("combined.pdf").font_size("Introduction") == site.pdf(
         "guide/intro/index.pdf"
     ).font_size("Introduction")
+
+
+def test_headings_that_are_not_printed_are_left_out(project: Project) -> None:
+    project.write(
+        "docs/reference.md",
+        "# Reference\n\nPlain reference page.\n\n"
+        "## HIDDEN-HEADING { .mkdocs-exporter-ignore }\n\n## Shown heading\n",
+    )
+
+    site = project.build(exporter=aggregator(covers="none", toc={"enabled": True}))
+    combined = site.pdf("combined.pdf")
+    toc = combined.pages_text[page_of(combined, "Table of contents")]
+
+    assert "HIDDEN-HEADING" not in combined.text
+    assert "Shown heading" in toc
+    assert "HIDDEN-HEADING" not in str(titles(combined.outline))

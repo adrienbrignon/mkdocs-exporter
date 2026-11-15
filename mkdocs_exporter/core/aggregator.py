@@ -418,10 +418,12 @@ def toc_entries(
             if part is None:
                 continue
 
+            # Headings that aren't printed (e.g. hidden) lead to the part itself.
+            anchor = part.anchor if page(part.anchor) is not None else part.id
             entry = TocEntry(
                 title=node.title or part.document.title,
-                page=page(part.anchor) or 0,
-                href="#" + part.anchor,
+                page=page(anchor) or 0,
+                href="#" + anchor,
             )
 
             if node.document is None:
@@ -432,7 +434,10 @@ def toc_entries(
                 for index, (_, id, title), parent in _nested(
                     _sub_headings(part), depth
                 ):
-                    child = TocEntry(title=title, page=page(id) or 0, href="#" + id)
+                    if (number := page(id)) is None:
+                        continue
+
+                    child = TocEntry(title=title, page=number, href="#" + id)
                     created[index] = child
                     siblings = (
                         created[parent].children if parent >= 0 else entry.children
@@ -487,7 +492,11 @@ def outline(
     def add(nodes: Sequence[NavNode], parent: Any) -> None:
         for node in nodes:
             part = _first(node, parts)
-            target = destination(part.anchor) if part is not None else None
+            target = (
+                destination(part.anchor) or destination(part.id)
+                if part is not None
+                else None
+            )
 
             if part is None or target is None:
                 continue
@@ -634,7 +643,6 @@ async def aggregate(
         )
 
     settings = book.BookOptions(
-        content=theme.content,
         prefix=site.prefix,
         links=options.links or RELATIVE_LINKS_BASE,
         removed=theme.removed,
