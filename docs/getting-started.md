@@ -13,8 +13,8 @@ Documents are printed by a headless Chromium browser driven by [Playwright](http
 
 ## Examples
 
-- [__Read__ this documentation in the PDF format](../documentation.pdf)
-- [__View__ this page in the PDF format](./index.pdf)
+- <a href="../documentation.pdf">__Read__ this documentation in the PDF format</a>
+- <a href="index.pdf">__View__ this page in the PDF format</a>
 - [__Browse__ the examples](examples/index.md): documents generated from a small website, with their configuration
 
 <div class="previews" markdown>
