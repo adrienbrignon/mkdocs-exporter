@@ -1,0 +1,39 @@
+<style data-teleport="head">
+  @page :first {
+    margin: 0;
+    background: #283593;
+  }
+
+  .example-cover {
+    break-after: page;
+    padding: 8cm 2.5cm 0;
+    color: #fff;
+    font-family: sans-serif;
+
+    .site {
+      font-size: 12pt;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      opacity: 0.8;
+    }
+
+    .title {
+      margin-top: 0.3em;
+      font-size: 36pt;
+      font-weight: 600;
+      line-height: 1.1;
+    }
+
+    .description {
+      max-width: 12cm;
+      margin-top: 2em;
+      font-size: 12pt;
+      line-height: 1.5;
+    }
+  }
+</style>
+<div class="example-cover">
+  <div class="site">{{ config.site_name }}</div>
+  <div class="title">{{ page.title }}</div>
+  <div class="description">{{ config.site_description }}</div>
+</div>

@@ -6,7 +6,7 @@ PDF ?= true
 PDF_AGGREGATOR ?= true
 
 .RECIPEPREFIX = >
-.PHONY: all install browser lint format typecheck test build serve dist clean fclean re
+.PHONY: all install browser lint format typecheck test build serve examples dist clean fclean re
 
 all: lint typecheck test
 
@@ -35,6 +35,13 @@ build:
 
 serve:
 >@ MKDOCS_EXPORTER_PDF=$(PDF) MKDOCS_EXPORTER_PDF_AGGREGATOR=$(PDF_AGGREGATOR) uv run mkdocs serve $(ARGS)
+
+examples:
+> @for theme in material readthedocs; do \
+>   uv run mkdocs build -q -f examples/project/mkdocs.yml -t $$theme -d $(CURDIR)/.cache/examples/$$theme || exit 1; \
+>   cp .cache/examples/$$theme/guide/writing/index.pdf examples/themes/$$theme.pdf; \
+> done
+> cp .cache/examples/material/example.pdf examples/example.pdf
 
 dist:
 > uv build
