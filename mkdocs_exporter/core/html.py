@@ -1,13 +1,20 @@
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Callable, Iterable
 from typing import Any
 from urllib.parse import urljoin, urlsplit, urlunsplit
 
 from bs4 import BeautifulSoup, Tag
 
+from mkdocs_exporter.core.document import Heading
 from mkdocs_exporter.logging import logger
+
+COVERS = ("mkdocs-exporter-front-cover", "mkdocs-exporter-back-cover")
+"""The classes of cover pages."""
+
+HEADING = re.compile(r"^h[1-6]$")
 
 ANCESTOR = "data-mkdocs-exporter-ancestor"
 """Marks the ancestors of a document's content (laid out as blocks in print)."""
@@ -202,3 +209,33 @@ def resolve_link(href: str, page_url: str, prefix: str, base: str) -> str | None
             query=target.query, fragment=target.fragment
         )
     )
+
+
+def headings(content: Tag, identify: bool = False) -> list[Heading]:
+    """The headings of a page's content, outside of its covers.
+
+    Args:
+        content: The content.
+        identify: Should headings without identifier be given one (instead of being left
+            out)?
+    """
+
+    found = []
+
+    for index, tag in enumerate(content.find_all(HEADING)):
+        if tag.find_parent(class_=COVERS) is not None:
+            continue
+        if not tag.get("id"):
+            if not identify:
+                continue
+
+            tag["id"] = f"mkdocs-exporter-heading-{index}"
+
+        title = "".join(
+            text
+            for text in tag.find_all(string=True)
+            if text.find_parent(class_="headerlink") is None
+        )
+        found.append(Heading(int(tag.name[1]), str(tag["id"]), " ".join(title.split())))
+
+    return found

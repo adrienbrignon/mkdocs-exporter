@@ -6,11 +6,10 @@ from dataclasses import dataclass, field
 
 from jinja2 import Environment
 
+from mkdocs_exporter.core.document import Heading
+
 CLASS = "mkdocs-exporter-toc"
 """The class of the element holding a table of contents."""
-
-Heading = tuple[int, str, str]
-"""A heading: (level, identifier, title)."""
 
 
 @dataclass
@@ -45,20 +44,20 @@ def nested(
     stack: list[tuple[int, int]] = []
 
     for index, heading in enumerate(headings):
-        if heading[0] > depth:
+        if heading.level > depth:
             continue
 
-        while stack and stack[-1][0] >= heading[0]:
+        while stack and stack[-1][0] >= heading.level:
             stack.pop()
 
         yield index, heading, stack[-1][1] if stack else -1
-        stack.append((heading[0], index))
+        stack.append((heading.level, index))
 
 
 def subheadings(headings: Sequence[Heading]) -> list[Heading]:
     """Headings, without the document's title (its first heading, when it is a `h1`)."""
 
-    return list(headings[1:] if headings and headings[0][0] == 1 else headings)
+    return list(headings[1:] if headings and headings[0].level == 1 else headings)
 
 
 def heading_entries(
@@ -76,11 +75,11 @@ def heading_entries(
     entries: list[TocEntry] = []
     created: dict[int, TocEntry] = {}
 
-    for index, (_, id, title), parent in nested(headings, depth):
-        if (number := page(id)) is None:
+    for index, heading, parent in nested(headings, depth):
+        if (number := page(heading.id)) is None:
             continue
 
-        entry = TocEntry(title=title, page=number, href="#" + id)
+        entry = TocEntry(title=heading.title, page=number, href="#" + heading.id)
         created[index] = entry
         (created[parent].children if parent in created else entries).append(entry)
 

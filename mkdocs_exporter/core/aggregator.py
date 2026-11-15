@@ -22,7 +22,7 @@ from pypdf.generic import (
 from mkdocs_exporter.core import book, margins, toc
 from mkdocs_exporter.core.browser import RenderError
 from mkdocs_exporter.core.css import PageMargin, top_margin
-from mkdocs_exporter.core.document import Document
+from mkdocs_exporter.core.document import Document, Heading, Position
 from mkdocs_exporter.core.html import HtmlDocument
 from mkdocs_exporter.core.pdf import RELATIVE_LINKS_BASE, fix_uri, info, link_actions
 from mkdocs_exporter.core.server import RESERVED
@@ -128,27 +128,6 @@ def flat_nav(documents: Sequence[Document]) -> list[NavNode]:
 # --- Measurements ----------------------------------------------------------------------
 
 
-@dataclass(frozen=True)
-class Position:
-    """A position in a printed book."""
-
-    page: int
-    """The index of the page (0-based)."""
-
-    top: float = 0.0
-    """The distance from the top of the page area (without margin), in CSS pixels."""
-
-
-@dataclass
-class MeasuredHeading:
-    """A heading, as printed."""
-
-    level: int
-    title: str
-    id: str | None
-    position: Position
-
-
 @dataclass
 class MeasuredPart:
     """A part, as printed: its pages (0-based, inclusive) and its headings."""
@@ -162,7 +141,7 @@ class MeasuredPart:
     back: tuple[int, int] | None = None
     """The pages of its back cover."""
 
-    headings: list[MeasuredHeading] = field(default_factory=list)
+    headings: list[Heading] = field(default_factory=list)
 
     @property
     def pages(self) -> int:
@@ -212,12 +191,13 @@ class Measure:
                     front=_span(part.get("front")),
                     back=_span(part.get("back")),
                     headings=[
-                        MeasuredHeading(
+                        Heading(
                             level=int(heading["level"]),
+                            id=str(heading.get("id") or ""),
                             title=str(heading["title"]),
-                            id=heading.get("id"),
                             position=Position(
-                                int(heading["page"]), float(heading["top"])
+                                int(heading["page"]),
+                                float(heading["top"]) * POINTS_PER_PIXEL,
                             ),
                         )
                         for heading in part["headings"]
@@ -258,7 +238,7 @@ class Measure:
             positions[part.id] = Position(min(pages.start, part.last))
 
             for heading in part.headings:
-                if heading.id:
+                if heading.id and heading.position is not None:
                     positions.setdefault(heading.id, heading.position)
 
         return positions
@@ -315,7 +295,7 @@ def running_heads(measure: Measure, plan: Plan) -> list[str]:
             (
                 (heading.position.page, heading.title)
                 for heading in part.headings
-                if heading.level <= 2
+                if heading.level <= 2 and heading.position is not None
             ),
             measure.content(part),
         )
@@ -431,14 +411,14 @@ def outline(
 
             items: dict[int, Any] = {}
 
-            for index, (_, id, title), parent_index in toc.nested(
+            for index, heading, parent_index in toc.nested(
                 toc.subheadings(part.headings), depth
             ):
-                if (position := destination(id)) is None:
+                if (position := destination(heading.id)) is None:
                     continue
 
                 items[index] = writer.add_outline_item(
-                    title=title,
+                    title=heading.title,
                     page_number=position[0],
                     parent=items.get(parent_index, item),
                     fit=Fit.xyz(left=0, top=position[1]),
@@ -772,7 +752,7 @@ def finish(
 
         top = heights[position.page] - tops[position.page]
 
-        return position.page, max(0.0, top - position.top * POINTS_PER_PIXEL)
+        return position.page, max(0.0, top - position.top)
 
     for _, annotation, uri in link_actions(writer):
         target = rewrite(uri)

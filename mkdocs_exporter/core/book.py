@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import copy
 from collections.abc import Callable, Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from urllib.parse import unquote, urljoin, urlsplit, urlunsplit
 
 from bs4 import BeautifulSoup, Comment, PageElement, Tag
@@ -19,8 +19,9 @@ from mkdocs_exporter.core.css import (
 from mkdocs_exporter.core.css import (
     rewrite_urls as rewrite_css_urls,
 )
-from mkdocs_exporter.core.document import Document
+from mkdocs_exporter.core.document import Document, Heading
 from mkdocs_exporter.core.html import ANCESTOR, HtmlDocument, resolve_link
+from mkdocs_exporter.core.html import headings as find_headings
 
 FRONT_COVER_PAGE = "mkdocs-exporter-front-cover"
 """The named page of front covers."""
@@ -43,8 +44,6 @@ ORIGIN = "http://mkdocs-exporter.invalid"
 PLACEHOLDER = "<!--mkdocs-exporter-parts-->"
 """Where the parts are inserted in the serialized shell (a comment)."""
 
-HEADINGS = ("h1", "h2", "h3", "h4", "h5", "h6")
-EXCLUDED = ("mkdocs-exporter-front-cover", "mkdocs-exporter-back-cover")
 
 ID_ATTRIBUTES = ("for", "form", "list")
 """Attributes holding an identifier."""
@@ -122,8 +121,8 @@ class Part:
     ids: set[str] = field(default_factory=set)
     """The identifiers defined by the part (before being namespaced)."""
 
-    headings: list[tuple[int, str, str]] = field(default_factory=list)
-    """Its headings (level, namespaced identifier, title), outside of covers."""
+    headings: list[Heading] = field(default_factory=list)
+    """Its headings (with namespaced identifiers), outside of covers."""
 
     styles: list[str] = field(default_factory=list)
     """The styles it teleports to the head (e.g. its covers')."""
@@ -147,7 +146,7 @@ class Part:
     def anchor(self) -> str:
         """Where links to the part lead: its first heading, or the part itself."""
 
-        return self.headings[0][1] if self.headings else self.id
+        return self.headings[0].id if self.headings else self.id
 
 
 @dataclass
@@ -680,33 +679,6 @@ def within(tag: Tag, ancestor: Tag) -> bool:
     return any(parent is ancestor for parent in tag.parents)
 
 
-def headings(content: Tag) -> list[Tag]:
-    """The headings of a part, outside of its covers (identifiers given if missing)."""
-
-    covers = [
-        tag
-        for tag in content.find_all(class_=EXCLUDED)
-        if isinstance(tag, Tag) and tag.parent is content
-    ]
-    found = []
-
-    for index, tag in enumerate(content.find_all(HEADINGS)):
-        if any(within(tag, cover) for cover in covers):
-            continue
-        if not tag.get("id"):
-            tag["id"] = f"mkdocs-exporter-heading-{index}"
-
-        found.append(tag)
-
-    return found
-
-
-def _title(tag: Tag) -> str:
-    """The text of a heading."""
-
-    return " ".join(tag.get_text().split())
-
-
 def prepare(
     parts: Sequence[Part],
     options: BookOptions,
@@ -738,11 +710,10 @@ def prepare(
 
             element.extract()
 
-        found = headings(part.content)
+        found = find_headings(part.content, identify=True)
         part.ids = collect_ids(part.content)
         part.headings = [
-            (int(tag.name[1]), part.prefix + str(tag["id"]), _title(tag))
-            for tag in found
+            replace(heading, id=part.prefix + heading.id) for heading in found
         ]
 
     for part in parts:

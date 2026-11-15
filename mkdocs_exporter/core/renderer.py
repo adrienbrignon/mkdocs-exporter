@@ -5,7 +5,6 @@ import dataclasses
 import importlib.resources
 import json
 import os
-import re
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from urllib.parse import urlsplit
@@ -18,6 +17,7 @@ from mkdocs_exporter.core.browser import Browser, Printed, PrintResult, RenderEr
 from mkdocs_exporter.core.cache import Assets, Cache, digest, environment, fingerprint
 from mkdocs_exporter.core.document import Document, Heading, Layout, Site
 from mkdocs_exporter.core.html import ANCESTOR, HtmlDocument, resolve_link
+from mkdocs_exporter.core.html import headings as find_headings
 from mkdocs_exporter.core.margins import Margins
 from mkdocs_exporter.core.pdf import (
     RELATIVE_LINKS_BASE,
@@ -33,8 +33,6 @@ from mkdocs_exporter.logging import logger
 
 COVER_LOCATIONS = ("front", "back")
 """The locations of cover pages."""
-
-HEADING = re.compile(r"^h[1-6]$")
 
 PATCH = """(patch) => {
   if (patch.css !== undefined) {
@@ -56,7 +54,6 @@ PATCH = """(patch) => {
   }
 }"""
 """Updates a printed document: running heads (`css`), table of contents (`toc`)."""
-"""Heading elements."""
 
 
 def default_concurrency() -> int:
@@ -184,10 +181,10 @@ class Renderer:
         html.set_attribute("details:not([open])", "open", "")
         html.remove([".headerlink", *self.theme.removed])
 
-    def prepare(self, document: Document) -> tuple[str, list[tuple[int, str, str]]]:
+    def prepare(self, document: Document) -> tuple[str, list[Heading]]:
         """Returns the HTML to print for a document, and its headings.
 
-        Headings are returned as (level, identifier, title), outside of covers. Hidden
+        Headings are those outside of covers. Hidden
         links to each of them make the browser create named destinations, which tell
         where headings land (and let PDF readers link to them).
         """
@@ -211,7 +208,7 @@ class Renderer:
         )
         moved = teleported(content) if keep else []
 
-        headings = _headings(content)
+        headings = find_headings(content)
         contents = self._insert_toc(html, content, headings)
 
         if headings:
@@ -219,8 +216,8 @@ class Renderer:
                 "nav", attrs={"class": "mkdocs-exporter-anchors", "hidden": ""}
             )
 
-            for _, identifier, _ in headings:
-                anchors.append(html.soup.new_tag("a", attrs={"href": f"#{identifier}"}))
+            for heading in headings:
+                anchors.append(html.soup.new_tag("a", attrs={"href": f"#{heading.id}"}))
 
             html.body.append(anchors)
 
@@ -280,7 +277,7 @@ class Renderer:
         return output, headings
 
     def _toc_entries(
-        self, headings: Sequence[toc.Heading], page: Callable[[str], int | None]
+        self, headings: Sequence[Heading], page: Callable[[str], int | None]
     ) -> list[toc.TocEntry]:
         """The entries of a document's table of contents (none without the option)."""
 
@@ -292,7 +289,7 @@ class Renderer:
         )
 
     def _insert_toc(
-        self, html: HtmlDocument, content: Tag, headings: Sequence[toc.Heading]
+        self, html: HtmlDocument, content: Tag, headings: Sequence[Heading]
     ) -> Tag | None:
         """Inserts a document's table of contents after its front cover, with
         placeholder page numbers (filled once printed, see `render`)."""
@@ -342,7 +339,7 @@ class Renderer:
             # numbers of links' targets (`target-counter()`): print once to find out
             # where headings land, then print again with the section of every page and
             # the page numbers of the table of contents (until they are stable).
-            running = [(i, title) for level, i, title in headings if level <= 2]
+            running = [(h.id, h.title) for h in headings if h.level <= 2]
             applied: dict[str, str] = {}
 
             async def refine(printed: Printed) -> str | None:
@@ -387,9 +384,9 @@ class Renderer:
             pages=layout.pages,
             anchors=layout.anchors,
             headings=[
-                Heading(level=level, title=title, id=i, position=layout.anchors[i])
-                for level, i, title in headings
-                if i in layout.anchors
+                dataclasses.replace(heading, position=layout.anchors[heading.id])
+                for heading in headings
+                if heading.id in layout.anchors
             ],
         )
         result.pdf = self._rewrite_links(result.pdf, document)
@@ -510,30 +507,6 @@ class Renderer:
             *diagnostics.external_failed_requests,
         ]:
             logger.debug("[mkdocs-exporter.pdf] '%s': %s", document.id, message)
-
-
-def _headings(content: Tag) -> list[tuple[int, str, str]]:
-    """The headings of a page's content: (level, identifier, title)."""
-
-    excluded = ("mkdocs-exporter-front-cover", "mkdocs-exporter-back-cover")
-    headings = []
-
-    for element in content.find_all(HEADING):
-        identifier = element.get("id")
-
-        if not identifier or element.find_parent(class_=excluded) is not None:
-            continue
-
-        title = "".join(
-            text
-            for text in element.find_all(string=True)
-            if text.find_parent(class_="headerlink") is None
-        )
-        headings.append(
-            (int(element.name[1]), str(identifier), " ".join(title.split()))
-        )
-
-    return headings
 
 
 def _path(url: str) -> str:

@@ -1,3 +1,4 @@
+from mkdocs_exporter.core.document import Heading
 from mkdocs_exporter.core.toc import (
     TocEntry,
     TocOptions,
@@ -7,12 +8,12 @@ from mkdocs_exporter.core.toc import (
 )
 
 HEADINGS = [
-    (1, "title", "Title"),
-    (2, "a", "A"),
-    (3, "a1", "A.1"),
-    (4, "a1x", "A.1.x"),
-    (2, "b", "B"),
-    (3, "b1", "B.1"),
+    Heading(1, "title", "Title"),
+    Heading(2, "a", "A"),
+    Heading(3, "a1", "A.1"),
+    Heading(4, "a1x", "A.1.x"),
+    Heading(2, "b", "B"),
+    Heading(3, "b1", "B.1"),
 ]
 
 PAGES = {"title": 1, "a": 2, "a1": 2, "a1x": 3, "b": 3, "b1": 4}

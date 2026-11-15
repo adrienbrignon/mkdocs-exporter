@@ -69,17 +69,18 @@ class Position:
     """The index of the page (0-based)."""
 
     top: float = 0.0
-    """The distance from the top of the page, in PDF points."""
+    """The distance from the top of the page's area (without margin), in points."""
 
 
 @dataclass(frozen=True)
 class Heading:
-    """A heading of a printed document."""
+    """A heading of a page."""
 
     level: int
+    id: str
     title: str
-    id: str | None
-    position: Position
+    position: Position | None = None
+    """Where it is printed, once printed."""
 
 
 @dataclass
