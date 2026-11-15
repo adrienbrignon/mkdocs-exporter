@@ -87,6 +87,21 @@ def test_options_invalidate_the_cache(project: Project, rendered) -> None:
     assert "HEADER-MARKER" in site.pdf("reference/index.pdf").text
 
 
+def test_table_of_contents_options_invalidate_the_cache(
+    project: Project, rendered
+) -> None:
+    toc = {"enabled": True, "title": "Contents"}
+    project.build(merge(SINGLE, {"formats": {"pdf": {"toc": toc}}}))
+    rendered()
+
+    site = project.build(
+        merge(SINGLE, {"formats": {"pdf": {"toc": {**toc, "title": "TOC-MARKER"}}}})
+    )
+
+    assert rendered() == sorted(PAGES)
+    assert "TOC-MARKER" in site.pdf("guide/advanced/index.pdf").text
+
+
 def test_incomplete_documents_are_not_cached(project: Project, rendered) -> None:
     project.write("docs/reference.md", "# Reference\n\n![Missing](missing.png)\n")
 
