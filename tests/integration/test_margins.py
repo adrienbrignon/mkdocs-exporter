@@ -14,11 +14,15 @@ MARGINS = {
 }
 
 
-@pytest.fixture(scope="module")
-def site(tmp_path_factory: pytest.TempPathFactory) -> Site:
+@pytest.fixture(scope="module", params=["material", "readthedocs"])
+def site(
+    request: pytest.FixtureRequest, tmp_path_factory: pytest.TempPathFactory
+) -> Site:
     project = Project(tmp_path_factory.mktemp("margins") / "project")
 
-    return project.build(exporter={"formats": {"pdf": MARGINS}})
+    return project.build(
+        exporter={"formats": {"pdf": MARGINS}}, theme={"name": request.param}
+    )
 
 
 def test_headers_and_footers(site: Site) -> None:

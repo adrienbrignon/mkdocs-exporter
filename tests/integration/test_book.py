@@ -276,8 +276,14 @@ def test_pages_are_numbered_across_documents(project: Project, covers: str) -> N
         assert f"{index + 1} / {combined.page_count}" in text
 
 
-def test_every_table_of_contents_entry_leads_to_its_page(project: Project) -> None:
-    site = project.build(exporter=aggregator(covers="all", toc={"enabled": True}))
+@pytest.mark.parametrize("theme", ["material", "readthedocs"])
+def test_every_table_of_contents_entry_leads_to_its_page(
+    project: Project, theme: str
+) -> None:
+    site = project.build(
+        exporter=aggregator(covers="all", toc={"enabled": True}),
+        theme={"name": theme},
+    )
     combined = site.pdf("combined.pdf")
     toc = combined.pages_text[page_of(combined, "Table of contents")]
     entries = re.findall(r"^(\w[\w ]*?)\s*(\d+)$", toc, re.MULTILINE)

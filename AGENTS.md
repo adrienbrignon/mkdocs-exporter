@@ -113,7 +113,8 @@ Design decisions backed by measurements (don't revert them without measuring aga
   (about 5x slower at concurrency 4). Preparing pages is now the main cost of a build.
 - **Chromium shrinks every page** when anything overflows horizontally or when flex containers start on a
   page of another width: `base.css` clips overflow on `body > *` and lays out the ancestors of the content
-  (marked `data-mkdocs-exporter-ancestor`) as blocks, for any theme.
+  (marked `data-mkdocs-exporter-ancestor`) as static blocks, for any theme (content positioned out of the
+  flow, like Read the Docs' `.wy-grid-for-nav`, loses margin boxes and the root's page fragments).
 - **The canvas hides page backgrounds**: when a `@page` rule sets a background, `pdf.js` marks the root
   and `base.css` makes `html`/`body` transparent in print. Their color isn't moved to pages: it can't be
   read in print media before printing (emulating print media races with `book.js`'s print listener, and

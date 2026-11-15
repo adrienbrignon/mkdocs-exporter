@@ -19,13 +19,18 @@ body > * {
 }
 
 /*
- * Flex and grid containers starting on a page whose size differs from the following
- * pages' (e.g. a cover without margins) lay their items out at a wrong width: the
- * ancestors of the content are made blocks (they are marked by the exporter).
+ * The ancestors of the content (marked by the exporter) are laid out as blocks in the
+ * normal flow:
+ * - flex and grid containers starting on a page whose size differs from the following
+ *   pages' (e.g. a cover without margins) lay their items out at a wrong width;
+ * - content positioned out of the flow (e.g. Read the Docs' `.wy-grid-for-nav`) loses
+ *   the margin boxes of the following pages, and the root element no longer has one
+ *   fragment per page (combined documents are measured from them, see `book.js`).
  */
 @media print {
   [data-mkdocs-exporter-ancestor] {
     display: block !important;
+    position: static !important;
   }
 }
 
