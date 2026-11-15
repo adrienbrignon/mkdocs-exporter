@@ -21,6 +21,7 @@ from mkdocs.structure.pages import Page
 from mkdocs_exporter.config import Config
 from mkdocs_exporter.core.aggregator import Aggregation, NavNode, TocOptions
 from mkdocs_exporter.core.browser import Browser
+from mkdocs_exporter.core.cache import Cache
 from mkdocs_exporter.core.document import Document, Site
 from mkdocs_exporter.core.exporter import Exporter
 from mkdocs_exporter.core.html import HtmlDocument
@@ -45,6 +46,7 @@ class Plugin(BasePlugin[Config]):
 
     def __init__(self) -> None:
         self.command = "build"
+        self.dirty = False
         self.theme: Theme = Theme()
         self.pdf = False
         self.exports: dict[str, Export] = {}
@@ -61,6 +63,7 @@ class Plugin(BasePlugin[Config]):
         """Invoked once per process (MkDocs then keeps this instance across rebuilds)."""
 
         self.command = command
+        self.dirty = dirty
 
         if command == "serve":
             # The browser is kept open from one rebuild to the next.
@@ -290,6 +293,12 @@ class Plugin(BasePlugin[Config]):
             if aggregator.enabled
         ]
 
+        cache = None
+
+        if options.cache.enabled:
+            base = Path(config.config_file_path or ".").parent
+            cache = Cache(base / options.cache.directory)
+
         exporter = Exporter(
             site,
             self.theme,
@@ -307,8 +316,13 @@ class Plugin(BasePlugin[Config]):
                 },
                 variables={"site_name": config.site_name},
             ),
+            cache,
         )
         report = await exporter.export([e.document for e in exports], aggregations)
+
+        if cache is not None and not report.failures and not self.dirty:
+            # Every page was rendered: entries that weren't used are obsolete.
+            cache.prune()
 
         for export in exports:
             if export.document.id in report.layouts:

@@ -99,6 +99,9 @@ class PrintResult:
     layout: Layout | None = None
     """The layout of the document, when it has been read."""
 
+    resources: set[str] = field(default_factory=set)
+    """The URLs requested to the page's origin (besides the page itself)."""
+
 
 Refine = Callable[[bytes], Awaitable[str | None]]
 """Computes, from a first print, a script to run in the page before printing it again."""
@@ -237,6 +240,7 @@ class Browser:
 
         origin = urlsplit(url).netloc
         diagnostics = Diagnostics()
+        resources: set[str] = set()
         page = await self._context.new_page()
 
         def on_console(message: ConsoleMessage) -> None:
@@ -249,19 +253,21 @@ class Browser:
 
         def on_request_failed(request: Request) -> None:
             failure = f"{request.url} ({request.failure})"
-            target = (
-                diagnostics.failed_requests
-                if urlsplit(request.url).netloc == origin
-                else diagnostics.external_failed_requests
-            )
 
-            target.append(failure)
+            if urlsplit(request.url).netloc == origin:
+                resources.add(request.url)
+                diagnostics.failed_requests.append(failure)
+            else:
+                diagnostics.external_failed_requests.append(failure)
 
         def on_response(response: Any) -> None:
-            if response.status >= 400 and urlsplit(response.url).netloc == origin:
-                diagnostics.failed_requests.append(
-                    f"{response.url} (HTTP {response.status})"
-                )
+            if urlsplit(response.url).netloc == origin:
+                resources.add(response.url)
+
+                if response.status >= 400:
+                    diagnostics.failed_requests.append(
+                        f"{response.url} (HTTP {response.status})"
+                    )
 
         page.on("console", on_console)
         page.on("requestfailed", on_request_failed)
@@ -314,7 +320,9 @@ class Browser:
         finally:
             await page.close()
 
-        return PrintResult(pdf=pdf, diagnostics=diagnostics)
+        resources.discard(url)
+
+        return PrintResult(pdf=pdf, diagnostics=diagnostics, resources=resources)
 
     @staticmethod
     async def _collect_errors(page: Any, diagnostics: Diagnostics) -> None:

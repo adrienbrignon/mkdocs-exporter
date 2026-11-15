@@ -71,6 +71,24 @@ plugins:
           concurrency: 8
 ```
 
+### Cache
+
+Documents are kept in `.cache/plugin/exporter` (next to your configuration file) and reused by the next builds as long as their page, the plugin's options and the files they load from your website (stylesheets, scripts, images...) are unchanged.
+Files loaded from other websites (e.g. a script from a CDN) are assumed not to change: delete the directory to start afresh.
+
+Documents that may be incomplete (a file failed to load, a hook failed) are not kept, and the cache only keeps the documents of the last build.
+The cache can be moved, or disabled:
+
+```yaml
+plugins:
+  - exporter:
+      formats:
+        pdf:
+          cache:
+            enabled: false
+            directory: .cache/plugin/exporter
+```
+
 ### Links
 
 Links to other pages of your website are resolved to absolute URLs, based on `site_url`.

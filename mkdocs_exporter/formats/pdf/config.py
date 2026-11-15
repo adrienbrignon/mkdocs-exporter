@@ -104,6 +104,16 @@ class CoversConfig(BaseConfig):
     """The back cover template location."""
 
 
+class CacheConfig(BaseConfig):
+    """The cache's configuration."""
+
+    enabled = c.Type(bool, default=True)
+    """Should documents be reused while their page and resources are unchanged?"""
+
+    directory = c.Type(str, default=".cache/plugin/exporter")
+    """The cache's directory (relative to the configuration file)."""
+
+
 class TocConfig(BaseConfig):
     """The table of contents of an aggregated document."""
 
@@ -193,6 +203,9 @@ class Config(BaseConfig):
 
     browser = c.SubConfig(BrowserConfig)
     """The browser's configuration."""
+
+    cache = c.SubConfig(CacheConfig)
+    """The cache of documents."""
 
     url = c.Optional(c.Type(str))
     """The URL replacing the website's root in links (defaults to `site_url`)."""

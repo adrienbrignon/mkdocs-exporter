@@ -3,16 +3,19 @@
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import importlib.resources
 import json
 import re
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
+from urllib.parse import urlsplit
 
 from bs4 import Tag
 
 from mkdocs_exporter.core import margins
 from mkdocs_exporter.core.browser import Browser, PrintResult, RenderError
+from mkdocs_exporter.core.cache import Assets, Cache, digest, environment, fingerprint
 from mkdocs_exporter.core.document import Document, Heading, Layout, Site
 from mkdocs_exporter.core.html import HtmlDocument, resolve_link
 from mkdocs_exporter.core.pdf import (
@@ -27,10 +30,10 @@ from mkdocs_exporter.core.themes import Theme
 from mkdocs_exporter.logging import logger
 
 COVER_LOCATIONS = ("front", "back")
+"""The locations of cover pages."""
 
 HEADING = re.compile(r"^h[1-6]$")
 """Heading elements."""
-"""The locations of cover pages."""
 
 
 @dataclass
@@ -111,12 +114,17 @@ class Renderer:
         browser: Browser,
         server: Server,
         options: RenderOptions | None = None,
+        cache: Cache | None = None,
     ) -> None:
         self.site = site
         self.theme = theme
         self.browser = browser
         self.server = server
         self.options = options or RenderOptions()
+        self.cache = cache
+        self.reused = 0
+        """The number of documents reused from the cache."""
+        self._assets: Assets = {}
 
         from mkdocs_exporter.core.resources import css
 
@@ -233,6 +241,17 @@ class Renderer:
         """Renders a document to PDF."""
 
         render_pass = render_pass or Pass()
+        cache = self.cache if render_pass.name == "default" else None
+        key = self._key(document, render_pass) if cache else ""
+
+        if cache and (result := cache.get(key, self._fresh)):
+            logger.debug("[mkdocs-exporter.pdf] Reusing '%s'", document.id)
+            self.reused += 1
+
+            return result
+
+        logger.info("[mkdocs-exporter.pdf] Rendering '%s'...", document.id)
+
         # A few milliseconds of CPU: a thread would mostly wait for the GIL (measured
         # about 5 times slower with 4 documents rendered concurrently).
         html, headings = self.prepare(document, render_pass)
@@ -284,7 +303,52 @@ class Renderer:
                 },
             )
 
+        diagnostics = result.diagnostics
+
+        if cache and not (
+            diagnostics.hook_errors
+            or diagnostics.failed_requests
+            or diagnostics.external_failed_requests
+        ):
+            # Results that may be incomplete are not kept (e.g. a script failed to load).
+            cache.put(key, result, {_path(u): self._asset(u) for u in result.resources})
+
         return result
+
+    def _key(self, document: Document, render_pass: Pass) -> str:
+        """Identifies a document's inputs (besides the resources it loads)."""
+
+        options = dataclasses.asdict(self.options)
+
+        del options["concurrency"]
+
+        return fingerprint(
+            environment(),
+            self.browser.version,
+            self.browser.options,
+            self.theme.name,
+            self.site.url,
+            self.site.prefix,
+            options,
+            dataclasses.asdict(document),
+            dataclasses.asdict(render_pass),
+        )
+
+    def _asset(self, url: str) -> str | None:
+        """The fingerprint of a resource served to the browser (`None` if missing)."""
+
+        path = _path(url)
+
+        if path not in self._assets:
+            resource = self.server.resolve(path)
+            self._assets[path] = digest(resource[0] if resource else None)
+
+        return self._assets[path]
+
+    def _fresh(self, assets: Assets) -> bool:
+        """Are the resources a document loaded unchanged?"""
+
+        return all(self._asset(url) == value for url, value in assets.items())
 
     def _rewrite_links(
         self, pdf: bytes, document: Document, render_pass: Pass
@@ -327,8 +391,6 @@ class Renderer:
 
         async def render(document: Document, render_pass: Pass | None) -> Outcome:
             async with semaphore:
-                logger.info("[mkdocs-exporter.pdf] Rendering '%s'...", document.id)
-
                 try:
                     result = await self.render(document, render_pass)
                 except RenderError as error:
@@ -397,3 +459,9 @@ def _headings(content: Tag) -> list[tuple[int, str, str]]:
         )
 
     return headings
+
+
+def _path(url: str) -> str:
+    """The path and query of a URL."""
+
+    return urlsplit(url)._replace(scheme="", netloc="").geturl()

@@ -30,6 +30,7 @@ jobs:
 
 !!! tip
     Cache `~/.cache/ms-playwright` (keyed by Playwright's version) to avoid downloading the browser on every run, the system dependencies still need to be installed with `playwright install-deps chromium`.
+    Cache `.cache/plugin/exporter` too, to only render the pages that changed since the last run (see [Cache](../configuration/generating-pdf-documents.md#cache)).
 
 ## GitLab CI
 

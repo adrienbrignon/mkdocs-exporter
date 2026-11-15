@@ -9,10 +9,12 @@ from pathlib import Path
 
 from mkdocs_exporter.core.aggregator import Aggregation, aggregate
 from mkdocs_exporter.core.browser import Browser
+from mkdocs_exporter.core.cache import Cache
 from mkdocs_exporter.core.document import Document, Layout, Site
 from mkdocs_exporter.core.renderer import Outcome, Renderer, RenderOptions
 from mkdocs_exporter.core.server import Server
 from mkdocs_exporter.core.themes import Theme
+from mkdocs_exporter.logging import logger
 
 
 @dataclass
@@ -35,11 +37,13 @@ class Exporter:
         theme: Theme,
         browser: Browser,
         options: RenderOptions | None = None,
+        cache: Cache | None = None,
     ) -> None:
         self.site = site
         self.theme = theme
         self.browser = browser
         self.options = options or RenderOptions()
+        self.cache = cache
 
     async def export(
         self, documents: Sequence[Document], aggregations: Sequence[Aggregation] = ()
@@ -59,10 +63,23 @@ class Exporter:
 
             with server:
                 renderer = Renderer(
-                    self.site, self.theme, self.browser, server, self.options
+                    self.site,
+                    self.theme,
+                    self.browser,
+                    server,
+                    self.options,
+                    self.cache,
                 )
+                outcomes = await renderer.render_all(documents)
 
-                for outcome in await renderer.render_all(documents):
+                if renderer.reused:
+                    logger.info(
+                        "[mkdocs-exporter.pdf] Reused %d of %d documents (unchanged)",
+                        renderer.reused,
+                        len(documents),
+                    )
+
+                for outcome in outcomes:
                     if outcome.result is None:
                         report.failures.append(outcome)
                         continue
