@@ -45,10 +45,9 @@ class Diagnostics:
     """
 
     late_errors: list[str] = field(default_factory=list)
-    """Uncaught errors of the page's scripts, raised while paginating or printing.
+    """Uncaught errors of the page's scripts, raised once the page was ready to print.
 
-    They usually come from the website's scripts reacting to the elements Paged.js moves
-    around, and don't affect the document.
+    They don't affect the document.
     """
 
     console: list[str] = field(default_factory=list)

@@ -5,7 +5,6 @@ from __future__ import annotations
 import importlib.resources
 import mimetypes
 import threading
-from collections.abc import Callable
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -62,11 +61,9 @@ class Server:
         self,
         directory: Path,
         prefix: str = "/",
-        transform_stylesheet: Callable[[str], str] | None = None,
     ) -> None:
         self.directory = directory.resolve()
         self.prefix = prefix if prefix.endswith("/") else prefix + "/"
-        self.transform_stylesheet = transform_stylesheet
         self.documents: dict[str, tuple[bytes, str]] = {}
         self.volatile: set[str] = set()
         self._server: ThreadingHTTPServer | None = None
@@ -186,15 +183,7 @@ class Server:
     def _read(self, file: Path) -> tuple[bytes, str]:
         """Reads a file of the website."""
 
-        data = file.read_bytes()
-
-        if file.suffix.lower() == ".css" and self.transform_stylesheet is not None:
-            text = data.decode("utf-8", errors="surrogateescape")
-            data = self.transform_stylesheet(text).encode(
-                "utf-8", errors="surrogateescape"
-            )
-
-        return data, content_type(file.name)
+        return file.read_bytes(), content_type(file.name)
 
     @staticmethod
     def _key(url: str) -> str:

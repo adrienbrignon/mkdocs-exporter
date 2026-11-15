@@ -3,32 +3,9 @@
 from __future__ import annotations
 
 import importlib.resources
-import re
 from typing import ClassVar
 
 from mkdocs_exporter.core.html import HtmlDocument
-
-NTH_SELECTOR = re.compile(
-    r":nth-(child|last-child|of-type|last-of-type)\(\s*(\d*)\s*n\s*\+\s*(\d+)\s*\)"
-)
-
-
-def fix_nth_selectors(css: str) -> str:
-    """Rewrites `:nth-*(An+B)` selectors as `:nth-*(An-C)` when equivalent.
-
-    Paged.js mistakes the `+` of such selectors for a sibling combinator and fails to
-    paginate the document. `An+B` and `An-(A-B)` match the same elements when `0 < B < A`.
-    """
-
-    def replace(match: re.Match[str]) -> str:
-        kind, a, b = match.group(1), int(match.group(2) or 1), int(match.group(3))
-
-        if 0 < b < a:
-            return f":nth-{kind}({a}n-{a - b})"
-
-        return match.group(0)
-
-    return NTH_SELECTOR.sub(replace, css)
 
 
 class Theme:
@@ -76,11 +53,6 @@ class Theme:
             .joinpath(self.script)
             .read_text(encoding="utf-8")
         )
-
-    def transform_stylesheet(self, css: str) -> str:
-        """Transforms a stylesheet before it reaches Paged.js."""
-
-        return fix_nth_selectors(css)
 
     def content_element(self, document: HtmlDocument):
         """The element holding the page's content (falls back to the body)."""

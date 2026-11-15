@@ -150,6 +150,7 @@ To use it, download [`paged.polyfill.min.js`](https://unpkg.com/pagedjs@0.4.3/di
     ```
 
 Paged.js lays out pages in JavaScript: expect documents to take longer to generate, especially combined ones.
+Paged.js 0.4 also fails on some `:nth-child(An+B)` selectors, such as those of the `readthedocs` theme.
 
 ## Browser
 

@@ -39,12 +39,6 @@ def test_refuses_paths_outside_the_site(site: Path) -> None:
     assert server.resolve("/missing.html") is None
 
 
-def test_transforms_stylesheets(site: Path) -> None:
-    server = Server(site, "/", transform_stylesheet=str.upper)
-
-    assert server.resolve("/style.css")[0] == b"A:NTH-CHILD(2N+1){}"  # type: ignore[index]
-
-
 def test_serves_bundled_assets(site: Path) -> None:
     content, kind = Server(site, "/").resolve(RESERVED + "pdf.js")  # type: ignore[misc]
 

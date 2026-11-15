@@ -199,7 +199,7 @@ class Renderer:
 
         for stylesheet in stylesheets:
             if stylesheet:
-                html.add_style(self.theme.transform_stylesheet(stylesheet))
+                html.add_style(stylesheet)
 
         if hidden:
             html.add_style(", ".join(hidden) + " { display: none !important; }")

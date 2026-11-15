@@ -49,9 +49,7 @@ class Exporter:
         """
 
         report = Report()
-        server = Server(
-            self.site.directory, self.site.prefix, self.theme.transform_stylesheet
-        )
+        server = Server(self.site.directory, self.site.prefix)
 
         async with self.browser:
             with server:
