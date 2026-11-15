@@ -27,7 +27,7 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from urllib.parse import unquote, urljoin, urlsplit, urlunsplit
 
-from bs4 import BeautifulSoup, Tag
+from bs4 import BeautifulSoup, Comment, PageElement, Tag
 
 from mkdocs_exporter.core import margins
 from mkdocs_exporter.core.document import Document
@@ -52,7 +52,7 @@ ORIGIN = "http://mkdocs-exporter.invalid"
 """A placeholder origin to resolve URLs with."""
 
 PLACEHOLDER = "<!--mkdocs-exporter-parts-->"
-"""Where the parts are inserted in the serialized shell."""
+"""Where the parts are inserted in the serialized shell (a comment)."""
 
 HEADINGS = ("h1", "h2", "h3", "h4", "h5", "h6")
 EXCLUDED = ("mkdocs-exporter-front-cover", "mkdocs-exporter-back-cover")
@@ -988,6 +988,13 @@ def _merge(page: PageResources, resources: _Resources, shell: bool = False) -> N
         resources.scripts.add(key)
 
 
+def _nodes(html: str) -> list[PageElement]:
+    """The nodes of an HTML fragment, to insert one by one (BeautifulSoup 4.13.1 fails to
+    insert an empty document)."""
+
+    return list(BeautifulSoup(html, "html.parser").contents)
+
+
 def assemble(parts: Sequence[Part], options: BookOptions, toc: str | None) -> Book:
     """Assembles prepared parts into a book (see `prepare`).
 
@@ -1065,11 +1072,11 @@ def assemble(parts: Sequence[Part], options: BookOptions, toc: str | None) -> Bo
     shell.mark_ancestors(first.content, ANCESTOR)
 
     content = [str(part.content) for part in parts]
-    first.content.replace_with(BeautifulSoup(PLACEHOLDER, "html.parser"))
+    first.content.replace_with(Comment(PLACEHOLDER[4:-3]))
     shell.remove(options.removed)
 
     head = shell.head
-    head.append(BeautifulSoup("".join(resources.head), "html.parser"))
+    head.extend(_nodes("".join(resources.head)))
 
     for stylesheet in css:
         if stylesheet:
@@ -1083,11 +1090,11 @@ def assemble(parts: Sequence[Part], options: BookOptions, toc: str | None) -> Bo
             del element["data-teleport"]
             destination.append(element)
 
-    for html in reversed(options.head):
-        head.insert(0, BeautifulSoup(html, "html.parser"))
+    for node in reversed(_nodes("".join(options.head))):
+        head.insert(0, node)
 
     body = shell.body
-    body.append(BeautifulSoup("".join(resources.body), "html.parser"))
+    body.extend(_nodes("".join(resources.body)))
 
     for script in options.scripts:
         shell.add_script(script)
