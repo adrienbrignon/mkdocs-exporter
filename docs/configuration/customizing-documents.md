@@ -40,6 +40,19 @@ Stylesheets are plain CSS: nesting is supported, Sass isn't (see the [migration 
 
 Documents are laid out by Chromium, which supports page sizes (they can differ from a page to another), margins, [margin boxes](https://www.w3.org/TR/css-page-3/#margin-boxes) with page counters, named pages (`page: ...`), `@page :first` and page breaks. Running headers are available through [headers and footers](headers-and-footers.md); for other features of the [CSS Generated Content for Paged Media](https://www.w3.org/TR/css-gcpm-3/) module, see [Using Paged.js](#using-paged-js).
 
+Pages are printed on the background of your website (in print media) unless a `@page` rule sets a background of its own, e.g. a full-bleed cover: the website's background is then left out of every page, so that it doesn't hide them. To print on a color in that case, give it to pages too:
+
+```css
+@page {
+  background: #fafafa;
+}
+
+@page :first {
+  margin: 0;
+  background: url("/assets/images/cover.png") center / cover;
+}
+```
+
 ## Page titles
 
 Some themes don't print the page's title when its content has no first-level heading. The `title` option inserts it in documents:

@@ -111,8 +111,11 @@ Design decisions backed by measurements (don't revert them without measuring aga
 - **Chromium shrinks every page** when anything overflows horizontally or when flex containers start on a
   page of another width: `base.css` clips overflow on `body > *` and lays out the ancestors of the content
   (marked `data-mkdocs-exporter-ancestor`) as blocks, for any theme.
-- **The canvas hides page backgrounds**: `pdf.js` moves the background of `html`/`body` (and the body's
-  font, which margin boxes don't inherit) to a `@page` rule, `base.css` makes them transparent in print.
+- **The canvas hides page backgrounds**: when a `@page` rule sets a background, `pdf.js` marks the root
+  and `base.css` makes `html`/`body` transparent in print. Their color isn't moved to pages: it can't be
+  read in print media before printing (emulating print media races with `book.js`'s print listener, and
+  Material's dark scheme prints on white). `pdf.js` also gives pages the body's font (margin boxes
+  inherit from the root).
 - **Combined documents are a single HTML document printed once**, not every page rendered again and
   merged with pypdf: on the 201-page project, 3.4 s instead of 9.6 s (6.4 s when parsing every page
   again: keeping the renderer's prepared content halves the cost); 2.3 s for 800 text-only pages against

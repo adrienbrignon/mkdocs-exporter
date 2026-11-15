@@ -15,8 +15,8 @@
  * Users can define `window.MkDocsExporter.before`, `.render` and `.after`: they are
  * awaited, in this order, once the page and its resources are loaded and before printing.
  *
- * The background of the page (`html` or `body`) and the body's font family are moved to
- * pages (see `canvas`), `base.css` making `html` and `body` transparent in print.
+ * Pages are given the body's font family, and `html[data-mkdocs-exporter-page-background]`
+ * is set when a `@page` rule sets a background (see `canvas`).
  */
 (() => {
   const errors = [];
@@ -101,35 +101,71 @@
   };
 
   /**
-   * Gives pages the canvas color (the root's or body's background) and the body's font
-   * family, with a `@page` rule coming before every other: printed natively, the canvas is
-   * painted over the page, hiding the backgrounds of `@page` rules (e.g. full-bleed
-   * covers), and margin boxes inherit from the root element rather than from the body.
-   * The font size is left alone: `em` lengths of `@page` rules (margins) depend on it.
+   * Does a `@page` rule set a background? Rules are looked for whatever media they apply
+   * to (pages are in screen media until printed).
    */
-  const canvas = () => {
-    const declarations = [`font-family: ${getComputedStyle(document.body).fontFamily};`];
+  const pageBackgrounds = () => {
+    const properties = ['background', 'background-color', 'background-image'];
+    const walk = (rules) => {
+      for (const rule of rules) {
+        if (rule instanceof CSSPageRule) {
+          if (properties.some((property) => rule.style.getPropertyValue(property))) {
+            return true;
+          }
 
-    for (const element of [document.documentElement, document.body]) {
-      const color = getComputedStyle(element).backgroundColor;
+          continue;
+        }
 
-      if (color && color !== 'transparent' && color !== 'rgba(0, 0, 0, 0)') {
-        declarations.push(`background-color: ${color};`);
-        break;
+        let children = null;
+
+        try {
+          children = rule instanceof CSSImportRule ? rule.styleSheet && rule.styleSheet.cssRules : rule.cssRules;
+        } catch (error) { /* Cross-origin stylesheet. */ }
+
+        if (children && walk(children)) {
+          return true;
+        }
       }
+
+      return false;
+    };
+
+    for (const sheet of document.styleSheets) {
+      try {
+        if (walk(sheet.cssRules)) {
+          return true;
+        }
+      } catch (error) { /* Cross-origin stylesheet. */ }
     }
 
+    return false;
+  };
+
+  /**
+   * Prepares the page context:
+   * - margin boxes inherit from the root element rather than from the body: pages are given
+   *   the body's font family, with a `@page` rule coming before every other (the font size
+   *   is left alone: `em` lengths of `@page` rules, such as margins, depend on it);
+   * - printed natively, the canvas (the background of the root and body) is painted over
+   *   whole pages, hiding the backgrounds of `@page` rules (e.g. full-bleed covers): when a
+   *   `@page` rule sets one, the root is marked for `base.css` to make the root and body
+   *   transparent in print. Otherwise, the canvas is left alone: its color in print can't
+   *   be read before printing (e.g. dark themes printed on white).
+   */
+  const canvas = () => {
     const style = document.createElement('style');
 
-    style.textContent = `@page { ${declarations.join(' ')} }`;
+    style.textContent = `@page { font-family: ${getComputedStyle(document.body).fontFamily}; }`;
     document.head.prepend(style);
+
+    if (pageBackgrounds()) {
+      document.documentElement.setAttribute('data-mkdocs-exporter-page-background', '');
+    }
   };
 
   const run = async () => {
     try {
       phase = 'rendering';
-
-      canvas();
 
       await settle();
       await call('before');
@@ -140,6 +176,8 @@
       }
 
       await call('after');
+
+      canvas();
 
       // Keep the website's scripts from reacting to the upcoming print.
       for (const event of ['beforeprint', 'afterprint', 'resize', 'scroll']) {

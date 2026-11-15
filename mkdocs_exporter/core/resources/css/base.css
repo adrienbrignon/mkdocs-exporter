@@ -7,12 +7,13 @@ body > * {
 }
 
 /*
- * The canvas (the background of the root and body) is painted over pages, hiding the
- * backgrounds of `@page` rules: its color is given to pages instead (see `pdf.js`).
+ * The canvas (the background of the root and body) is painted over whole pages, hiding the
+ * backgrounds of `@page` rules: it is made transparent when a `@page` rule sets a
+ * background (`pdf.js` marks the root).
  */
 @media print {
-  html,
-  body {
+  html[data-mkdocs-exporter-page-background],
+  html[data-mkdocs-exporter-page-background] body {
     background: transparent !important;
   }
 }
