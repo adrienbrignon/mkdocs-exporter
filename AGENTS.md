@@ -44,10 +44,11 @@ Before considering a change done, run the linter, the formatter check, the type 
 | `core/browser.py` | Playwright/Chromium: prints a URL to PDF, collects diagnostics |
 | `core/renderer.py` | Prepares a page's print HTML and renders documents concurrently |
 | `core/exporter.py` | Orchestrates an export: server, browser, documents, then aggregations |
-| `core/aggregator.py` | Combined documents: covers, numbering, bookmarks, internal links, table of contents (pypdf) |
+| `core/aggregator.py` | Combined documents: printing, measurements, table of contents, bookmarks (pypdf) |
+| `core/book.py` | Combined documents assembled as a single HTML document (parts, URLs, identifiers, named pages) |
 | `core/margins.py` | Headers and footers compiled to CSS page margin boxes |
 | `core/themes/` | Theme adapters (`material`, `readthedocs`, generic fallback) |
-| `core/resources/` | `pdf.js` (gets pages ready, reports readiness), theme scripts, print CSS, TOC template |
+| `core/resources/` | `pdf.js` (gets pages ready, reports readiness), `book.js` (measures combined documents), theme scripts, print CSS, TOC template |
 | `core/runner.py` | Runs coroutines on an event loop owned by the exporter (`Loop`: kept across `serve` rebuilds) |
 | `core/cache.py` | Cache of printed documents (`.cache/plugin/exporter`), checked against the resources they loaded |
 | `mkdocs_exporter/plugin.py` | The MkDocs plugin (`exporter`): adapts MkDocs pages and navigation to core data |
@@ -72,9 +73,17 @@ Before considering a change done, run the linter, the formatter check, the type 
    memory at the page's own URL (with a query string), so relative URLs resolve. Unchanged documents are
    reused from the cache: the key is a fingerprint of the page and options (before preparing it), and an
    entry is valid while the same-origin resources the page loaded hash the same.
-5. For each aggregation, pages are rendered again with continuous numbering (again while page counts or
-   the table of contents change), merged with pypdf, then bookmarks and internal links are added from the
-   positions of headings and anchors reported by the browser.
+5. Each aggregation is printed as a single HTML document (`core/book.py`): the first page's shell holding
+   one part per page (the page's content element, with its kept covers), reusing the content the
+   renderer prepared (only the shell is parsed again). Relative URLs become root-absolute, links to
+   other parts anchors, identifiers (and radio groups) are prefixed by part (`p2-`); covers, the table
+   of contents, blank pages and each part's content (for `{page_title}`) are on named pages, styles
+   teleported by covers are translated (`@page :first` → covers' named page) and scoped (`@scope`) to
+   their part when they differ. A draft print (`page_ranges="1"`: the whole document is laid out, only
+   one page is painted) is measured by `book.js`; the aggregator patches the document (table of contents,
+   blank pages for `start: odd`, `{section}` counter style) and prints it again, checking the final
+   print's measurement (up to 3 times). Bookmarks are added with pypdf from that measurement, and named
+   destinations are lowered by the top margin of their page.
 
 **Browser contract** (see `core/resources/js/pdf.js`): `pdf.js` is the first script of the page. It
 records uncaught errors by phase, waits for the `load` event, fonts, images, MathJax and the theme
@@ -82,9 +91,11 @@ records uncaught errors by phase, waits for the `load` event, fonts, images, Mat
 sets `body[mkdocs-exporter]` to `true` or `error` and resolves `window.__MKDOCS_EXPORTER_READY__` (awaited by
 `Browser.print` in a single round-trip).
 
-**Layout data** comes from the printed PDF, never from the DOM: hidden links to every heading make
-Chromium create named destinations (`core/pdf.py:read_layout`). Features browsers lack are computed from
-a first print: `{section}` running heads become a `@counter-style` with one symbol per page
+**Layout data** of single documents comes from the printed PDF: hidden links to every heading make
+Chromium create named destinations (`core/pdf.py:read_layout`). Combined documents are measured while
+they are printed (`book.js`, from a `matchMedia('print')` listener: the print layout is live there, the
+root element having one fragment per page). Features browsers lack are computed from a first print:
+`{section}` running heads become a `@counter-style` with one symbol per page
 (`Browser.print(refine=...)` patches the page and prints again).
 
 Design decisions backed by measurements (don't revert them without measuring again):
@@ -98,8 +109,18 @@ Design decisions backed by measurements (don't revert them without measuring aga
 - **Prepare pages on the event loop**, not in a thread: BeautifulSoup work waits for the GIL in a thread
   (about 5x slower at concurrency 4). Preparing pages is now the main cost of a build.
 - **Chromium shrinks every page** when anything overflows horizontally or when flex containers start on a
-  page of another width: `base.css` clips overflow on `body > *`, `material.css` lays out the main
-  containers as blocks.
+  page of another width: `base.css` clips overflow on `body > *` and lays out the ancestors of the content
+  (marked `data-mkdocs-exporter-ancestor`) as blocks, for any theme.
+- **The canvas hides page backgrounds**: `pdf.js` moves the background of `html`/`body` (and the body's
+  font, which margin boxes don't inherit) to a `@page` rule, `base.css` makes them transparent in print.
+- **Combined documents are a single HTML document printed once**, not every page rendered again and
+  merged with pypdf: on the 201-page project, 3.4 s instead of 9.6 s (6.4 s when parsing every page
+  again: keeping the renderer's prepared content halves the cost); 2.3 s for 800 text-only pages against
+  29 s for the per-page approach with Paged.js. The draft print costs about a quarter of a full one
+  (2.8 s instead of 11.7 s for 925 pages); `@counter-style` with 5,000 symbols adds 2 % to a print.
+  Native printing is superlinear beyond a few thousand pages (5,000 trivial pages: 6 s; 20,000: 180 s).
+- **A change of named page starts a new page**, even for an empty box: `body` and each part are given the
+  name of their first page and parts lose their pseudo-elements, else books get blank pages.
 - **`wait_until="load"`**: identical output to `networkidle`, about 35 % faster.
 - Uncaught errors of the website's scripts are logged at debug level (they also happen on the website);
   errors in `MkDocsExporter` hooks and missing same-origin resources are warnings; only pagination failures

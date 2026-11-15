@@ -1,18 +1,14 @@
 # Combining pages
 
-The aggregator combines pages into a single PDF document:
+The aggregator combines pages into a single PDF document. The pages are assembled into a single HTML document, printed once by the browser:
 
 ```mermaid
 graph LR
-    A[Pages] --> B[Renderer]
-    B --> C[PDF document #1]
-    B --> D[PDF document #2]
-    B --> E[PDF document #3]
-    C --> F[Aggregator]
-    style F fill:#ea2027,color: #fff;
-    D --> F
-    E --> F
-    F --> G[Combined PDF document]
+    A[Pages] --> B[Combined HTML document]
+    style B fill:#ea2027,color: #fff;
+    B --> C[Draft print]
+    C -- page numbers, blank pages, running heads --> B
+    B --> D[Combined PDF document]
 ```
 
 ```yaml
@@ -29,8 +25,21 @@ plugins:
               author: Jane Doe
 ```
 
-Pages are combined in the order of the navigation, and numbered across the whole document.
+Pages are combined in the order of the navigation, and numbered across the whole document: `{page}` and `{pages}` in [headers and footers](headers-and-footers.md), as well as `counter(page)` and `counter(pages)` in your own stylesheets, count the pages of the combined document.
 The document's title, author and subject default to the website's (`site_name`, `site_author` and `site_description`).
+
+Each page keeps its own `{page_title}` and `{section}`; the pages of the table of contents show its title.
+What the browser can't print by itself (the page numbers of the table of contents, blank pages and `{section}`) is computed from a first print of the document's layout, then the document is printed again.
+
+### In a single document
+
+Since every page is part of the same HTML document:
+
+- each page starts on a new page;
+- identifiers are prefixed by page (e.g. `p2-installation`), so that footnotes, tabs and other references of different pages don't interfere: stylesheets and scripts targeting identifiers of the content (`#installation`) don't match them in combined documents;
+- stylesheets and scripts loaded by some pages only are loaded once for the whole document, and the scripts of [`formats.pdf.scripts`](customizing-documents.md#scripts) run once;
+- `@page :first` rules apply to the pages of front covers (in a page's own document, its first page is its front cover);
+- styles teleported to the head by cover pages (`<style data-teleport="head">`) are included once when they are the same for every page; otherwise they only apply to their own page.
 
 ## Cover pages
 
@@ -55,6 +64,7 @@ aggregator:
 ```
 
 Links between pages of the combined document point within the document, to the linked heading when there is one.
+Other links point to the website (`site_url` or `formats.pdf.url`), or are relative to the combined document when the website has no URL.
 
 ## Table of contents
 
@@ -73,7 +83,7 @@ Its appearance can be changed with CSS (`.mkdocs-exporter-toc` and the classes o
 
 ## Starting pages on the right
 
-For printed books, pages can start on odd (right-hand) pages, blank pages being inserted when needed:
+For printed books, pages can start on odd (right-hand) pages, blank pages (without headers nor footers) being inserted when needed:
 
 ```yaml
 aggregator:
