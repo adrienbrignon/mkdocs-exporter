@@ -1,5 +1,10 @@
 # Multimedia
 
+!!! info "Setting up"
+
+    Images need no setup: documents are printed once they are loaded, in any format the browser supports (JPEG, PNG, WebP, SVG...).
+    Paths starting with `/` are resolved from the root of the website, like on the website.
+
 Lorem ipsum dolor sit amet, consectetur adipiscing elit.
 
 ## Images

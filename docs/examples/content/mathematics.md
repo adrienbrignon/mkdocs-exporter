@@ -10,6 +10,43 @@ buttons:
 
 # Mathematics
 
+!!! info "Setting up"
+
+    Formulas are typeset by a JavaScript library, like on the website: MkDocs Exporter doesn't typeset them, it waits for them before printing.
+    With Material for MkDocs, follow its [mathematics](https://squidfunk.github.io/mkdocs-material/reference/math/) guide: the `pymdownx.arithmatex` extension marks formulas, then either library typesets them.
+
+    === "MathJax"
+
+        MathJax typesets formulas asynchronously: documents are printed once it is done.
+
+        ```yaml
+        markdown_extensions:
+          - pymdownx.arithmatex:
+              generic: true
+
+        extra_javascript:
+          - assets/scripts/mathjax.js # MathJax's configuration (see the guide)
+          - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
+        ```
+
+    === "KaTeX"
+
+        KaTeX typesets formulas while the page loads, before documents are printed.
+
+        ```yaml
+        markdown_extensions:
+          - pymdownx.arithmatex:
+              generic: true
+
+        extra_javascript:
+          - assets/scripts/katex.js # Renders formulas (see the guide)
+          - https://unpkg.com/katex@0/dist/katex.min.js
+          - https://unpkg.com/katex@0/dist/contrib/auto-render.min.js
+
+        extra_css:
+          - https://unpkg.com/katex@0/dist/katex.min.css
+        ```
+
 Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc quis augue massa. Vestibulum suscipit et nisi in imperdiet. Nunc et mattis arcu, feugiat venenatis elit. Praesent hendrerit lacus felis, vel volutpat massa tristique vitae.
 
 Quisque quam urna, vulputate quis malesuada quis, iaculis sit amet lectus. Vivamus malesuada dignissim lectus in condimentum. Integer et efficitur sapien. Aenean aliquam pharetra porttitor. Morbi rutrum placerat lectus. Aenean imperdiet nisi lobortis sagittis ultricies.
