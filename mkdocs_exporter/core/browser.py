@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
-from collections.abc import Awaitable, Callable, Sequence
+from collections.abc import Awaitable, Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from types import TracebackType
 from typing import Any
@@ -13,8 +13,10 @@ from playwright.async_api import Browser as PlaywrightBrowser
 from playwright.async_api import (
     BrowserContext,
     ConsoleMessage,
+    Page,
     Playwright,
     Request,
+    Response,
     async_playwright,
 )
 from playwright.async_api import Error as PlaywrightError
@@ -65,6 +67,19 @@ class Diagnostics:
 
     external_failed_requests: list[str] = field(default_factory=list)
     """Requests to other websites that failed."""
+
+    def record(self, errors: Sequence[Mapping[str, Any]]) -> None:
+        """Records the errors recorded by a page, by the phase they occurred in (see
+        `pdf.js`)."""
+
+        for error in errors:
+            target = {
+                "hook": self.hook_errors,
+                "loading": self.errors,
+                "rendering": self.errors,
+            }.get(str(error.get("phase")), self.late_errors)
+
+            target.append(str(error.get("message")))
 
     @property
     def complete(self) -> bool:
@@ -133,6 +148,9 @@ Refine = Callable[[Printed], Awaitable[str | None]]
 MEASURE = "() => window.__MKDOCS_EXPORTER_LAYOUT__ || null"
 """Reads what the page measured while it was printed (see `book.js`)."""
 
+ERRORS = "() => (window.__MKDOCS_EXPORTER_ERRORS__ || []).splice(0)"
+"""Reads the errors the page recorded since they were last read (see `pdf.js`)."""
+
 
 class RenderError(Exception):
     """A page could not be printed."""
@@ -185,16 +203,6 @@ class Browser:
 
         return self._browser.version
 
-    async def renew(self) -> None:
-        """Starts afresh (new cache, cookies and storage) for the next pages."""
-
-        if self._browser is None or self._context is None:
-            raise RuntimeError("The browser has not been launched")
-
-        await self._context.close()
-
-        self._context = await self._browser.new_context()
-
     @property
     def running(self) -> bool:
         """Whether the browser has been launched and is still usable."""
@@ -202,19 +210,11 @@ class Browser:
         return self._browser is not None and self._browser.is_connected()
 
     async def launch(self) -> Browser:
-        """Launches the browser (closing it first if it's no longer usable)."""
+        """Launches the browser (closing it first if it was launched)."""
 
         if self._playwright is not None:
             await self.close()
 
-        return await self.__aenter__()
-
-    async def close(self) -> None:
-        """Closes the browser."""
-
-        await self.__aexit__(None, None, None)
-
-    async def __aenter__(self) -> Browser:
         logger.info("[mkdocs-exporter.pdf] Launching browser...")
 
         self._playwright = await async_playwright().start()
@@ -225,17 +225,24 @@ class Browser:
             )
             self._context = await self._browser.new_context()
         except BaseException:
-            await self.__aexit__(None, None, None)
+            await self.close()
             raise
 
         return self
 
-    async def __aexit__(
-        self,
-        exc_type: type[BaseException] | None,
-        exc: BaseException | None,
-        traceback: TracebackType | None,
-    ) -> None:
+    async def renew(self) -> None:
+        """Starts afresh (new cache, cookies and storage) for the next pages."""
+
+        if self._browser is None or self._context is None:
+            raise RuntimeError("The browser has not been launched")
+
+        await self._context.close()
+
+        self._context = await self._browser.new_context()
+
+    async def close(self) -> None:
+        """Closes the browser."""
+
         for close in (
             self._context.close if self._context else None,
             self._browser.close if self._browser else None,
@@ -246,6 +253,17 @@ class Browser:
                     await close()
 
         self._context = self._browser = self._playwright = None
+
+    async def __aenter__(self) -> Browser:
+        return await self.launch()
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        await self.close()
 
     async def print(
         self,
@@ -281,85 +299,25 @@ class Browser:
         if self._context is None:
             raise RuntimeError("The browser has not been launched")
 
-        origin = urlsplit(url).netloc
-        diagnostics = Diagnostics()
-        resources: set[str] = set()
+        watch = _Watch(urlsplit(url).netloc, self.debug)
+        diagnostics = watch.diagnostics
         page = await self._context.new_page()
+        printer = _Printer(page, outline, tagged, measure or refine is not None)
 
-        def on_console(message: ConsoleMessage) -> None:
-            if self.debug:
-                logger.info(
-                    "[mkdocs-exporter.pdf.browser] (%s) %s", message.type, message.text
-                )
-            if message.type == "error":
-                diagnostics.console.append(message.text)
-
-        def on_request_failed(request: Request) -> None:
-            failure = f"{request.url} ({request.failure})"
-
-            if urlsplit(request.url).netloc == origin:
-                resources.add(request.url)
-                diagnostics.failed_requests.append(failure)
-            else:
-                diagnostics.external_failed_requests.append(failure)
-
-        def on_response(response: Any) -> None:
-            if urlsplit(response.url).netloc == origin:
-                resources.add(response.url)
-
-                if response.status >= 400:
-                    diagnostics.failed_requests.append(
-                        f"{response.url} (HTTP {response.status})"
-                    )
-
-        page.on("console", on_console)
-        page.on("requestfailed", on_request_failed)
-        page.on("response", on_response)
+        watch.attach(page)
 
         try:
-            await page.goto(url, wait_until="load", timeout=self.timeout)
+            await self._open(page, url, diagnostics)
 
-            try:
-                state = await asyncio.wait_for(
-                    page.evaluate(READY), timeout=self.timeout / 1000
-                )
-            except TimeoutError:
-                raise PlaywrightTimeoutError("Timed out") from None
+            printed = await printer.print(draft=draft and refine is not None)
 
-            self._record_errors(state["errors"], diagnostics)
-
-            if state["state"] == "error":
-                raise RenderError(f"Rendering failed: {state['reason']}", diagnostics)
-
-            async def pdf(draft: bool = False) -> Printed:
-                data = await page.pdf(
-                    prefer_css_page_size=True,
-                    print_background=True,
-                    outline=outline and not draft,
-                    tagged=tagged and not draft,
-                    page_ranges="1" if draft else "",
-                )
-                measured = await page.evaluate(MEASURE) if refine or measure else None
-
-                return Printed(pdf=data, measure=measured, draft=draft)
-
-            printed = await pdf(draft=draft and refine is not None)
-
-            for _ in range(attempts if refine is not None else 0):
-                script = await refine(printed)  # type: ignore[misc]
-
-                if script is None and not printed.draft:
-                    break
-                if script:
-                    await page.evaluate(script)
-
-                printed = await pdf()
-
+            if refine is not None:
+                printed = await printer.refine(printed, refine, attempts)
             if logger.isEnabledFor(logging.DEBUG):
                 # Only logged at the debug level.
-                await self._collect_errors(page, diagnostics)
-        except PlaywrightTimeoutError as error:
-            await self._collect_errors(page, diagnostics)
+                await watch.collect(page)
+        except (PlaywrightTimeoutError, TimeoutError) as error:
+            await watch.collect(page)
 
             raise RenderError(
                 f"Timed out after {self.timeout} ms waiting for the page to be ready",
@@ -370,38 +328,119 @@ class Browser:
         finally:
             await page.close()
 
-        resources.discard(url)
+        watch.resources.discard(url)
 
         return PrintResult(
             pdf=printed.pdf,
             diagnostics=diagnostics,
-            resources=resources,
+            resources=watch.resources,
             measure=printed.measure,
         )
 
-    @staticmethod
-    async def _collect_errors(page: Any, diagnostics: Diagnostics) -> None:
-        """Collects the errors recorded by the page since the last collection."""
+    async def _open(self, page: Page, url: str, diagnostics: Diagnostics) -> None:
+        """Opens a page and waits for it to be ready to print (see `pdf.js`)."""
+
+        await page.goto(url, wait_until="load", timeout=self.timeout)
+
+        state = await asyncio.wait_for(page.evaluate(READY), self.timeout / 1000)
+
+        diagnostics.record(state["errors"])
+
+        if state["state"] == "error":
+            raise RenderError(f"Rendering failed: {state['reason']}", diagnostics)
+
+
+class _Watch:
+    """Records what a page logs and requests."""
+
+    def __init__(self, origin: str, debug: bool) -> None:
+        self.origin = origin
+        """The origin (host and port) of the website."""
+        self.debug = debug
+        self.diagnostics = Diagnostics()
+        self.resources: set[str] = set()
+        """The URLs requested to the website (see `PrintResult.resources`)."""
+
+    def attach(self, page: Page) -> None:
+        """Starts recording what a page logs and requests."""
+
+        page.on("console", self._console)
+        page.on("requestfailed", self._request_failed)
+        page.on("response", self._response)
+
+    async def collect(self, page: Page) -> None:
+        """Collects the errors the page recorded since they were last collected."""
 
         try:
-            errors = await page.evaluate(
-                "() => (window.__MKDOCS_EXPORTER_ERRORS__ || []).splice(0)"
-            )
+            errors = await page.evaluate(ERRORS)
         except PlaywrightError:
             return
 
-        Browser._record_errors(errors or [], diagnostics)
+        self.diagnostics.record(errors or [])
 
-    @staticmethod
-    def _record_errors(errors: list[dict[str, Any]], diagnostics: Diagnostics) -> None:
-        """Sorts the errors recorded by the page by the phase they occurred in."""
+    def _console(self, message: ConsoleMessage) -> None:
+        if self.debug:
+            logger.info(
+                "[mkdocs-exporter.pdf.browser] (%s) %s", message.type, message.text
+            )
+        if message.type == "error":
+            self.diagnostics.console.append(message.text)
 
-        for error in errors:
-            phase = str(error.get("phase"))
-            target = {
-                "hook": diagnostics.hook_errors,
-                "loading": diagnostics.errors,
-                "rendering": diagnostics.errors,
-            }.get(phase, diagnostics.late_errors)
+    def _request_failed(self, request: Request) -> None:
+        failure = f"{request.url} ({request.failure})"
 
-            target.append(str(error.get("message")))
+        if urlsplit(request.url).netloc == self.origin:
+            self.resources.add(request.url)
+            self.diagnostics.failed_requests.append(failure)
+        else:
+            self.diagnostics.external_failed_requests.append(failure)
+
+    def _response(self, response: Response) -> None:
+        if urlsplit(response.url).netloc == self.origin:
+            self.resources.add(response.url)
+
+            if response.status >= 400:
+                self.diagnostics.failed_requests.append(
+                    f"{response.url} (HTTP {response.status})"
+                )
+
+
+class _Printer:
+    """Prints a page that is ready, adjusting it between prints."""
+
+    def __init__(self, page: Page, outline: bool, tagged: bool, measure: bool) -> None:
+        self.page = page
+        self.outline = outline
+        self.tagged = tagged
+        self.measure = measure
+
+    async def print(self, draft: bool = False) -> Printed:
+        """Prints the page (only its first page for a draft, untagged and without
+        bookmarks), reading what it measured."""
+
+        pdf = await self.page.pdf(
+            prefer_css_page_size=True,
+            print_background=True,
+            outline=self.outline and not draft,
+            tagged=self.tagged and not draft,
+            page_ranges="1" if draft else "",
+        )
+        measured = await self.page.evaluate(MEASURE) if self.measure else None
+
+        return Printed(pdf=pdf, measure=measured, draft=draft)
+
+    async def refine(self, printed: Printed, refine: Refine, attempts: int) -> Printed:
+        """Adjusts the page from its last print and prints it again, until `refine` has
+        nothing to adjust (a draft is always printed again) or up to `attempts` times."""
+
+        for _ in range(attempts):
+            script = await refine(printed)
+
+            if script is None and not printed.draft:
+                break
+            if script:
+                await self.page.evaluate(script)
+
+            printed = await self.print()
+
+        return printed
