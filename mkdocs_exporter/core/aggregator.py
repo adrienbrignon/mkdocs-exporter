@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib.resources
 import io
 import posixpath
+import re
 from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING, cast
@@ -23,7 +24,12 @@ from pypdf.generic import (
 )
 
 from mkdocs_exporter.core.document import Document, Heading, Layout, Position, Site
-from mkdocs_exporter.core.pdf import RELATIVE_LINKS_BASE, link_actions, relative_url
+from mkdocs_exporter.core.pdf import (
+    RELATIVE_LINKS_BASE,
+    info,
+    link_actions,
+    relative_url,
+)
 from mkdocs_exporter.logging import logger
 
 if TYPE_CHECKING:
@@ -220,16 +226,7 @@ def total_pages(parts: Sequence[Part]) -> int:
 def metadata(values: Mapping[str, object]) -> dict[str, str]:
     """Normalizes document information keys (`title` → `/Title`)."""
 
-    result = {}
-
-    for key, value in values.items():
-        if value is None:
-            continue
-
-        name = key if key.startswith("/") else "/" + key[:1].upper() + key[1:]
-        result[name] = str(value)
-
-    return result
+    return info(values)
 
 
 def flat_nav(documents: Sequence[Document]) -> list[NavNode]:
@@ -359,10 +356,15 @@ def render_toc(options: TocOptions, entries: Sequence[TocEntry]) -> str:
 class Book:
     """Writes an aggregated document."""
 
-    def __init__(self, parts: Sequence[Part], pdfs: Sequence[bytes]) -> None:
+    def __init__(
+        self, parts: Sequence[Part], pdfs: Sequence[bytes], language: str | None = None
+    ) -> None:
         self.parts = list(parts)
         self.writer = PdfWriter()
         self.starts: dict[str, int] = {}
+
+        if language:
+            self.writer.root_object[NameObject("/Lang")] = TextStringObject(language)
 
         for part, pdf in zip(self.parts, pdfs, strict=True):
             if part.blank_before and len(self.writer.pages):
@@ -520,6 +522,9 @@ class Book:
         """Writes the document."""
 
         self.writer.add_metadata({"/Producer": "MkDocs Exporter", **metadata(info)})
+
+        # Documents embed the same fonts and images: keep a single copy of them.
+        self.writer.compress_identical_objects()
         output.parent.mkdir(parents=True, exist_ok=True)
 
         with output.open("wb") as file:
@@ -636,7 +641,11 @@ async def aggregate(
 
         logger.debug("[mkdocs-exporter.pdf] Page numbering of '%s' changed", output)
 
-    book = Book(parts, [_result(results[d.id]).pdf for d in documents])
+    book = Book(
+        parts,
+        [_result(results[d.id]).pdf for d in documents],
+        language=_language(documents[0].html),
+    )
     base = renderer.options.links or RELATIVE_LINKS_BASE
 
     book.anchor()
@@ -645,6 +654,14 @@ async def aggregate(
     book.write(site.directory / output, aggregation.metadata)
 
     return []
+
+
+def _language(html: str) -> str | None:
+    """The language of an HTML document (`<html lang="...">`)."""
+
+    match = re.search(r"<html\b[^>]*\blang=[\"']?([\w-]+)", html[:2048], re.IGNORECASE)
+
+    return match.group(1) if match else None
 
 
 def _result(outcome: Outcome) -> PrintResult:

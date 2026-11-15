@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import io
 import posixpath
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from typing import cast
 
 from pypdf import PdfReader, PdfWriter
@@ -73,6 +73,38 @@ def rewrite_links(pdf: bytes, rewrite: Callable[[str], str | None]) -> bytes:
 
     output = io.BytesIO()
 
+    writer.write(output)
+
+    return output.getvalue()
+
+
+def info(values: Mapping[str, object]) -> dict[str, str]:
+    """Normalizes document information keys (`title` → `/Title`), dropping empty values."""
+
+    result = {}
+
+    for key, value in values.items():
+        if value is None or value == "":
+            continue
+
+        name = key if key.startswith("/") else "/" + key[:1].upper() + key[1:]
+        result[name] = str(value)
+
+    return result
+
+
+def set_metadata(pdf: bytes, values: Mapping[str, object]) -> bytes:
+    """Sets the document information of a PDF document (with an incremental update)."""
+
+    metadata = info(values)
+
+    if not metadata:
+        return pdf
+
+    output = io.BytesIO()
+    writer = PdfWriter(io.BytesIO(pdf), incremental=True)
+
+    writer.add_metadata(metadata)
     writer.write(output)
 
     return output.getvalue()

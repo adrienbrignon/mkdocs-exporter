@@ -53,6 +53,9 @@ class Document:
     covers: dict[str, str] = field(default_factory=dict)
     """The HTML of the document's cover pages, by location (`front`, `back`)."""
 
+    metadata: dict[str, str] = field(default_factory=dict)
+    """The document information (`title`, `author`, `subject`, `keywords`...)."""
+
     @property
     def directory(self) -> str:
         """The directory of the PDF document, relative to the website's root."""

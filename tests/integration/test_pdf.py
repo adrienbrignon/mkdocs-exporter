@@ -270,3 +270,26 @@ def test_removed_covers_on_their_own_page_are_not_counted(project: Project) -> N
 
     assert combined.page_count == pages - len(PAGES)
     assert f"{combined.page_count} / {combined.page_count}" in combined.pages_text[-1]
+
+
+def test_document_information(project: Project) -> None:
+    project.write(
+        "docs/reference.md",
+        "---\nauthor: Ada\ndescription: All the details.\ntags: [api, cli]\n---\n\n"
+        "# Reference\n",
+    )
+
+    site = project.build(site_author="Jane", site_description="Fixture site")
+    reference = site.pdf("reference/index.pdf").metadata
+    home = site.pdf("index.pdf").metadata
+    combined = site.pdf("combined.pdf")
+
+    assert reference["/Title"] == "Reference"
+    assert reference["/Author"] == "Ada"
+    assert reference["/Subject"] == "All the details."
+    assert reference["/Keywords"] == "api, cli"
+    assert home["/Author"] == "Jane"
+    assert home["/Subject"] == "Fixture site"
+    assert combined.metadata["/Title"] == "Fixture"
+    assert combined.metadata["/Author"] == "Jane"
+    assert combined.reader.root_object["/Lang"] == "en"

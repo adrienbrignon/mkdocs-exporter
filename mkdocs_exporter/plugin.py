@@ -187,6 +187,7 @@ class Plugin(BasePlugin[Config]):
                 html=output,
                 meta=dict(page.meta),
                 covers=covers,
+                metadata=_metadata(page, config),
             ),
         )
 
@@ -331,6 +332,7 @@ class Plugin(BasePlugin[Config]):
             metadata={
                 "title": config.site_name,
                 "author": config.site_author,
+                "subject": config.site_description,
                 **options.metadata,
             },
             nav=self.nav,
@@ -342,6 +344,26 @@ class Plugin(BasePlugin[Config]):
         """Should a PDF document be generated for the page?"""
 
         return bool(page.meta.get("pdf", not self.config.formats.pdf.explicit))
+
+
+def _metadata(page: Page, config: MkDocsConfig) -> dict[str, str]:
+    """The document information of a page's PDF document."""
+
+    keywords = page.meta.get("keywords") or page.meta.get("tags") or []
+
+    if isinstance(keywords, str):
+        keywords = [keywords]
+
+    return {
+        key: str(value)
+        for key, value in {
+            "title": page.title,
+            "author": page.meta.get("author") or config.site_author,
+            "subject": page.meta.get("description") or config.site_description,
+            "keywords": ", ".join(str(keyword) for keyword in keywords),
+        }.items()
+        if value
+    }
 
 
 def _read(path: str) -> str:

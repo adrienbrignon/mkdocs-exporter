@@ -11,7 +11,12 @@ from mkdocs_exporter.core import margins
 from mkdocs_exporter.core.browser import Browser, PrintResult, RenderError
 from mkdocs_exporter.core.document import Document, Site
 from mkdocs_exporter.core.html import HtmlDocument, resolve_link
-from mkdocs_exporter.core.pdf import RELATIVE_LINKS_BASE, relative_url, rewrite_links
+from mkdocs_exporter.core.pdf import (
+    RELATIVE_LINKS_BASE,
+    relative_url,
+    rewrite_links,
+    set_metadata,
+)
 from mkdocs_exporter.core.server import RESERVED, Server
 from mkdocs_exporter.core.themes import Theme
 from mkdocs_exporter.logging import logger
@@ -211,6 +216,16 @@ class Renderer:
             self.server.unpublish(path)
 
         result.pdf = self._rewrite_links(result.pdf, document, render_pass)
+
+        if render_pass.name == "default":
+            result.pdf = set_metadata(
+                result.pdf,
+                {
+                    "creator": "MkDocs Exporter",
+                    "title": document.title,
+                    **document.metadata,
+                },
+            )
 
         return result
 
