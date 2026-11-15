@@ -6,6 +6,8 @@ from typing import Any
 import pytest
 from mkdocs.exceptions import Abort
 
+from mkdocs_exporter.core.books import printer
+from mkdocs_exporter.core.books.assembly import reuse
 from tests.conftest import BOOK_BUTTON, Project, Site, single_book
 from tests.support.pdf import OutlineItem, PdfDocument
 
@@ -246,6 +248,36 @@ def test_book_buttons_link_to_the_first_book_of_the_page(project: Project) -> No
     assert 'download="The guide.pdf"' in guide
     assert 'href="pdf/all.pdf"' in home
     assert site.pdfs().count("guide.pdf") == 1
+
+
+def test_books_reuse_the_content_prepared_for_pages(
+    project: Project, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Pages are parsed once for their document and books (but the first page, the
+    book's shell); the content of a page is reused by a single book."""
+
+    reused: list[str] = []
+
+    def spy(index: int, document: Any, *args: Any) -> Any:
+        reused.append(document.id)
+
+        return reuse(index, document, *args)
+
+    monkeypatch.setattr(printer, "reuse", spy)
+    project.build(
+        exporter={
+            "formats": {
+                "pdf": {
+                    "books": [
+                        {"output": "all.pdf", "covers": "none"},
+                        {"output": "guide.pdf", "include": ["guide/*"]},
+                    ]
+                }
+            }
+        }
+    )
+
+    assert reused == ["guide/intro.md", "guide/advanced.md", "reference.md"]
 
 
 def test_books_must_have_distinct_outputs(
