@@ -144,6 +144,36 @@
   };
 
   /**
+   * Exposes the current section (first or second-level heading) of each page as a CSS
+   * custom property, for headers and footers: the first heading of the page, or the
+   * last one of the previous pages (like `string()`, which Paged.js mishandles).
+   */
+  const sections = () => {
+    const quote = (text) => `"${text.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\s+/g, ' ').trim()}"`;
+    const excluded = '.mkdocs-exporter-front-cover, .mkdocs-exporter-back-cover, .mkdocs-exporter-toc';
+    let current = null;
+
+    for (const page of document.querySelectorAll('.pagedjs_page')) {
+      const headings = [...page.querySelectorAll('.pagedjs_page_content :is(h1, h2)')]
+        .filter((heading) => !heading.closest(excluded));
+      const title = (heading) => {
+        const clone = heading.cloneNode(true);
+
+        clone.querySelectorAll('.headerlink, .anchorlink').forEach((link) => link.remove());
+
+        return clone.textContent;
+      };
+
+      if (headings.length > 0) {
+        page.style.setProperty('--mkdocs-exporter-section', quote(title(headings[0])));
+        current = title(headings[headings.length - 1]);
+      } else if (current !== null) {
+        page.style.setProperty('--mkdocs-exporter-section', quote(current));
+      }
+    }
+  };
+
+  /**
    * Applies the page numbering of the aggregated document.
    */
   const number = () => {
@@ -257,6 +287,7 @@
       }
 
       number();
+      sections();
       await call('after', flow);
 
       window.__MKDOCS_EXPORTER_RESULT__ = measure();

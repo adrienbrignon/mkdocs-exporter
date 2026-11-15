@@ -23,7 +23,7 @@ def test_content_with_placeholders() -> None:
 
     assert content("{site_name}: {page_title}", values) == '"Docs" ": " "Intro"'
     assert content("{page}/{pages}", values) == 'counter(page) "/" counter(pages)'
-    assert content("{section}", values) == "string(mkdocs-exporter-section)"
+    assert content("{section}", values) == 'var(--mkdocs-exporter-section, "")'
     assert content("", values) == '""'
 
 

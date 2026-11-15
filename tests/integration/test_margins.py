@@ -10,7 +10,7 @@ pytestmark = pytest.mark.browser
 
 MARGINS = {
     "header": {"left": "{site_name}", "right": "TITLE {page_title}"},
-    "footer": {"left": "SECTION {section}", "right": "PAGE {page} OF {pages}"},
+    "footer": {"left": "SECTION {section} END", "right": "PAGE {page} OF {pages}"},
 }
 
 
@@ -31,10 +31,12 @@ def test_headers_and_footers(site: Site) -> None:
 
 
 def test_sections_are_running_headings(site: Site) -> None:
+    """Text can follow `{section}` (Paged.js' `string()` dropped it)."""
+
     document = site.pdf("guide/advanced/index.pdf")
     text = "\n".join(document.pages_text[1:])
 
-    assert "SECTION Advanced" in text
+    assert "SECTION Advanced END" in text
     assert "¶" not in text
 
 

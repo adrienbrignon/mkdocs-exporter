@@ -18,8 +18,8 @@ BOXES = {
 }
 """The page margin boxes of each position of headers and footers."""
 
-SECTION = "mkdocs-exporter-section"
-"""The name of the CSS string holding the current section."""
+SECTION = "--mkdocs-exporter-section"
+"""The CSS custom property holding the current section (set on each page by `pdf.js`)."""
 
 TOKEN = re.compile(r"\{([^{}]*)\}")
 
@@ -60,7 +60,7 @@ def content(template: str, values: Mapping[str, str]) -> str:
         if name in ("page", "pages"):
             parts.append(f"counter({name})")
         elif name == "section":
-            parts.append(f"string({SECTION})")
+            parts.append(f'var({SECTION}, "")')
         else:
             parts.append(css_string(values.get(name, "")))
 
@@ -107,7 +107,6 @@ def stylesheet(
     empty = "\n".join(f"  @{box} {{ content: none; }}" for box in boxes)
 
     return (
-        f"h1, h2 {{ string-set: {SECTION} content(text); }}\n"
         f"@page {{\n{rules}\n}}\n"
         ".mkdocs-exporter-back-cover { page: mkdocs-exporter-cover; }\n"
         f"@page mkdocs-exporter-cover {{\n{empty}\n}}\n"
