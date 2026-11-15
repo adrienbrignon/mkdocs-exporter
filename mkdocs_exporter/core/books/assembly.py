@@ -376,7 +376,7 @@ def namespace_ids(element: Tag, prefix: str, ids: set[str]) -> None:
             attrs["data-clipboard-target"] = rename_selector_ids(
                 str(attrs["data-clipboard-target"]), reference
             )
-        if tag.name == "style" and tag.string:
+        if tag.name == "style" and tag.string and "#" in tag.string:
             tag.string = rewrite_ids(tag.string, reference)
 
 

@@ -144,6 +144,9 @@ Design decisions backed by measurements (don't revert them without measuring aga
   Native printing is superlinear beyond a few thousand pages (5,000 trivial pages: 6 s; 20,000: 180 s).
 - **A change of named page starts a new page**, even for an empty box: `body` and each part are given the
   name of their first page and parts lose their pseudo-elements, else books get blank pages.
+- **Twice as many documents at a time as CPUs, up to 8**: rendering mostly waits for the browser (on 4 CPUs,
+  13.3 s at 4 documents at a time, 11.4 s at 8); beyond 8, memory grows faster than speed (the browser peaked
+  at 1.4 GiB at 8 and 2.4 GiB at 16, for 6 % less time on 28 CPUs).
 - **`wait_until="load"`**: identical output to `networkidle`, about 35 % faster.
 - Uncaught errors of the website's scripts are logged at debug level (they also happen on the website);
   errors in `MkDocsExporter` hooks and missing same-origin resources are warnings; only pagination failures
@@ -153,7 +156,7 @@ Design decisions backed by measurements (don't revert them without measuring aga
 
 - Python `>=3.11`, PEP 8 enforced by `ruff format` (88 columns), imports sorted by ruff.
 - Type hints on all new code; keep `mypy` clean.
-- Docstrings on public classes and functions.
+- Docstrings on public classes and functions; no comments at the top of files (module docstrings, headers).
 - Log through `mkdocs_exporter.logging.logger`; prefix messages with `[mkdocs-exporter.<area>]`.
 - Keep the core free of `mkdocs` imports: it is meant to be driven by other engines (a standalone
   command for Zensical and MkDocs 2.0 is planned).

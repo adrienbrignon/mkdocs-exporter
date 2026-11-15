@@ -8,6 +8,8 @@ from tinycss2 import ast
 from tinycss2.ast import Node
 from tinycss2.serializer import serialize_string_value, serialize_url
 
+from mkdocs_exporter.logging import logger
+
 UNSCOPABLE = frozenset(
     {
         "counter-style",
@@ -170,20 +172,25 @@ def top_margin(
 def rewrite_urls(css: str, rewrite: Callable[[str], str]) -> str:
     """Rewrites the URLs (`url()`) of a stylesheet or of declarations (`style`)."""
 
+    changes = _Changes(rewrite)
+
     def visit(token: Node) -> Node:
         url = _url(token)
 
-        return token if url is None else _url_token(token, rewrite(url))
+        return token if url is None else _url_token(token, changes(url))
 
-    return tinycss2.serialize(_map(tinycss2.parse_component_value_list(css), visit))
+    tokens = _map(tinycss2.parse_component_value_list(css), visit)
+
+    return tinycss2.serialize(tokens) if changes.made else css
 
 
 def rename_selector_ids(selector: str, rename: Callable[[str], str]) -> str:
     """Renames the identifiers of a selector (`#id`)."""
 
-    return tinycss2.serialize(
-        _map(tinycss2.parse_component_value_list(selector), _hash_renamer(rename))
-    )
+    changes = _Changes(rename)
+    tokens = _map(tinycss2.parse_component_value_list(selector), _hash_renamer(changes))
+
+    return tinycss2.serialize(tokens) if changes.made else selector
 
 
 def rewrite_ids(css: str, rename: Callable[[str], str]) -> str:
@@ -191,6 +198,8 @@ def rewrite_ids(css: str, rename: Callable[[str], str]) -> str:
 
     Hashes of values (e.g. colors) are left untouched.
     """
+
+    rename = changes = _Changes(rename)
 
     def references(tokens: list[Node]) -> list[Node]:
         def visit(token: Node) -> Node:
@@ -210,16 +219,26 @@ def rewrite_ids(css: str, rename: Callable[[str], str]) -> str:
         for node in nodes:
             if isinstance(node, ast.QualifiedRule):
                 node.prelude = selectors(node.prelude)
-                node.content = _tokens(rules(_contents(node.content)))
-            elif isinstance(node, ast.AtRule) and node.content is not None:
+            elif isinstance(node, ast.AtRule):
                 node.prelude = references(node.prelude)
-                node.content = _tokens(rules(_contents(node.content)))
             elif isinstance(node, ast.Declaration):
                 node.value = references(node.value)
+            # Blocks holding invalid CSS keep their content, but their references.
+            if (
+                isinstance(node, (ast.QualifiedRule, ast.AtRule))
+                and node.content
+                and not _rewrite_block(node, rules)
+            ):
+                node.content = references(node.content)
 
         return nodes
 
-    return tinycss2.serialize(rules(_stylesheet(css)))
+    try:
+        nodes = rules(_stylesheet(css))
+    except InvalidStylesheet:
+        return css
+
+    return tinycss2.serialize(nodes) if changes.made else css
 
 
 @dataclass(frozen=True)
@@ -251,38 +270,50 @@ def split_page_rules(css: str) -> tuple[list[PageRule], str]:
                 rules.append(PageRule(selector_list(node.prelude), block))
                 continue
             if isinstance(node, (ast.AtRule, ast.QualifiedRule)) and node.content:
-                node.content = _tokens(walk(_contents(node.content)))
+                _rewrite_block(node, walk)
 
             kept.append(node)
 
         return kept
 
-    rest = tinycss2.serialize(walk(_stylesheet(css)))
+    try:
+        nodes = walk(_stylesheet(css))
+    except InvalidStylesheet:
+        return [], css
 
-    return rules, rest
+    return rules, tinycss2.serialize(nodes) if rules else css
 
 
 def rename_pages(css: str, names: Mapping[str, str]) -> str:
     """Renames the pages named by `page` properties."""
 
+    renamed = False
+
     def walk(nodes: list[Node]) -> list[Node]:
         for node in nodes:
             if isinstance(node, ast.Declaration) and node.lower_name == "page":
+                nonlocal renamed
+                renamed |= any(
+                    isinstance(t, ast.IdentToken) and t.value in names
+                    for t in node.value
+                )
                 node.value = [
                     ast.IdentToken(t.source_line, t.source_column, names[t.value])
                     if isinstance(t, ast.IdentToken) and t.value in names
                     else t
                     for t in node.value
                 ]
-            elif (
-                isinstance(node, (ast.AtRule, ast.QualifiedRule))
-                and node.content is not None
-            ):
-                node.content = _tokens(walk(_contents(node.content)))
+            elif isinstance(node, (ast.AtRule, ast.QualifiedRule)) and node.content:
+                _rewrite_block(node, walk)
 
         return nodes
 
-    return tinycss2.serialize(walk(_stylesheet(css)))
+    try:
+        nodes = walk(_stylesheet(css))
+    except InvalidStylesheet:
+        return css
+
+    return tinycss2.serialize(nodes) if renamed else css
 
 
 def scope(css: str, selector: str) -> str:
@@ -294,7 +325,12 @@ def scope(css: str, selector: str) -> str:
     outside: list[Node] = []
     inside: list[Node] = []
 
-    for node in _stylesheet(css):
+    try:
+        nodes = _stylesheet(css)
+    except InvalidStylesheet:
+        return f"@scope ({selector}) {{\n{css}\n}}"
+
+    for node in nodes:
         unscopable = (
             isinstance(node, ast.AtRule) and node.lower_at_keyword in UNSCOPABLE
         )
@@ -309,12 +345,58 @@ def scope(css: str, selector: str) -> str:
     return result.strip()
 
 
+class _Changes:
+    """Calls a function, telling whether it ever returned something else than its
+    argument (stylesheets left unchanged are not serialized again)."""
+
+    def __init__(self, function: Callable[[str], str]) -> None:
+        self.function = function
+        self.made = False
+
+    def __call__(self, value: str) -> str:
+        result = self.function(value)
+        self.made |= result != value
+
+        return result
+
+
+class InvalidStylesheet(ValueError):
+    """A stylesheet that can't be parsed (it is then left as it is)."""
+
+
 def _stylesheet(css: str | list[Node]) -> list[Node]:
-    return tinycss2.parse_stylesheet(css, skip_comments=False, skip_whitespace=False)
+    """The rules of a stylesheet (`InvalidStylesheet` if one of them is invalid)."""
+
+    nodes = tinycss2.parse_stylesheet(css, skip_comments=False, skip_whitespace=False)
+
+    if any(node.type == "error" for node in nodes):
+        logger.debug("[mkdocs-exporter.pdf] Invalid CSS left as it is: %.80r", css)
+
+        raise InvalidStylesheet(css)
+
+    return nodes
 
 
-def _contents(tokens: list[Node]) -> list[Node]:
-    """The declarations and rules of a block (nested rules included).
+def _rewrite_block(node: Node, rewrite: Callable[[list[Node]], list[Node]]) -> bool:
+    """Rewrites the declarations and rules of a block, unless one of them is invalid.
+
+    Returns:
+        Was the block rewritten?
+    """
+
+    contents = _contents(node.content)
+
+    if contents is None:
+        return False
+
+    node.content = _tokens(rewrite(contents))
+
+    return True
+
+
+def _contents(tokens: list[Node]) -> list[Node] | None:
+    """The declarations and rules of a block (nested rules included), `None` when one
+    of them is invalid.
 
     The whitespace ending declarations is moved after them, so that the semicolons
     added when they are serialized follow their value.
@@ -325,6 +407,9 @@ def _contents(tokens: list[Node]) -> list[Node]:
     for node in tinycss2.parse_blocks_contents(
         tokens, skip_comments=False, skip_whitespace=False
     ):
+        if node.type == "error":
+            return None
+
         nodes.append(node)
 
         if isinstance(node, ast.Declaration):

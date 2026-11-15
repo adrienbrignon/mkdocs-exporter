@@ -127,7 +127,7 @@ def on_post_build(env):
 
     exporter = env.conf.plugins.get("exporter")
 
-    if not getattr(exporter, "pdf", False):
+    if exporter is None or not exporter.pdf:
         return
 
     logger.info("Building the examples...")

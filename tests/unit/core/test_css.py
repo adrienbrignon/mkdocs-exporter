@@ -132,3 +132,33 @@ def test_scoped_styles_keep_global_at_rules() -> None:
     assert css.startswith("@font-face { font-family: X; }")
     assert "@scope (#part) {\n.title { color: red; }\n}" in css
     assert scope("@keyframes k { from {} }", "#part") == "@keyframes k { from {} }"
+
+
+@pytest.mark.parametrize(
+    "css",
+    [".a { color red }", ".a, .b", "@page :first { margin: 0 } }"],
+)
+def test_invalid_stylesheets_are_left_as_they_are(css: str) -> None:
+    rules, rest = split_page_rules(css)
+
+    assert rewrite_ids(css, "p-".__add__) == css
+    assert rename_pages(css, {"x": "y"}) == css
+    assert rules == []
+    assert rest == css
+    assert css in scope(css, "#part")
+
+
+def test_invalid_blocks_keep_their_content() -> None:
+    css = rewrite_ids(".a { *zoom: 1; fill: url(#t) } #t { color: red }", "p-".__add__)
+
+    assert css == ".a { *zoom: 1; fill: url(#p-t) } #p-t { color: red; }"
+
+
+def test_unchanged_stylesheets_are_not_serialized_again() -> None:
+    css = ".a{color:red}.b>#c{fill:url(#d)}@media print{.e{page:x}}"
+
+    assert rewrite_urls(css, str) == css
+    assert rewrite_ids(css, str) == css
+    assert rename_selector_ids("#c>d", str) == "#c>d"
+    assert rename_pages(css, {"other": "y"}) == css
+    assert split_page_rules(css) == ([], css)
