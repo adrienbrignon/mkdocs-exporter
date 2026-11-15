@@ -9,6 +9,7 @@ from mkdocs_exporter.core.books import Book, BookPrinter
 from mkdocs_exporter.core.browser import Browser
 from mkdocs_exporter.core.cache import Cache
 from mkdocs_exporter.core.document import Document, Layout, Site
+from mkdocs_exporter.core.preparation import Prepared
 from mkdocs_exporter.core.renderer import Context, Outcome, Renderer, RenderOptions
 from mkdocs_exporter.core.server import Server
 from mkdocs_exporter.core.themes import Theme
@@ -92,11 +93,13 @@ class Exporter:
                 if report.failures:
                     return report
 
-                prepared = {
-                    outcome.document.id: outcome.prepared
-                    for outcome in outcomes
-                    if outcome.prepared is not None
-                }
+                prepared: dict[str, Prepared] = {}
+
+                for outcome in outcomes:
+                    if outcome.prepared is not None:
+                        prepared[outcome.document.id] = outcome.prepared
+                        # Released once a book has used it.
+                        outcome.prepared = None
 
                 for index, book in enumerate(books):
                     printer = BookPrinter(context, book, prepared, f"book-{index}")
