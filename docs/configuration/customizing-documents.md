@@ -40,6 +40,18 @@ Stylesheets are plain CSS: nesting is supported, Sass isn't (see the [migration 
 
 [Paged.js](https://pagedjs.org/documentation/) implements the paged media features Chromium lacks, such as running headers (`string-set`) or page references (`target-counter`).
 
+## Page titles
+
+Some themes don't print the page's title when its content has no first-level heading. The `title` option inserts it in documents:
+
+```yaml
+plugins:
+  - exporter:
+      formats:
+        pdf:
+          title: true
+```
+
 ## Utility classes
 
 These classes are available in PDF documents:

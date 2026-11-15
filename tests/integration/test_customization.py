@@ -135,3 +135,18 @@ def test_elements_can_be_ignored(project: Project) -> None:
 
     assert "IGNORED-MARKER" not in site.pdf("reference/index.pdf").text
     assert "IGNORED-MARKER" in site.html("reference/index.html")
+
+
+def test_titles_can_be_inserted(project: Project) -> None:
+    """Pages without a first-level heading get their title (#53)."""
+
+    project.write(
+        "docs/reference.md", "---\ntitle: The reference\n---\n\nNo heading here.\n"
+    )
+
+    site = project.build(
+        theme={"name": "readthedocs"}, exporter={"formats": {"pdf": {"title": True}}}
+    )
+    text = site.pdf("reference/index.pdf").text
+
+    assert text.index("The reference") < text.index("No heading here.")

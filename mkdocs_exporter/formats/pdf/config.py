@@ -170,6 +170,9 @@ class Config(BaseConfig):
     explicit = c.Type(bool, default=False)
     """Should pages specify explicitly that they should be rendered as PDF?"""
 
+    title = c.Type(bool, default=False)
+    """Should the page's title be inserted at the top of documents lacking a `h1`?"""
+
     concurrency = PositiveInteger(default=4)
     """The maximum number of concurrent PDF generation tasks."""
 

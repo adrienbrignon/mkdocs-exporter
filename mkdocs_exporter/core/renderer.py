@@ -47,6 +47,9 @@ class RenderOptions:
     hidden: Sequence[str] = (".mkdocs-exporter-ignore", ".headerlink")
     """Selectors of elements that must not appear in documents (besides the theme's)."""
 
+    title: bool = False
+    """Should the document's title be inserted when its content has no `h1` heading?"""
+
     margins: Mapping[str, Mapping[str, str | None]] = field(default_factory=dict)
     """Headers and footers (see `mkdocs_exporter.core.margins.stylesheet`)."""
 
@@ -131,6 +134,10 @@ class Renderer:
 
         content = self.theme.content_element(html)
 
+        if self.options.title and document.title and content.find("h1") is None:
+            heading = html.soup.new_tag("h1", attrs={"class": "mkdocs-exporter-title"})
+            heading.string = document.title
+            content.insert(0, heading)
         if render_pass.toc is not None:
             content.insert(
                 0, html.fragment(render_pass.toc, **{"class": "mkdocs-exporter-toc"})

@@ -287,6 +287,7 @@ class Plugin(BasePlugin[Config]):
                 links=links if links is None or links.endswith("/") else links + "/",
                 delay=options.browser.delay,
                 concurrency=options.concurrency,
+                title=options.title,
                 margins={
                     "header": dict(options.header),
                     "footer": dict(options.footer),
