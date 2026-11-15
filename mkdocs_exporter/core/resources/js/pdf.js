@@ -15,8 +15,8 @@
  * Users can define `window.MkDocsExporter.before`, `.render` and `.after`: they are
  * awaited, in this order, once the page and its resources are loaded and before printing.
  *
- * The background of the page (`html` or `body`) and the body's font are moved to pages
- * (see `canvas`), `base.css` making `html` and `body` transparent in print.
+ * The background of the page (`html` or `body`) and the body's font family are moved to
+ * pages (see `canvas`), `base.css` making `html` and `body` transparent in print.
  */
 (() => {
   const errors = [];
@@ -101,14 +101,14 @@
   };
 
   /**
-   * Gives pages the canvas color (the root's or body's background) and the body's font,
-   * with a `@page` rule coming before every other: printed natively, the canvas is painted
-   * over the page, hiding the backgrounds of `@page` rules (e.g. full-bleed covers), and
-   * margin boxes inherit from the root element rather than from the body.
+   * Gives pages the canvas color (the root's or body's background) and the body's font
+   * family, with a `@page` rule coming before every other: printed natively, the canvas is
+   * painted over the page, hiding the backgrounds of `@page` rules (e.g. full-bleed
+   * covers), and margin boxes inherit from the root element rather than from the body.
+   * The font size is left alone: `em` lengths of `@page` rules (margins) depend on it.
    */
   const canvas = () => {
-    const body = getComputedStyle(document.body);
-    const declarations = [`font-family: ${body.fontFamily};`, `font-size: ${body.fontSize};`];
+    const declarations = [`font-family: ${getComputedStyle(document.body).fontFamily};`];
 
     for (const element of [document.documentElement, document.body]) {
       const color = getComputedStyle(element).backgroundColor;
