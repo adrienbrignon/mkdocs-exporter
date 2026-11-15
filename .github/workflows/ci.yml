@@ -132,6 +132,33 @@ jobs:
       - name: Run tests
         run: uv run --no-sync pytest
 
+  lowest:
+    name: Test (lowest supported versions)
+    runs-on: ubuntu-latest
+    env:
+      UV_PYTHON: '3.11'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v10
+        with:
+          enable-cache: true
+      - name: Install dependencies
+        run: uv sync --resolution lowest-direct --no-default-groups --group dev
+      - name: Show versions
+        run: |
+          uv run --no-sync python - <<'PY'
+          import importlib.metadata as metadata
+
+          for name in ("mkdocs", "playwright", "pypdf", "beautifulsoup4", "lxml", "jinja2", "tinycss2"):
+              print(name, metadata.version(name))
+          PY
+      - name: Install browser
+        run: uv run --no-sync playwright install --with-deps --only-shell chromium
+      - name: Run tests
+        run: uv run --no-sync pytest
+
   package:
     name: Package
     runs-on: ubuntu-latest
