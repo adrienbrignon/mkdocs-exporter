@@ -4,9 +4,11 @@ import importlib.resources
 from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass, field
 
+from bs4 import Tag
 from jinja2 import Environment
 
 from mkdocs_exporter.core.document import Heading
+from mkdocs_exporter.core.html import HtmlDocument
 
 CLASS = "mkdocs-exporter-toc"
 """The class of the element holding a table of contents."""
@@ -102,3 +104,18 @@ def render(options: TocOptions, entries: Sequence[TocEntry]) -> str:
         .from_string(source)
         .render(title=options.title, entries=entries)
     )
+
+
+def insert(html: HtmlDocument, content: Tag, markup: str) -> Tag:
+    """Inserts a table of contents (its HTML) at the start of a document's content,
+    after its front cover."""
+
+    element = html.fragment(markup, **{"class": CLASS})
+    covers = content.find_all(class_="mkdocs-exporter-front-cover", recursive=False)
+
+    if covers:
+        covers[0].insert_after(element)
+    else:
+        content.insert(0, element)
+
+    return element

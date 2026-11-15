@@ -175,7 +175,9 @@ def test_styles_differing_between_parts_are_scoped() -> None:
 
 def test_parts_are_named_after_their_first_page() -> None:
     names = PageNames()
-    css = structure([part(0, [], {"front"}), part(1, [])], names, toc=True, titled=True)
+    parts = [part(0, [], {"front"}), part(1, [])]
+    names.complete(parts, toc=True, titled=True)
+    css = structure(parts, names)
 
     assert names.first == {
         "mkdocs-exporter-part-0": FRONT_COVER_PAGE,

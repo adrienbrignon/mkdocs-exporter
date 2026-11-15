@@ -39,6 +39,30 @@ class PageNames:
     content: dict[str, str] = field(default_factory=dict)
     """The name of the pages of each part's content."""
 
+    def complete(self, parts: Sequence[Part], toc: bool, titled: bool) -> None:
+        """Names the pages of the parts that have none of their own (see `part_styles`).
+
+        Front covers are on the shared front cover page. Contents are on a page of
+        their own when headers or footers show their title (`titled`), on the shared
+        content page otherwise. The first page of a part is its front cover's, the
+        table of contents' (for the first part, when the book has one: `toc`) or its
+        content's.
+        """
+
+        for part in parts:
+            front = self.front.setdefault(part.id, FRONT_COVER_PAGE)
+            content = self.content.setdefault(
+                part.id,
+                f"mkdocs-exporter-part-{part.index}" if titled else CONTENT_PAGE,
+            )
+
+            if "front" in part.covers:
+                self.first[part.id] = front
+            elif toc and part.index == 0:
+                self.first[part.id] = TOC_PAGE
+            else:
+                self.first[part.id] = content
+
 
 def translate_selector(
     selector: str, first: Sequence[str], every: Sequence[str], names: Mapping[str, str]
@@ -179,21 +203,16 @@ def first_pages(css: str, parts: Sequence[Part], names: PageNames) -> str:
 
 
 def structure(
-    parts: Sequence[Part],
-    names: PageNames,
-    toc: bool,
-    titled: bool = False,
-    back_covers: bool = False,
+    parts: Sequence[Part], names: PageNames, back_covers: bool = False
 ) -> str:
-    """The stylesheet laying parts out on their pages.
+    """The stylesheet laying parts out on their pages (see `PageNames.complete`).
 
     Each part starts on a new page; covers, the table of contents and blank pages are on
-    named pages, as well as each part's content when headers or footers show its title
-    (`titled`), and back covers when headers or footers are hidden there (`back_covers`,
-    like in single documents). A change of named page starts a new page, even for an
-    empty box: `body`
-    and each part are given the name of their first page, and parts lose their
-    pseudo-elements (e.g. Material's spacer), so that no page holds only empty boxes.
+    named pages, as well as back covers when headers or footers are hidden there
+    (`back_covers`, like in single documents). A change of named page starts a new page,
+    even for an empty box: `body` and each part are given the name of their first page,
+    and parts lose their pseudo-elements (e.g. Material's spacer), so that no page holds
+    only empty boxes.
     """
 
     rules = [
@@ -207,24 +226,11 @@ def structure(
     ]
 
     for part in parts:
-        front = names.front.get(part.id, FRONT_COVER_PAGE)
-        content = names.content.get(
-            part.id, f"mkdocs-exporter-part-{part.index}" if titled else CONTENT_PAGE
-        )
-        first = content
-
-        if "front" in part.covers:
-            first = front
-        elif toc and part.index == 0:
-            first = TOC_PAGE
-
-        names.first[part.id] = first
-        names.content.setdefault(part.id, content)
-        names.front.setdefault(part.id, front)
         rules += [
-            f"#{part.id} {{ page: {first}; }}",
-            f":where(#{part.id}) > * {{ page: {content}; }}",
-            f"#{part.id} > .mkdocs-exporter-front-cover {{ page: {front}; }}",
+            f"#{part.id} {{ page: {names.first[part.id]}; }}",
+            f":where(#{part.id}) > * {{ page: {names.content[part.id]}; }}",
+            f"#{part.id} > .mkdocs-exporter-front-cover"
+            f" {{ page: {names.front[part.id]}; }}",
         ]
 
     if back_covers:

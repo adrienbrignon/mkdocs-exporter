@@ -532,15 +532,7 @@ def _insert_toc(
     if options is None or not entries:
         return None
 
-    element = html.fragment(toc.render(options, entries), **{"class": toc.CLASS})
-    covers = content.find_all(class_="mkdocs-exporter-front-cover", recursive=False)
-
-    if covers:
-        covers[0].insert_after(element)
-    else:
-        content.insert(0, element)
-
-    return element
+    return toc.insert(html, content, toc.render(options, entries))
 
 
 def _insert_anchors(html: HtmlDocument, headings: Sequence[Heading]) -> None:

@@ -11,7 +11,6 @@ from mkdocs_exporter.core.books.ids import collect_ids, namespace_ids
 from mkdocs_exporter.core.books.styles import (
     BACK_COVER_PAGE,
     BLANK_PAGE,
-    CONTENT_PAGE,
     TOC_PAGE,
     PageNames,
     first_pages,
@@ -28,6 +27,7 @@ from mkdocs_exporter.core.html import (
     resolve_link,
 )
 from mkdocs_exporter.core.html import headings as find_headings
+from mkdocs_exporter.core.toc import insert as insert_toc
 
 if TYPE_CHECKING:
     from mkdocs_exporter.core.renderer import Prepared
@@ -87,6 +87,17 @@ class Part:
         """Where links to the part lead: its first heading, or the part itself."""
 
         return self.headings[0].id if self.headings else self.id
+
+    def keep(self, element: Tag, destination: str) -> None:
+        """Keeps an element the part teleports: styles teleported to the head are
+        translated with the book's (see `part_styles`), other elements are moved to
+        the shell."""
+
+        if destination == "head" and element.name == "style":
+            self.styles.append(element.string or "")
+        else:
+            element["data-teleport"] = destination
+            self.teleported.append(element)
 
 
 @dataclass
@@ -157,13 +168,8 @@ def reuse(index: int, document: Document, covers: set[str], prepared: Prepared) 
                 cover.decompose()
 
     for origin, destination, element in prepared.teleported:
-        if origin != "content" and origin not in covers:
-            continue
-        if destination == "head" and element.name == "style":
-            part.styles.append(element.string or "")
-        else:
-            element["data-teleport"] = destination
-            part.teleported.append(element)
+        if origin == "content" or origin in covers:
+            part.keep(element, destination)
 
     return part
 
@@ -212,14 +218,7 @@ def prepare(
         by_url.setdefault(part.document.url, part)
 
         for element in part.content.select("[data-teleport]"):
-            destination = str(element.get("data-teleport") or "")
-
-            if destination == "head" and element.name == "style":
-                part.styles.append(element.string or "")
-            else:
-                part.teleported.append(element)
-
-            element.extract()
+            part.keep(element.extract(), str(element.get("data-teleport") or ""))
 
         found = find_headings(part.content, identify=True)
         part.ids = collect_ids(part.content)
@@ -227,21 +226,22 @@ def prepare(
             replace(heading, id=part.prefix + heading.id) for heading in found
         ]
 
+    def link(path: str, fragment: str) -> str | None:
+        """Links to parts lead within the book, other links to the website."""
+
+        target = by_url.get(path)
+
+        if target is not None:
+            if fragment and fragment in target.ids:
+                return "#" + target.prefix + fragment
+
+            return "#" + target.anchor
+
+        href = options.prefix + path + (f"#{fragment}" if fragment else "")
+
+        return resolve_link(href, "", options.prefix, options.links)
+
     for part in parts:
-
-        def link(path: str, fragment: str, part: Part = part) -> str | None:
-            target = by_url.get(path)
-
-            if target is not None:
-                if fragment and fragment in target.ids:
-                    return "#" + target.prefix + fragment
-
-                return "#" + target.anchor
-
-            href = options.prefix + path + (f"#{fragment}" if fragment else "")
-
-            return resolve_link(href, "", options.prefix, options.links)
-
         namespace_ids(part.content, part.prefix, part.ids)
         rewrite_urls(
             part.content, part.document.url, options.prefix, link, options.links
@@ -262,34 +262,100 @@ class _Resources:
     styles: set[str] = field(default_factory=set)
     scripts: set[str] = field(default_factory=set)
     head: list[str] = field(default_factory=list)
+    """The HTML of the stylesheets and styles added to the shell's head."""
     body: list[str] = field(default_factory=list)
+    """The HTML of the scripts added to the shell's body."""
+
+    @classmethod
+    def of(cls, parts: Sequence[Part], prefix: str) -> _Resources:
+        """The stylesheets and scripts of the parts, those of the shell (the first
+        part's page) excepted."""
+
+        resources = cls()
+
+        for part in parts:
+            shell = part is parts[0]
+            page = part.resources
+
+            if page is None and part.html is not None:
+                page = page_resources(
+                    part.html, part.content, part.document.url, prefix, head=shell
+                )
+
+            resources.merge(page or PageResources(), shell)
+
+        return resources
+
+    def merge(self, page: PageResources, shell: bool = False) -> None:
+        """Merges the stylesheets and scripts of a page into the book's.
+
+        Stylesheets are deduplicated by URL, styles by content, scripts by URL,
+        identifier or content (a page may load a script others don't, e.g. a diagram
+        library). Those of the shell (the first page) are only registered.
+        """
+
+        for href in page.stylesheets:
+            if href not in self.stylesheets and not shell:
+                self.head.append(f'<link rel="stylesheet" href="{href}">')
+
+            self.stylesheets.add(href)
+
+        for text in page.styles:
+            if text not in self.styles and not shell:
+                self.head.append(f"<style>{text}</style>")
+
+            self.styles.add(text)
+
+        for key, html in page.scripts:
+            if key not in self.scripts and not shell:
+                self.body.append(html)
+
+            self.scripts.add(key)
 
 
-def _merge(page: PageResources, resources: _Resources, shell: bool = False) -> None:
-    """Merges the stylesheets and scripts of a page into the book's.
+def _stylesheets(
+    parts: Sequence[Part], options: AssemblyOptions, toc: bool
+) -> tuple[list[str], PageNames]:
+    """The stylesheets of a book, in order, and the names of its parts' pages."""
 
-    Stylesheets are deduplicated by URL, styles by content, scripts by URL, identifier or
-    content (a page may load a script others don't, e.g. a diagram library). Those of
-    the shell (the first page) are only registered.
-    """
+    styles, names = part_styles(parts)
+    titled = options.margins.uses("page_title")
+    names.complete(parts, toc, titled)
+    titles = (
+        {names.content[part.id]: part.document.title for part in parts}
+        if titled
+        else {}
+    )
+    css = [
+        *options.base_stylesheets,
+        options.margins.book_stylesheet(
+            options.variables,
+            {**titles, TOC_PAGE: options.toc_title},
+            [*sorted(set(names.front.values())), BACK_COVER_PAGE],
+            BLANK_PAGE,
+        ),
+        *(first_pages(css, parts, names) for css in options.stylesheets),
+        structure(parts, names, back_covers=bool(options.margins.boxes)),
+    ]
 
-    for href in page.stylesheets:
-        if href not in resources.stylesheets and not shell:
-            resources.head.append(f'<link rel="stylesheet" href="{href}">')
+    if options.hidden:
+        css.append(", ".join(options.hidden) + " { display: none !important; }")
 
-        resources.stylesheets.add(href)
+    # Teleported styles last, so that they take precedence (like in single documents).
+    return [*css, *styles], names
 
-    for text in page.styles:
-        if text not in resources.styles and not shell:
-            resources.head.append(f"<style>{text}</style>")
 
-        resources.styles.add(text)
+def _teleport(shell: HtmlDocument, parts: Sequence[Part]) -> None:
+    """Moves the elements teleported by parts to the shell (unless their destination
+    is missing)."""
 
-    for key, html in page.scripts:
-        if key not in resources.scripts and not shell:
-            resources.body.append(html)
+    for element in (element for part in parts for element in part.teleported):
+        selector = str(element.get("data-teleport") or "")
+        destination = shell.select_one(selector) if selector else None
 
-        resources.scripts.add(key)
+        if destination is not None:
+            del element["data-teleport"]
+            destination.append(element)
 
 
 def _nodes(html: str) -> list[PageElement]:
@@ -304,105 +370,52 @@ def assemble(
 ) -> Assembly:
     """Assembles prepared parts into a book (see `prepare`).
 
+    The first part's page is the shell of the book: the parts replace its content, the
+    stylesheets and scripts of other pages are added to it.
+
     Args:
-        parts: The parts, in order (the first part's page is the shell).
+        parts: The parts, in order.
         options: The options of the book.
         toc: The HTML of the table of contents, inserted after the first front cover.
     """
 
-    first = parts[0]
-    shell = first.html
-    resources = _Resources()
+    first, shell = parts[0], parts[0].html
 
     if shell is None:
         raise ValueError("The first part of a book must hold its page")
 
-    for part in parts:
-        page = part.resources
-
-        if page is None and part.html is not None:
-            page = page_resources(
-                part.html,
-                part.content,
-                part.document.url,
-                options.prefix,
-                head=part is first,
-            )
-
-        _merge(page or PageResources(), resources, shell=part is first)
+    resources = _Resources.of(parts, options.prefix)
 
     if toc is not None:
-        element = shell.fragment(toc, **{"class": "mkdocs-exporter-toc"})
-        covers = first.content.find_all(
-            class_="mkdocs-exporter-front-cover", recursive=False
-        )
+        insert_toc(shell, first.content, toc)
 
-        if covers:
-            covers[0].insert_after(element)
-        else:
-            first.content.insert(0, element)
-
-    styles, names = part_styles(parts)
-    titled = options.margins.uses("page_title")
-    layout = structure(
-        parts, names, toc is not None, titled, back_covers=bool(options.margins.boxes)
-    )
-    titles = {
-        names.content[part.id]: part.document.title
-        for part in parts
-        if titled and names.content[part.id] != CONTENT_PAGE
-    }
-    css = [
-        *options.base_stylesheets,
-        options.margins.book_stylesheet(
-            options.variables,
-            {**titles, TOC_PAGE: options.toc_title},
-            [*sorted(set(names.front.values())), BACK_COVER_PAGE],
-            BLANK_PAGE,
-        ),
-        *(first_pages(css, parts, names) for css in options.stylesheets),
-        layout,
-    ]
-
-    if options.hidden:
-        css.append(", ".join(options.hidden) + " { display: none !important; }")
-
-    # Teleported styles last, so that they take precedence (like in single documents).
-    css += styles
+    stylesheets, names = _stylesheets(parts, options, toc is not None)
 
     # Containers of the content are laid out as blocks in print (see `base.css`).
     shell.mark_ancestors(first.content, ANCESTOR)
 
-    content = [str(part.content) for part in parts]
+    # Parts are serialized once, in place of the shell's content.
+    content = "".join(str(part.content) for part in parts)
     first.content.replace_with(Comment(PLACEHOLDER[4:-3]))
     shell.remove(options.removed)
+    shell.head.extend(_nodes("".join(resources.head)))
 
-    head = shell.head
-    head.extend(_nodes("".join(resources.head)))
-
-    for stylesheet in css:
+    for stylesheet in stylesheets:
         if stylesheet:
             shell.add_style(stylesheet)
 
-    for element in (e for part in parts for e in part.teleported):
-        selector = str(element.get("data-teleport") or "")
-        destination = shell.select_one(selector) if selector else None
-
-        if destination is not None:
-            del element["data-teleport"]
-            destination.append(element)
+    _teleport(shell, parts)
 
     for node in reversed(_nodes("".join(options.head))):
-        head.insert(0, node)
+        shell.head.insert(0, node)
 
-    body = shell.body
-    body.extend(_nodes("".join(resources.body)))
+    shell.body.extend(_nodes("".join(resources.body)))
 
     for script in options.scripts:
         shell.add_script(script)
 
     return Assembly(
-        html=str(shell).replace(PLACEHOLDER, "".join(content), 1),
+        html=str(shell).replace(PLACEHOLDER, content, 1),
         parts=list(parts),
         pages=names,
     )
