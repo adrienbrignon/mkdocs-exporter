@@ -25,7 +25,7 @@ from mkdocs_exporter.core.document import Document, Site
 from mkdocs_exporter.core.exporter import Exporter
 from mkdocs_exporter.core.html import HtmlDocument
 from mkdocs_exporter.core.renderer import Outcome, RenderOptions
-from mkdocs_exporter.core.runner import run
+from mkdocs_exporter.core.runner import Loop, run
 from mkdocs_exporter.core.themes import Theme, get_theme
 from mkdocs_exporter.covers import CoverRenderer
 from mkdocs_exporter.helpers import resolve
@@ -52,6 +52,8 @@ class Plugin(BasePlugin[Config]):
         self.nav: list[NavNode] = []
         self.watched: set[str] = set()
         self.covers: CoverRenderer
+        self.loop: Loop | None = None
+        self.browser: Browser | None = None
 
     def on_startup(
         self, *, command: Literal["build", "gh-deploy", "serve"], dirty: bool
@@ -59,6 +61,23 @@ class Plugin(BasePlugin[Config]):
         """Invoked once per process (MkDocs then keeps this instance across rebuilds)."""
 
         self.command = command
+
+        if command == "serve":
+            # The browser is kept open from one rebuild to the next.
+            self.loop = Loop()
+
+    def on_shutdown(self) -> None:
+        """Invoked when MkDocs exits: closes the browser kept while serving."""
+
+        loop, browser = self.loop, self.browser
+        self.loop = self.browser = None
+
+        if loop is not None:
+            try:
+                if browser is not None:
+                    loop.run(browser.close)
+            finally:
+                loop.close()
 
     @event_priority(100)
     def on_config(self, config: MkDocsConfig) -> None:
@@ -246,7 +265,7 @@ class Plugin(BasePlugin[Config]):
                 )
             return
 
-        failures = run(lambda: self._export(config))
+        failures = (self.loop.run if self.loop else run)(lambda: self._export(config))
 
         if failures:
             details = "\n".join(
@@ -274,13 +293,7 @@ class Plugin(BasePlugin[Config]):
         exporter = Exporter(
             site,
             self.theme,
-            Browser(
-                headless=options.browser.headless,
-                timeout=options.browser.timeout,
-                args=options.browser.args,
-                channel=options.browser.channel,
-                debug=options.browser.debug,
-            ),
+            await self._browser(),
             RenderOptions(
                 stylesheets=[_read(path) for path in options.stylesheets],
                 scripts=[_read(path) for path in options.scripts],
@@ -303,6 +316,34 @@ class Plugin(BasePlugin[Config]):
                 formats["pdf"]["pages"] = report.layouts[export.document.id].pages
 
         return report.failures
+
+    async def _browser(self) -> Browser:
+        """The browser printing documents (kept open while serving)."""
+
+        options = self.config.formats.pdf.browser
+        browser = Browser(
+            headless=options.headless,
+            timeout=options.timeout,
+            args=options.args,
+            channel=options.channel,
+            debug=options.debug,
+        )
+
+        if self.loop is None:
+            return browser
+
+        kept = self.browser
+
+        if kept is not None and kept.running and kept.options == browser.options:
+            kept.timeout, kept.debug = browser.timeout, browser.debug
+
+            return kept
+        if kept is not None:
+            await kept.close()
+
+        self.browser = await browser.launch()
+
+        return browser
 
     def _aggregation(self, config: MkDocsConfig, options: Any) -> Aggregation:
         """Describes an aggregated document."""

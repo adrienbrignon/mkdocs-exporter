@@ -17,7 +17,7 @@ Read the [migration guide](https://adrienbrignon.github.io/mkdocs-exporter/migra
 - Headers and footers with placeholders (`header`, `footer`) (#84).
 - Cover pages are Jinja templates, with or without the macros plugin (#50).
 - Per-page documents have bookmarks and are tagged (accessibility).
-- `formats.pdf.serve` to generate documents while serving.
+- `formats.pdf.serve` to generate documents while serving (the browser is kept open between rebuilds).
 - `formats.pdf.browser.channel` and `formats.pdf.browser.delay` options (#81).
 - `mkdocs-exporter-ignore`, `page-break`, `page-break-before` and `avoid-page-break` classes (#33, #63).
 - `MkDocsExporter.before` and `MkDocsExporter.after` hooks.

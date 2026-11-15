@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -51,7 +52,11 @@ class Exporter:
         report = Report()
         server = Server(self.site.directory, self.site.prefix)
 
-        async with self.browser:
+        async with contextlib.AsyncExitStack() as stack:
+            if not self.browser.running:
+                # Otherwise, the browser is closed by whoever launched it.
+                await stack.enter_async_context(self.browser)
+
             with server:
                 renderer = Renderer(
                     self.site, self.theme, self.browser, server, self.options

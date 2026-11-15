@@ -7,9 +7,10 @@ import logging
 import re
 
 import pytest
+from mkdocs.commands.build import build
 from mkdocs.exceptions import Abort
 
-from tests.conftest import Project, Site
+from tests.conftest import Project, Site, merge
 
 pytestmark = pytest.mark.browser
 
@@ -56,6 +57,48 @@ def test_rebuilds_while_serving(project: Project) -> None:
 
     assert "combined.pdf" in site.pdfs()
     assert site.pdf("combined.pdf").count("FRONT-COVER") == 4
+
+
+def test_browser_is_kept_while_serving(project: Project, exporter_logs) -> None:
+    project.serve(builds=3, exporter={"formats": {"pdf": {"serve": True}}})
+
+    assert sum("Launching browser" in m for m in exporter_logs()) == 1
+
+
+def test_browser_is_relaunched_when_its_options_change(
+    project: Project, exporter_logs
+) -> None:
+    serve = {"formats": {"pdf": {"serve": True}}}
+    cfg = project.config(serve)
+    plugin = cfg.plugins["exporter"]
+
+    cfg.plugins.on_startup(command="serve", dirty=False)
+
+    try:
+        build(cfg)
+        cfg = project.config(
+            merge(serve, {"formats": {"pdf": {"browser": {"args": ["--mute-audio"]}}}})
+        )
+        build(cfg)
+        cfg = project.config(
+            merge(
+                serve,
+                {
+                    "formats": {
+                        "pdf": {"browser": {"args": ["--mute-audio"], "timeout": 5000}}
+                    }
+                },
+            )
+        )
+        build(cfg)
+
+        assert plugin.browser is not None
+        assert plugin.browser.timeout == 5000
+    finally:
+        cfg.plugins.on_shutdown()
+
+    assert plugin.browser is None
+    assert sum("Launching browser" in m for m in exporter_logs()) == 2
 
 
 def test_dirty_rebuilds_while_serving(project: Project) -> None:

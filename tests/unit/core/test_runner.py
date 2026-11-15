@@ -3,7 +3,7 @@
 import asyncio
 import threading
 
-from mkdocs_exporter.core.runner import run
+from mkdocs_exporter.core.runner import Loop, run
 
 
 async def current_thread() -> str:
@@ -21,3 +21,25 @@ def test_runs_in_another_thread_inside_a_running_loop() -> None:
         return run(current_thread)
 
     assert asyncio.run(main()).startswith("mkdocs-exporter")
+
+
+def test_loop_keeps_its_event_loop_until_closed() -> None:
+    loop = Loop()
+
+    async def current_loop() -> asyncio.AbstractEventLoop:
+        return asyncio.get_running_loop()
+
+    try:
+        first, second = loop.run(current_loop), loop.run(current_loop)
+
+        assert first is second
+        assert loop.run(current_thread) == "mkdocs-exporter"
+    finally:
+        loop.close()
+
+    assert first.is_closed()
+    assert not any(t.name == "mkdocs-exporter" for t in threading.enumerate())
+
+
+def test_closing_an_unused_loop() -> None:
+    Loop().close()

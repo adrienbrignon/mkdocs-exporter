@@ -57,6 +57,8 @@ plugins:
           serve: true
 ```
 
+The browser is then kept open from one rebuild to the next.
+
 ### Concurrency
 
 Documents are rendered concurrently, 4 at a time by default:

@@ -140,6 +140,31 @@ class Browser:
         self._browser: PlaywrightBrowser | None = None
         self._context: BrowserContext | None = None
 
+    @property
+    def options(self) -> tuple[bool, tuple[str, ...], str | None]:
+        """The options the browser is launched with."""
+
+        return self.headless, tuple(self.args), self.channel
+
+    @property
+    def running(self) -> bool:
+        """Whether the browser has been launched and is still usable."""
+
+        return self._browser is not None and self._browser.is_connected()
+
+    async def launch(self) -> Browser:
+        """Launches the browser (closing it first if it's no longer usable)."""
+
+        if self._playwright is not None:
+            await self.close()
+
+        return await self.__aenter__()
+
+    async def close(self) -> None:
+        """Closes the browser."""
+
+        await self.__aexit__(None, None, None)
+
     async def __aenter__(self) -> Browser:
         logger.info("[mkdocs-exporter.pdf] Launching browser...")
 
