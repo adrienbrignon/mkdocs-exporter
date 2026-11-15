@@ -34,27 +34,6 @@ from mkdocs_exporter.logging import logger
 COVER_LOCATIONS = ("front", "back")
 """The locations of cover pages."""
 
-PATCH = """(patch) => {
-  if (patch.css !== undefined) {
-    let style = document.getElementById('mkdocs-exporter-sections');
-
-    if (!style) {
-      style = document.createElement('style');
-      style.id = 'mkdocs-exporter-sections';
-      document.head.appendChild(style);
-    }
-
-    style.textContent = patch.css;
-  }
-
-  const contents = document.querySelector('.mkdocs-exporter-toc');
-
-  if (patch.toc !== undefined && contents) {
-    contents.innerHTML = patch.toc;
-  }
-}"""
-"""Updates a printed document: running heads (`css`), table of contents (`toc`)."""
-
 
 def default_concurrency() -> int:
     """The number of documents rendered at once by default.
@@ -129,6 +108,8 @@ class Renderer:
         options: RenderOptions | None = None,
         cache: Cache | None = None,
     ) -> None:
+        from mkdocs_exporter.core.resources import css
+
         self.site = site
         self.theme = theme
         self.browser = browser
@@ -141,21 +122,84 @@ class Renderer:
         """The documents whose prepared content is kept for books (see `prepared`)."""
         self.prepared: dict[str, Prepared] = {}
         """The content prepared for documents to keep, by identifier."""
-        self._assets: Assets = {}
-
-        from mkdocs_exporter.core.resources import css
-
         self.base_stylesheets = [
-            importlib.resources.files(css)
-            .joinpath("base.css")
-            .read_text(encoding="utf-8"),
+            importlib.resources.files(css).joinpath("base.css").read_text("utf-8"),
             theme.print_stylesheet(),
         ]
+        self._assets: Assets = {}
+
+    async def render_all(self, documents: Sequence[Document]) -> list[Outcome]:
+        """Renders documents concurrently; a failing document doesn't stop the others."""
+
+        semaphore = asyncio.Semaphore(self.options.concurrency or default_concurrency())
+
+        async def render(document: Document) -> Outcome:
+            async with semaphore:
+                try:
+                    result = await self.render(document)
+                except RenderError as error:
+                    return Outcome(document=document, error=error)
+
+                self.report(document, result)
+
+                return Outcome(document=document, result=result)
+
+        return list(await asyncio.gather(*(render(d) for d in documents)))
+
+    async def render(self, document: Document) -> PrintResult:
+        """Renders a document to PDF (or reuses it from the cache)."""
+
+        key = self._key(document) if self.cache else ""
+
+        if self.cache and (result := self.cache.get(key, self._fresh)):
+            logger.debug("[mkdocs-exporter.pdf] Reusing '%s'", document.id)
+            self.reused += 1
+
+            return result
+
+        logger.info("[mkdocs-exporter.pdf] Rendering '%s'...", document.id)
+
+        # A few milliseconds of CPU: a thread would mostly wait for the GIL (measured
+        # about 5 times slower with 4 documents rendered concurrently).
+        html, headings = self.prepare(document)
+        result = await self._print(document, html, headings)
+
+        self._finish(result, document, headings)
+
+        # Results that may be incomplete are not kept (e.g. a script failed to load).
+        if self.cache and result.diagnostics.complete:
+            assets = {_path(url): self._asset(url) for url in result.resources}
+            self.cache.put(key, result, assets)
+
+        return result
+
+    def report(self, document: Document, result: PrintResult) -> None:
+        """Logs what looked suspicious while rendering a document."""
+
+        diagnostics = result.diagnostics
+
+        for error in diagnostics.hook_errors:
+            logger.warning(
+                "[mkdocs-exporter.pdf] Error in '%s': %s", document.id, error
+            )
+        for request in diagnostics.failed_requests:
+            logger.warning(
+                "[mkdocs-exporter.pdf] Failed to load a resource of '%s': %s",
+                document.id,
+                request,
+            )
+        for message in [
+            *diagnostics.errors,
+            *diagnostics.late_errors,
+            *diagnostics.console,
+            *diagnostics.external_failed_requests,
+        ]:
+            logger.debug("[mkdocs-exporter.pdf] '%s': %s", document.id, message)
 
     def prepare_content(
         self, html: HtmlDocument, content: Tag, document: Document, covers: set[str]
     ) -> None:
-        """Prepares a page's content for printing (also as part of a combined document).
+        """Prepares a page's content for printing (also as part of a book).
 
         Inserts the title (when asked to) and cover pages, opens `<details>` and removes
         what must not be printed (permalinks, the theme's `removed` elements).
@@ -182,20 +226,12 @@ class Renderer:
         html.remove([".headerlink", *self.theme.removed])
 
     def prepare(self, document: Document) -> tuple[str, list[Heading]]:
-        """Returns the HTML to print for a document, and its headings.
-
-        Headings are those outside of covers. Hidden
-        links to each of them make the browser create named destinations, which tell
-        where headings land (and let PDF readers link to them).
-        """
+        """The HTML to print for a document, and its headings (outside of covers)."""
 
         html = HtmlDocument(document.html)
-        hidden = [*self.theme.hidden, *self.options.hidden]
-        base = self.options.links or RELATIVE_LINKS_BASE
-        kept = set(document.covers)
         content = self.theme.content_element(html)
 
-        self.prepare_content(html, content, document, kept)
+        self.prepare_content(html, content, document, set(document.covers))
         html.mark_ancestors(content, ANCESTOR)
 
         # Without content element (the whole body), books parse the page again (see
@@ -207,25 +243,49 @@ class Renderer:
             else None
         )
         moved = teleported(content) if keep else []
-
         headings = find_headings(content)
         contents = self._insert_toc(html, content, headings)
 
-        if headings:
-            anchors = html.soup.new_tag(
-                "nav", attrs={"class": "mkdocs-exporter-anchors", "hidden": ""}
+        _insert_anchors(html, headings)
+        self._style(html, document)
+        self._script(html)
+        html.rewrite_links(
+            lambda href: resolve_link(href, document.url, self.site.prefix, self._base)
+        )
+
+        output = str(html)
+
+        if resources is not None:
+            # Books reuse the content (without what they print themselves) instead of
+            # parsing the page again.
+            for _, _, element in moved:
+                element.extract()
+            if contents is not None:
+                contents.extract()
+
+            self.prepared[document.id] = Prepared(
+                content=content.extract(), resources=resources, teleported=moved
             )
 
-            for heading in headings:
-                anchors.append(html.soup.new_tag("a", attrs={"href": f"#{heading.id}"}))
+        return output, headings
 
-            html.body.append(anchors)
+    @property
+    def _base(self) -> str:
+        """The URL links to the website start with, once resolved."""
 
+        return self.options.links or RELATIVE_LINKS_BASE
+
+    def _style(self, html: HtmlDocument, document: Document) -> None:
+        """Adds the stylesheets of the exporter, the theme, headers and footers and the
+        user to a document, then the styles teleported to the head (e.g. by covers),
+        which take precedence over them."""
+
+        hidden = [*self.theme.hidden, *self.options.hidden]
         stylesheets = [
             *self.base_stylesheets,
             self.options.margins.stylesheet(
                 {**self.options.variables, "page_title": document.title},
-                front_cover="front" in kept,
+                front_cover="front" in document.covers,
             ),
             *self.options.stylesheets,
         ]
@@ -237,12 +297,15 @@ class Renderer:
         if hidden:
             html.add_style(", ".join(hidden) + " { display: none !important; }")
 
-        # After the stylesheets, so that styles teleported to the head (e.g. by cover
-        # pages) take precedence over them.
         html.teleport()
 
-        # Inserted first in the head (hence in reverse order) to run before any script of
-        # the website, so that errors are recorded from the start.
+    def _script(self, html: HtmlDocument) -> None:
+        """Adds the scripts of the exporter, the theme and the user to a document.
+
+        The exporter's are the first scripts of the head (inserted in reverse order),
+        so that errors are recorded from the start; the user's are the last of the body.
+        """
+
         if theme_script := self.theme.print_script():
             html.add_script(theme_script, head=True, first=True)
 
@@ -253,28 +316,6 @@ class Renderer:
 
         for script in self.options.scripts:
             html.add_script(script)
-
-        html.rewrite_links(
-            lambda href: resolve_link(href, document.url, self.site.prefix, base)
-        )
-
-        output = str(html)
-
-        if resources is not None:
-            # Books reuse the content instead of parsing the page again (the rest of
-            # the page's document is left to the garbage collector).
-            for _, _, element in moved:
-                element.extract()
-
-            # Books have a table of contents of their own.
-            if contents is not None:
-                contents.extract()
-
-            self.prepared[document.id] = Prepared(
-                content=content.extract(), resources=resources, teleported=moved
-            )
-
-        return output, headings
 
     def _toc_entries(
         self, headings: Sequence[Heading], page: Callable[[str], int | None]
@@ -292,7 +333,7 @@ class Renderer:
         self, html: HtmlDocument, content: Tag, headings: Sequence[Heading]
     ) -> Tag | None:
         """Inserts a document's table of contents after its front cover, with
-        placeholder page numbers (filled once printed, see `render`)."""
+        placeholder page numbers (filled once printed, see `Refinement`)."""
 
         entries = self._toc_entries(headings, lambda _: 0)
 
@@ -311,73 +352,28 @@ class Renderer:
 
         return element
 
-    async def render(self, document: Document) -> PrintResult:
-        """Renders a document to PDF."""
+    async def _print(
+        self, document: Document, html: str, headings: Sequence[Heading]
+    ) -> PrintResult:
+        """Prints a document's HTML, refined from a first print when needed."""
 
-        cache = self.cache
-        key = self._key(document) if cache else ""
-
-        if cache and (result := cache.get(key, self._fresh)):
-            logger.debug("[mkdocs-exporter.pdf] Reusing '%s'", document.id)
-            self.reused += 1
-
-            return result
-
-        logger.info("[mkdocs-exporter.pdf] Rendering '%s'...", document.id)
-
-        # A few milliseconds of CPU: a thread would mostly wait for the GIL (measured
-        # about 5 times slower with 4 documents rendered concurrently).
-        html, headings = self.prepare(document)
         path = f"{document.url}?mkdocs-exporter=default"
         url = self.server.publish(path, html)
-        refine = None
-        sections = self.options.margins.uses("section")
-        listed = bool(self._toc_entries(headings, lambda _: 0))
-
-        if sections or listed:
-            # The browser can't print running headings (`string-set`) nor the page
-            # numbers of links' targets (`target-counter()`): print once to find out
-            # where headings land, then print again with the section of every page and
-            # the page numbers of the table of contents (until they are stable).
-            running = [(h.id, h.title) for h in headings if h.level <= 2]
-            applied: dict[str, str] = {}
-
-            async def refine(printed: Printed) -> str | None:
-                layout = read_layout(printed.pdf)
-                patch = {}
-
-                if sections:
-                    heads = margins.running_heads(
-                        (
-                            (layout.anchors[id].page, title)
-                            for id, title in running
-                            if id in layout.anchors
-                        ),
-                        range(layout.pages),
-                    )
-                    patch["css"] = margins.sections(list(heads.values()))
-                if listed and self.options.toc is not None:
-                    entries = self._toc_entries(
-                        headings,
-                        lambda i: (
-                            layout.anchors[i].page + 1 if i in layout.anchors else None
-                        ),
-                    )
-                    patch["toc"] = toc.render(self.options.toc, entries)
-                if patch == applied:
-                    return None
-
-                applied.clear()
-                applied.update(patch)
-
-                return f"({PATCH})({json.dumps(patch)})"
+        refinement = Refinement(self, headings)
 
         try:
-            result = await self.browser.print(
-                url, refine=refine, attempts=2 if listed else 1
+            return await self.browser.print(
+                url,
+                refine=refinement if refinement.needed else None,
+                attempts=refinement.attempts,
             )
         finally:
             self.server.unpublish(path)
+
+    def _finish(
+        self, result: PrintResult, document: Document, headings: Sequence[Heading]
+    ) -> None:
+        """Reads the layout of a printed document, and fixes its links and information."""
 
         layout = read_layout(result.pdf)
         result.layout = Layout(
@@ -389,9 +385,8 @@ class Renderer:
                 if heading.id in layout.anchors
             ],
         )
-        result.pdf = self._rewrite_links(result.pdf, document)
         result.pdf = set_metadata(
-            result.pdf,
+            self._rewrite_links(result.pdf, document),
             {
                 "creator": "MkDocs Exporter",
                 "title": document.title,
@@ -399,17 +394,27 @@ class Renderer:
             },
         )
 
-        diagnostics = result.diagnostics
+    def _rewrite_links(self, pdf: bytes, document: Document) -> bytes:
+        """Fixes links to the local server and makes links relative when needed."""
 
-        if cache and not (
-            diagnostics.hook_errors
-            or diagnostics.failed_requests
-            or diagnostics.external_failed_requests
+        origin = self.server.origin
+        relativize = self.options.links is None
+
+        if origin.encode() not in pdf and not (
+            relativize and RELATIVE_LINKS_BASE.encode() in pdf
         ):
-            # Results that may be incomplete are not kept (e.g. a script failed to load).
-            cache.put(key, result, {_path(u): self._asset(u) for u in result.resources})
+            return pdf
 
-        return result
+        return rewrite_links(
+            pdf,
+            lambda uri: fix_uri(
+                uri,
+                origin,
+                self.site.prefix,
+                self._base,
+                document.directory if relativize else None,
+            ),
+        )
 
     def _key(self, document: Document) -> str:
         """Identifies a document's inputs (besides the resources it loads)."""
@@ -445,68 +450,84 @@ class Renderer:
 
         return all(self._asset(url) == value for url, value in assets.items())
 
-    def _rewrite_links(self, pdf: bytes, document: Document) -> bytes:
-        """Fixes links to the local server and makes links relative when needed."""
 
-        origin = self.server.origin
-        relativize = self.options.links is None
+class Refinement:
+    """Completes a printed document with what browsers can't print by themselves.
 
-        if origin.encode() not in pdf and not (
-            relativize and RELATIVE_LINKS_BASE.encode() in pdf
-        ):
-            return pdf
+    Browsers can't print running heads (`string-set`) nor the page numbers of links'
+    targets (`target-counter()`): the document is printed once to find out where its
+    headings land, then printed again with the section of every page and the page
+    numbers of its table of contents, until they are stable.
+    """
 
-        return rewrite_links(
-            pdf,
-            lambda uri: fix_uri(
-                uri,
-                origin,
-                self.site.prefix,
-                self.options.links or RELATIVE_LINKS_BASE,
-                document.directory if relativize else None,
-            ),
-        )
+    def __init__(self, renderer: Renderer, headings: Sequence[Heading]) -> None:
+        self.renderer = renderer
+        self.headings = headings
+        self.sections = renderer.options.margins.uses("section")
+        """Do headers or footers show the section of pages?"""
+        self.listed = bool(renderer._toc_entries(headings, lambda _: 0))
+        """Does the document have a table of contents?"""
+        self.applied: dict[str, str] = {}
 
-    async def render_all(self, documents: Sequence[Document]) -> list[Outcome]:
-        """Renders documents concurrently; a failing document doesn't stop the others."""
+    @property
+    def needed(self) -> bool:
+        """Does the document need to be refined?"""
 
-        semaphore = asyncio.Semaphore(self.options.concurrency or default_concurrency())
+        return self.sections or self.listed
 
-        async def render(document: Document) -> Outcome:
-            async with semaphore:
-                try:
-                    result = await self.render(document)
-                except RenderError as error:
-                    return Outcome(document=document, error=error)
+    @property
+    def attempts(self) -> int:
+        """The number of prints refining the document, at most."""
 
-                self.report(document, result)
+        return 2 if self.listed else 1
 
-                return Outcome(document=document, result=result)
+    async def __call__(self, printed: Printed) -> str | None:
+        """The script updating a printed document (`None` once it is stable)."""
 
-        return list(await asyncio.gather(*(render(d) for d in documents)))
+        layout = read_layout(printed.pdf)
+        patch = {}
 
-    def report(self, document: Document, result: PrintResult) -> None:
-        """Logs what looked suspicious while rendering a document."""
-
-        diagnostics = result.diagnostics
-
-        for error in diagnostics.hook_errors:
-            logger.warning(
-                "[mkdocs-exporter.pdf] Error in '%s': %s", document.id, error
+        if self.sections:
+            heads = margins.running_heads(
+                (
+                    (layout.anchors[heading.id].page, heading.title)
+                    for heading in self.headings
+                    if heading.level <= 2 and heading.id in layout.anchors
+                ),
+                range(layout.pages),
             )
-        for request in diagnostics.failed_requests:
-            logger.warning(
-                "[mkdocs-exporter.pdf] Failed to load a resource of '%s': %s",
-                document.id,
-                request,
+            patch["css"] = margins.sections(list(heads.values()))
+        if self.listed and self.renderer.options.toc is not None:
+            entries = self.renderer._toc_entries(
+                self.headings,
+                lambda id: (
+                    layout.anchors[id].page + 1 if id in layout.anchors else None
+                ),
             )
-        for message in [
-            *diagnostics.errors,
-            *diagnostics.late_errors,
-            *diagnostics.console,
-            *diagnostics.external_failed_requests,
-        ]:
-            logger.debug("[mkdocs-exporter.pdf] '%s': %s", document.id, message)
+            patch["toc"] = toc.render(self.renderer.options.toc, entries)
+        if patch == self.applied:
+            return None
+
+        self.applied = patch
+
+        return f"window.__MKDOCS_EXPORTER_PATCH__({json.dumps(patch)})"
+
+
+def _insert_anchors(html: HtmlDocument, headings: Sequence[Heading]) -> None:
+    """Inserts hidden links to every heading: browsers create named destinations for
+    them, telling where headings land (and letting PDF readers link to them)."""
+
+    if not headings:
+        return
+
+    anchors = html.soup.new_tag(
+        "nav", attrs={"class": "mkdocs-exporter-anchors", "hidden": ""}
+    )
+
+    for heading in headings:
+        anchors.append(html.soup.new_tag("a", attrs={"href": f"#{heading.id}"}))
+
+    html.body.append(anchors)
 
 
 def _path(url: str) -> str:

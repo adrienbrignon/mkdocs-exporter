@@ -66,6 +66,14 @@ class Diagnostics:
     external_failed_requests: list[str] = field(default_factory=list)
     """Requests to other websites that failed."""
 
+    @property
+    def complete(self) -> bool:
+        """Did every hook succeed, and every resource load?"""
+
+        return not (
+            self.hook_errors or self.failed_requests or self.external_failed_requests
+        )
+
     def summary(self, limit: int = 5) -> str:
         """A human-readable summary."""
 

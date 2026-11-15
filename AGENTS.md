@@ -97,7 +97,9 @@ images, MathJax and the theme (`window.MkDocsExporterTheme.settle`), runs the
 `@page` rule sets a background, then sets `body[mkdocs-exporter]` to `true` or `error` (the reason in
 `window.__MKDOCS_EXPORTER_ERROR__`) and resolves `window.__MKDOCS_EXPORTER_READY__` (awaited by
 `Browser.print` in a single round-trip). For books, `book.js` exposes the measurement of every print as
-`window.__MKDOCS_EXPORTER_LAYOUT__` and applies patches with `window.__MKDOCS_EXPORTER_BOOK__.apply`.
+`window.__MKDOCS_EXPORTER_LAYOUT__` and applies patches with `window.__MKDOCS_EXPORTER_BOOK__.apply` (blank
+pages), relying on `window.__MKDOCS_EXPORTER_PATCH__` of `pdf.js` (table of contents and generated styles,
+also used to refine pages' documents).
 
 **Layout data** of single documents comes from the printed PDF: hidden links to every heading make
 Chromium create named destinations (`core/pdf.py:read_layout`). Combined documents are measured while

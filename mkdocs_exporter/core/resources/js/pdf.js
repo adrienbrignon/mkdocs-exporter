@@ -8,6 +8,30 @@
     ready = resolve;
   });
 
+  /**
+   * Updates the document between prints: its table of contents (`toc`) and the styles
+   * computed from the previous print (`css`, e.g. running heads).
+   */
+  window.__MKDOCS_EXPORTER_PATCH__ = (patch) => {
+    const toc = document.querySelector('.mkdocs-exporter-toc');
+
+    if (typeof patch.toc === 'string' && toc) {
+      toc.innerHTML = patch.toc;
+    }
+
+    if (typeof patch.css === 'string') {
+      let style = document.getElementById('mkdocs-exporter-generated');
+
+      if (!style) {
+        style = document.createElement('style');
+        style.id = 'mkdocs-exporter-generated';
+        document.head.appendChild(style);
+      }
+
+      style.textContent = patch.css;
+    }
+  };
+
   window.addEventListener('error', (event) => {
     if (event instanceof ErrorEvent) {
       errors.push({ phase, message: String((event.error && event.error.stack) || event.message) });

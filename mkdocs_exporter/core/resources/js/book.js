@@ -129,14 +129,6 @@
   });
 
   const apply = (patch) => {
-    if (typeof patch.toc === 'string') {
-      const toc = document.querySelector('.mkdocs-exporter-toc');
-
-      if (toc) {
-        toc.innerHTML = patch.toc;
-      }
-    }
-
     if (Array.isArray(patch.blanks)) {
       document.querySelectorAll('.mkdocs-exporter-blank').forEach((blank) => blank.remove());
 
@@ -148,17 +140,7 @@
       }
     }
 
-    if (typeof patch.css === 'string') {
-      let style = document.getElementById('mkdocs-exporter-generated');
-
-      if (!style) {
-        style = document.createElement('style');
-        style.id = 'mkdocs-exporter-generated';
-        document.head.appendChild(style);
-      }
-
-      style.textContent = patch.css;
-    }
+    window.__MKDOCS_EXPORTER_PATCH__(patch);
   };
 
   window.__MKDOCS_EXPORTER_BOOK__ = { apply };
