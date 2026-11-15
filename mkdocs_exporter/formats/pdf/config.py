@@ -2,7 +2,7 @@ from mkdocs.config import config_options as c
 from mkdocs.config.base import Config as BaseConfig
 
 from mkdocs_exporter.core import margins
-from mkdocs_exporter.core.aggregator import COVER_MODES, START_MODES
+from mkdocs_exporter.core.books import COVER_MODES, START_MODES
 
 
 class Stylesheet(c.File):

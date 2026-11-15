@@ -4,15 +4,11 @@ import sys
 
 def test_core_imports_without_mkdocs() -> None:
     code = (
-        "import sys\n"
+        "import importlib, pkgutil, sys\n"
         "sys.modules['mkdocs'] = None\n"
-        "import mkdocs_exporter.core.aggregator\n"
-        "import mkdocs_exporter.core.browser\n"
-        "import mkdocs_exporter.core.exporter\n"
-        "import mkdocs_exporter.core.renderer\n"
-        "import mkdocs_exporter.core.runner\n"
-        "import mkdocs_exporter.core.server\n"
-        "import mkdocs_exporter.core.themes\n"
+        "import mkdocs_exporter.core as core\n"
+        "for module in pkgutil.walk_packages(core.__path__, 'mkdocs_exporter.core.'):\n"
+        "    importlib.import_module(module.name)\n"
     )
 
     subprocess.run([sys.executable, "-c", code], check=True, capture_output=True)

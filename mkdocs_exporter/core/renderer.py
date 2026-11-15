@@ -12,7 +12,7 @@ from urllib.parse import urlsplit
 from bs4 import Tag
 
 from mkdocs_exporter.core import margins, toc
-from mkdocs_exporter.core.book import Prepared, page_resources, teleported
+from mkdocs_exporter.core.books.assembly import Prepared, page_resources, teleported
 from mkdocs_exporter.core.browser import Browser, Printed, PrintResult, RenderError
 from mkdocs_exporter.core.cache import Assets, Cache, digest, environment, fingerprint
 from mkdocs_exporter.core.document import Document, Heading, Layout, Site

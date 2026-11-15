@@ -39,7 +39,7 @@ def titles(items: list[OutlineItem]) -> list[Any]:
 
 @pytest.fixture(scope="module")
 def book(tmp_path_factory: pytest.TempPathFactory) -> Site:
-    """The fixture project aggregated without covers."""
+    """The fixture project combined into a book without covers."""
 
     project = Project(tmp_path_factory.mktemp("book") / "project")
 
@@ -47,7 +47,7 @@ def book(tmp_path_factory: pytest.TempPathFactory) -> Site:
 
 
 class TestOutline:
-    """Bookmarks of aggregated documents."""
+    """Bookmarks of books."""
 
     def test_follow_the_navigation(self, book: Site) -> None:
         assert titles(book.pdf("combined.pdf").outline) == [
@@ -87,9 +87,9 @@ class TestOutline:
 
 
 class TestLinks:
-    """Links of aggregated documents."""
+    """Links of books."""
 
-    def test_links_to_aggregated_pages_are_internal(self, book: Site) -> None:
+    def test_links_to_pages_of_the_book_are_internal(self, book: Site) -> None:
         combined = book.pdf("combined.pdf")
         home = page_of(combined, "Welcome to the")
         targets = {
@@ -99,7 +99,7 @@ class TestLinks:
         assert page_of(combined, "Introduction") in targets
         assert page_of(combined, "Deep dive") in targets
 
-    def test_no_link_points_to_an_aggregated_page_on_the_website(
+    def test_no_link_points_to_a_page_of_the_book_on_the_website(
         self, book: Site
     ) -> None:
         links = book.pdf("combined.pdf").external_links
@@ -137,7 +137,7 @@ class TestLinks:
 
 
 class TestTableOfContents:
-    """Tables of contents of aggregated documents."""
+    """Tables of contents of books."""
 
     @pytest.fixture(scope="class")
     @classmethod

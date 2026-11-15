@@ -1,6 +1,6 @@
 from bs4 import BeautifulSoup
 
-from mkdocs_exporter.core.book import (
+from mkdocs_exporter.core.books.assembly import (
     FRONT_COVER_PAGE,
     PageNames,
     PageResources,

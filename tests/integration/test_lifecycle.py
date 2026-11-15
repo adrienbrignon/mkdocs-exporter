@@ -100,7 +100,7 @@ def test_browser_is_relaunched_when_its_options_change(
 
 
 def test_dirty_rebuilds_while_serving(project: Project) -> None:
-    """Pages skipped by dirty rebuilds don't break the aggregator (#48)."""
+    """Pages skipped by dirty rebuilds don't break books (#48)."""
 
     site = project.serve(
         builds=2, dirty=True, exporter={"formats": {"pdf": {"serve": True}}}
@@ -199,7 +199,7 @@ def test_explicit_mode_without_pages_warns(project: Project, exporter_logs) -> N
 
 
 def test_duplicate_navigation_entries(project: Project) -> None:
-    """Pages listed twice in the navigation are aggregated once (#51)."""
+    """Pages listed twice in the navigation are combined once (#51)."""
 
     site = project.build(nav=["index.md", "reference.md", {"Again": "reference.md"}])
 
@@ -207,7 +207,7 @@ def test_duplicate_navigation_entries(project: Project) -> None:
 
 
 def test_pages_outside_the_navigation(project: Project) -> None:
-    """Pages outside the navigation get a document but are not aggregated."""
+    """Pages outside the navigation get a document but are not in books."""
 
     site = project.build(nav=["index.md"])
 

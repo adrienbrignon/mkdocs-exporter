@@ -5,7 +5,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from mkdocs_exporter.core.aggregator import Aggregation, aggregate
+from mkdocs_exporter.core.books import Book, print_book
 from mkdocs_exporter.core.browser import Browser
 from mkdocs_exporter.core.cache import Cache
 from mkdocs_exporter.core.document import Document, Layout, Site
@@ -44,11 +44,11 @@ class Exporter:
         self.cache = cache
 
     async def export(
-        self, documents: Sequence[Document], aggregations: Sequence[Aggregation] = ()
+        self, documents: Sequence[Document], books: Sequence[Book] = ()
     ) -> Report:
-        """Writes a PDF document for each document, then each aggregated document.
+        """Writes a PDF document for each document, then each book.
 
-        Aggregations are skipped when a document could not be rendered.
+        Books are skipped when a document could not be rendered.
         """
 
         report = Report()
@@ -70,9 +70,7 @@ class Exporter:
                 )
                 # Books reuse the content of pages prepared for their own document.
                 renderer.keep = {
-                    document.id
-                    for aggregation in aggregations
-                    for document in aggregation.documents
+                    document.id for book in books for document in book.documents
                 }
                 outcomes = await renderer.render_all(documents)
 
@@ -98,9 +96,9 @@ class Exporter:
                 if report.failures:
                     return report
 
-                for index, aggregation in enumerate(aggregations):
-                    report.failures += await aggregate(
-                        renderer, aggregation, name=f"aggregate-{index}"
+                for index, book in enumerate(books):
+                    report.failures += await print_book(
+                        renderer, book, name=f"book-{index}"
                     )
 
         return report

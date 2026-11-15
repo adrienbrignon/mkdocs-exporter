@@ -17,7 +17,7 @@ from mkdocs.structure.nav import Navigation, Section
 from mkdocs.structure.pages import Page
 
 from mkdocs_exporter.config import Config
-from mkdocs_exporter.core.aggregator import Aggregation, NavNode
+from mkdocs_exporter.core.books import Book, NavNode
 from mkdocs_exporter.core.browser import Browser
 from mkdocs_exporter.core.cache import Cache
 from mkdocs_exporter.core.document import Document, Site
@@ -282,14 +282,14 @@ class Plugin(BasePlugin[Config]):
             )
 
     async def _export(self, config: MkDocsConfig) -> list[Outcome]:
-        """Renders and aggregates documents, returning the failures."""
+        """Renders documents and books, returning the failures."""
 
         options = self.config.formats.pdf
         site = Site(directory=Path(config.site_dir), url=config.site_url or None)
         links = options.url or config.site_url or None
         exports = [self.exports[key] for key in self.order if key in self.exports]
         exports += [e for key, e in self.exports.items() if key not in set(self.order)]
-        aggregations = [self._aggregation(config, book) for book in _books(options)]
+        books = [self._book(config, book) for book in _books(options)]
 
         cache = None
 
@@ -316,7 +316,7 @@ class Plugin(BasePlugin[Config]):
             ),
             cache,
         )
-        report = await exporter.export([e.document for e in exports], aggregations)
+        report = await exporter.export([e.document for e in exports], books)
 
         if cache is not None and not report.failures and not self.dirty:
             # Every page was rendered: entries that weren't used are obsolete.
@@ -360,15 +360,15 @@ class Plugin(BasePlugin[Config]):
 
         return browser
 
-    def _aggregation(self, config: MkDocsConfig, options: Any) -> Aggregation:
-        """Describes an aggregated document."""
+    def _book(self, config: MkDocsConfig, options: Any) -> Book:
+        """Describes a book."""
 
         def selected(key: str) -> bool:
             return any(
                 fnmatchcase(key, pattern) for pattern in options.include
             ) and not any(fnmatchcase(key, pattern) for pattern in options.exclude)
 
-        return Aggregation(
+        return Book(
             output=options.output.replace(os.sep, "/"),
             documents=[
                 self.exports[key].document

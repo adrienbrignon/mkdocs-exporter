@@ -2,13 +2,13 @@ from typing import Any
 
 import pytest
 
-from mkdocs_exporter.core.aggregator import (
+from mkdocs_exporter.core.books.layout import (
     Measure,
     kept_covers,
-    metadata,
     plan,
     running_heads,
 )
+from mkdocs_exporter.core.pdf import info
 
 
 @pytest.mark.parametrize(
@@ -34,7 +34,7 @@ def test_a_single_document_keeps_its_covers(mode: str) -> None:
 
 
 def test_metadata_keys_are_normalized() -> None:
-    assert metadata({"title": "T", "/Author": "A", "subject": None}) == {
+    assert info({"title": "T", "/Author": "A", "subject": None}) == {
         "/Title": "T",
         "/Author": "A",
     }

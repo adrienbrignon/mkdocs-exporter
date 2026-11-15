@@ -150,7 +150,7 @@ class Part:
 
 
 @dataclass
-class BookOptions:
+class AssemblyOptions:
     """How pages are turned into a book."""
 
     prefix: str = "/"
@@ -188,7 +188,7 @@ class BookOptions:
 
 
 @dataclass
-class Book:
+class Assembly:
     """An HTML document combining pages."""
 
     html: str
@@ -681,7 +681,7 @@ def within(tag: Tag, ancestor: Tag) -> bool:
 
 def prepare(
     parts: Sequence[Part],
-    options: BookOptions,
+    options: AssemblyOptions,
     prepare_content: Callable[[Part], None] = lambda part: None,
 ) -> None:
     """Prepares the parts' content: teleported elements, identifiers, URLs and headings.
@@ -844,7 +844,9 @@ def _nodes(html: str) -> list[PageElement]:
     return list(BeautifulSoup(html, "html.parser").contents)
 
 
-def assemble(parts: Sequence[Part], options: BookOptions, toc: str | None) -> Book:
+def assemble(
+    parts: Sequence[Part], options: AssemblyOptions, toc: str | None
+) -> Assembly:
     """Assembles prepared parts into a book (see `prepare`).
 
     Args:
@@ -944,7 +946,7 @@ def assemble(parts: Sequence[Part], options: BookOptions, toc: str | None) -> Bo
     for script in options.scripts:
         shell.add_script(script)
 
-    return Book(
+    return Assembly(
         html=str(shell).replace(PLACEHOLDER, "".join(content), 1),
         parts=list(parts),
         pages=names,

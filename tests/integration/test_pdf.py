@@ -96,7 +96,7 @@ class TestPages:
                 assert target == pdf
 
 
-class TestAggregator:
+class TestBook:
     """The combined PDF document."""
 
     def test_contains_every_page(self, site: Site) -> None:
@@ -126,7 +126,7 @@ class TestAggregator:
         ("back", 0, 4),
     ],
 )
-def test_aggregator_cover_modes(
+def test_cover_modes_of_books(
     project: Project, covers: str, front: int, back: int
 ) -> None:
     site = project.build(exporter={"formats": {"pdf": {**single_book(covers=covers)}}})
@@ -146,7 +146,7 @@ def test_page_numbers_are_continuous_without_covers(project: Project) -> None:
         assert f"{index + 1} / {combined.page_count}" in text
 
 
-def test_aggregator_metadata(project: Project) -> None:
+def test_metadata_of_books(project: Project) -> None:
     site = project.build(
         exporter={"formats": {"pdf": {**single_book(metadata={"/Title": "Handbook"})}}}
     )

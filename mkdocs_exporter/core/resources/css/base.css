@@ -51,7 +51,7 @@ body > * {
   break-inside: avoid;
 }
 
-/* Table of contents of aggregated documents. */
+/* Tables of contents. */
 
 .mkdocs-exporter-toc {
   break-after: page;

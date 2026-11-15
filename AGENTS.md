@@ -40,14 +40,17 @@ Before considering a change done, run the linter, the formatter check, the type 
 |---|---|
 | `mkdocs_exporter/core/` | **Engine-agnostic core** (must never import `mkdocs`, enforced by ruff `TID251`) |
 | `core/document.py` | `Site` and `Document`: the plain data the core works on |
-| `core/html.py` | HTML manipulation (BeautifulSoup + lxml), link resolution |
+| `core/html.py` | HTML manipulation (BeautifulSoup + lxml), headings, link resolution |
+| `core/css.py` | Stylesheets, parsed with tinycss2: URLs, identifiers, `@page` rules and their cascade, scoping |
 | `core/server.py` | Loopback HTTP server exposing the built site (and in-memory pages) to the browser |
 | `core/browser.py` | Playwright/Chromium: prints a URL to PDF, collects diagnostics |
-| `core/renderer.py` | Prepares a page's print HTML and renders documents concurrently |
-| `core/exporter.py` | Orchestrates an export: server, browser, documents, then aggregations |
-| `core/aggregator.py` | Combined documents: printing, measurements, table of contents, bookmarks (pypdf) |
-| `core/book.py` | Combined documents assembled as a single HTML document (parts, URLs, identifiers, named pages) |
-| `core/margins.py` | Headers and footers compiled to CSS page margin boxes |
+| `core/renderer.py` | Prepares a page's print HTML and renders documents concurrently (`Refinement`: second print) |
+| `core/exporter.py` | Orchestrates an export: server, browser, documents, then books |
+| `core/books/printer.py` | Books (combined documents): `BookPrinter` assembles, prints, patches and finishes them |
+| `core/books/assembly.py` | A book as a single HTML document (parts, URLs, identifiers, styles, named pages) |
+| `core/books/layout.py` | The measurement of printed books: kept covers, blank pages, running heads, named pages |
+| `core/books/outline.py` | The navigation of books: table of contents entries, bookmarks, destinations (pypdf) |
+| `core/margins.py` | Headers and footers (`Margins`) compiled to CSS page margin boxes, running heads |
 | `core/toc.py` | Printed tables of contents (entries from headings, Jinja template) |
 | `core/themes/` | Theme adapters (`material`, `readthedocs`, generic fallback) |
 | `core/resources/` | `pdf.js` (gets pages ready, reports readiness), `book.js` (measures combined documents), theme scripts, print CSS, TOC template |
@@ -76,14 +79,14 @@ Before considering a change done, run the linter, the formatter check, the type 
    memory at the page's own URL (with a query string), so relative URLs resolve. Unchanged documents are
    reused from the cache: the key is a fingerprint of the page and options (before preparing it), and an
    entry is valid while the same-origin resources the page loaded hash the same.
-5. Each aggregation is printed as a single HTML document (`core/book.py`): the first page's shell holding
+5. Each book is printed as a single HTML document (`core/books/`): the first page's shell holding
    one part per page (the page's content element, with its kept covers), reusing the content the
    renderer prepared (only the shell is parsed again). Relative URLs become root-absolute, links to
    other parts anchors, identifiers (and radio groups) are prefixed by part (`p2-`); covers, the table
    of contents, blank pages and each part's content (for `{page_title}`) are on named pages, styles
    teleported by covers are translated (`@page :first` → covers' named page) and scoped (`@scope`) to
    their part when they differ. A draft print (`page_ranges="1"`: the whole document is laid out, only
-   one page is painted) is measured by `book.js`; the aggregator patches the document (table of contents,
+   one page is painted) is measured by `book.js`; the `BookPrinter` patches the document (table of contents,
    blank pages for `start: odd`, `{section}` counter style) and prints it again, checking the final
    print's measurement (up to 3 times). Bookmarks are added with pypdf from that measurement, and named
    destinations are lowered by the top margin of their page.

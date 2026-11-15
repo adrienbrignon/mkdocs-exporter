@@ -52,7 +52,7 @@ def test_covers_have_no_header_nor_footer(site: Site) -> None:
         assert "TITLE " not in document.pages_text[index]
 
 
-def test_aggregated_documents_are_numbered_continuously(site: Site) -> None:
+def test_books_are_numbered_continuously(site: Site) -> None:
     combined = site.pdf("combined.pdf")
     numbered = [i for i, text in enumerate(combined.pages_text) if "PAGE " in text]
 
@@ -63,7 +63,7 @@ def test_aggregated_documents_are_numbered_continuously(site: Site) -> None:
         )
 
 
-def test_page_titles_follow_aggregated_documents(project: Project) -> None:
+def test_page_titles_follow_the_pages_of_books(project: Project) -> None:
     site = project.build(
         exporter={"formats": {"pdf": {**MARGINS, **single_book(covers="none")}}}
     )
@@ -73,7 +73,7 @@ def test_page_titles_follow_aggregated_documents(project: Project) -> None:
     assert "TITLE Reference" in combined.pages_text[reference]
 
 
-def test_sections_and_titles_follow_aggregated_documents(project: Project) -> None:
+def test_sections_and_titles_follow_the_pages_of_books(project: Project) -> None:
     site = project.build(
         exporter={
             "formats": {
