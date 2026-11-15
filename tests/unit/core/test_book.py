@@ -5,15 +5,19 @@ from bs4 import BeautifulSoup
 from mkdocs_exporter.core.book import (
     FRONT_COVER_PAGE,
     PageNames,
+    PageResources,
     Part,
+    Prepared,
     collect_ids,
     namespace_ids,
     part_styles,
     resource_url,
+    reuse,
     rewrite_urls,
     scope_styles,
     site_path,
     structure,
+    teleported,
     translate_page_rules,
 )
 from mkdocs_exporter.core.document import Document
@@ -192,3 +196,42 @@ def test_parts_are_named_after_their_first_page() -> None:
     assert (
         ":where(#mkdocs-exporter-part-1) > * { page: mkdocs-exporter-part-1; }" in css
     )
+
+
+def test_prepared_content_keeps_the_covers_of_the_part() -> None:
+    html = HtmlDocument(
+        '<article><div class="mkdocs-exporter-front-cover">'
+        '<style data-teleport="head">.front {}</style>FRONT</div><p>Text</p>'
+        '<style data-teleport="head">.page {}</style>'
+        '<div class="mkdocs-exporter-back-cover">'
+        '<style data-teleport="head">.back {}</style>BACK</div></article>'
+    )
+    content = html.select_one("article")
+    assert content is not None
+
+    moved = teleported(content)
+    prepared = Prepared(content=content, resources=PageResources(), teleported=moved)
+    part = reuse(1, Document(id="a", url="a/", path="a.pdf"), {"front"}, prepared)
+
+    assert [origin for origin, _, _ in moved] == ["front", "content", "back"]
+    assert part.prepared
+    assert part.styles == [".front {}", ".page {}"]
+    assert "FRONT" in part.content.get_text()
+    assert "BACK" not in part.content.get_text()
+
+
+def test_resolved_links_lead_to_parts() -> None:
+    article = BeautifulSoup(
+        '<article><a href="https://example.org/docs/b/#x">B</a></article>', "lxml"
+    ).article
+    assert article is not None
+
+    rewrite_urls(
+        article,
+        "a/",
+        "/docs/",
+        lambda path, fragment: f"[{path}#{fragment}]",
+        "https://example.org/docs/",
+    )
+
+    assert 'href="[b/#x]"' in str(article)

@@ -21,8 +21,9 @@ Since every page lives in the same document:
 
 from __future__ import annotations
 
+import copy
 import re
-from collections.abc import Callable, Iterable, Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from urllib.parse import unquote, urljoin, urlsplit, urlunsplit
 
@@ -124,11 +125,18 @@ class Part:
     covers: set[str]
     """The covers kept."""
 
-    html: HtmlDocument
-    """The page, as parsed (the shell of the book, for the first part)."""
+    html: HtmlDocument | None
+    """The page, as parsed (the shell of the book, for the first part); `None` when the
+    part reuses the content prepared for the page's own document (see `Prepared`)."""
 
     content: Tag
     """The page's content element (the part's element)."""
+
+    resources: PageResources | None = None
+    """The stylesheets and scripts of the page (read from `html` when missing)."""
+
+    prepared: bool = False
+    """Was the content already prepared for printing (covers, title...)?"""
 
     ids: set[str] = field(default_factory=set)
     """The identifiers defined by the part (before being namespaced)."""
@@ -287,7 +295,11 @@ def _rewrite_srcset(srcset: str, rewrite: Callable[[str], str]) -> str:
 
 
 def rewrite_urls(
-    element: Tag, page_url: str, prefix: str, link: Callable[[str, str], str | None]
+    element: Tag,
+    page_url: str,
+    prefix: str,
+    link: Callable[[str, str], str | None],
+    base: str | None = None,
 ) -> None:
     """Makes the URLs found in an element valid wherever the element is served.
 
@@ -295,7 +307,8 @@ def rewrite_urls(
     `href` and `xlink:href`, `url()` of `style` attributes and `<style>` elements) become
     root-absolute. Links (`<a>`, `<area>`) are given to `link` with the path (relative to
     the website's root) and fragment they lead to; it returns their new target (`None`
-    keeps them as they are).
+    keeps them as they are). Links starting with `base` (already resolved, see
+    `resolve_link`) lead to the website's root followed by the rest of their URL.
     """
 
     def resource(url: str) -> str:
@@ -315,6 +328,8 @@ def rewrite_urls(
     for tag in element.find_all(True, attrs={"href": True}):
         href = str(tag["href"])
 
+        if base and href.startswith(base):
+            href = prefix + href[len(base) :]
         if tag.name not in HYPERLINKS:
             tag["href"] = resource(href)
         elif (target := site_path(href, page_url, prefix)) is not None and (
@@ -695,6 +710,73 @@ def structure(
 # --- Assembly --------------------------------------------------------------------------
 
 
+@dataclass
+class Prepared:
+    """A page's content prepared for its own document, reused as a part of books.
+
+    It spares books another parse of the page: the content is detached from the page's
+    document once that document is printed, links resolved (see `rewrite_urls`'s
+    `base`) and every cover inserted.
+    """
+
+    content: Tag
+    resources: PageResources
+    teleported: list[tuple[str, str, Tag]] = field(default_factory=list)
+    """The elements the content teleports: (origin, destination, element), the origin
+    being the location of the cover holding the element (`front`, `back`) or `content`."""
+
+
+def teleported(content: Tag) -> list[tuple[str, str, Tag]]:
+    """The elements a page's content teleports (see `Prepared.teleported`)."""
+
+    found = []
+
+    for element in content.find_all(True, attrs={"data-teleport": True}):
+        origin = "content"
+
+        for location in ("front", "back"):
+            cover = element.find_parent(class_=f"mkdocs-exporter-{location}-cover")
+
+            if cover is not None and cover.parent is content:
+                origin = location
+
+        found.append((origin, str(element.get("data-teleport") or ""), element))
+
+    return found
+
+
+def reuse(index: int, document: Document, covers: set[str], prepared: Prepared) -> Part:
+    """A part made of a page's prepared content, keeping only some of its covers."""
+
+    part = Part(
+        index=index,
+        document=document,
+        covers=covers,
+        html=None,
+        content=prepared.content,
+        resources=prepared.resources,
+        prepared=True,
+    )
+
+    for location in ("front", "back"):
+        if location not in covers:
+            for cover in prepared.content.find_all(
+                class_=f"mkdocs-exporter-{location}-cover", recursive=False
+            ):
+                cover.decompose()
+
+    for origin, destination, element in prepared.teleported:
+        if origin != "content" and origin not in covers:
+            continue
+        if destination == "head" and element.name == "style":
+            part.styles.append(element.string or "")
+        else:
+            element["data-teleport"] = destination
+            part.teleported.append(element)
+
+    return part
+
+
 def within(tag: Tag, ancestor: Tag) -> bool:
     """Is a tag a descendant of another (by identity: `Tag.__eq__` compares markup)?"""
 
@@ -744,7 +826,9 @@ def prepare(
     by_url: dict[str, Part] = {}
 
     for part in parts:
-        prepare_content(part)
+        if not part.prepared:
+            prepare_content(part)
+
         by_url.setdefault(part.document.url, part)
 
         for element in part.content.select("[data-teleport]"):
@@ -780,7 +864,9 @@ def prepare(
             return resolve_link(href, "", options.prefix, options.links)
 
         namespace_ids(part.content, part.prefix, part.ids)
-        rewrite_urls(part.content, part.document.url, options.prefix, link)
+        rewrite_urls(
+            part.content, part.document.url, options.prefix, link, options.links
+        )
 
         part.content["class"] = [  # type: ignore[assignment]
             *(part.content.get("class") or []),
@@ -789,17 +875,65 @@ def prepare(
         part.content["id"] = part.id
 
 
-def _stylesheet_links(html: HtmlDocument) -> Iterable[Tag]:
-    return (
-        tag
-        for tag in html.soup.find_all("link", attrs={"href": True})
-        if "stylesheet" in (tag.get("rel") or [])
-    )
+@dataclass
+class PageResources:
+    """The stylesheets and scripts a page loads (outside of its content)."""
+
+    stylesheets: list[str] = field(default_factory=list)
+    """The (root-absolute) URLs of stylesheets."""
+
+    styles: list[str] = field(default_factory=list)
+    """The contents of `<style>` elements."""
+
+    scripts: list[tuple[str, str]] = field(default_factory=list)
+    """The scripts of the body: (key, HTML), the key identifying the script by URL,
+    identifier or content."""
+
+
+def page_resources(
+    html: HtmlDocument, content: Tag, page_url: str, prefix: str, head: bool = False
+) -> PageResources:
+    """The stylesheets and scripts of a page, outside of its content.
+
+    Scripts of the head are left out, unless `head` is set: they usually configure their
+    own page.
+    """
+
+    resources = PageResources()
+    document_head = html.soup.head
+
+    for tag in html.soup.find_all(["link", "style", "script"]):
+        if tag.name == "link":
+            if tag.get("href") and "stylesheet" in (tag.get("rel") or []):
+                href = resource_url(str(tag["href"]), page_url, prefix)
+                resources.stylesheets.append(href)
+            continue
+        if within(tag, content):
+            continue
+        if tag.name == "style":
+            if tag.string:
+                resources.styles.append(tag.string)
+            continue
+        if not head and document_head is not None and within(tag, document_head):
+            continue
+
+        if tag.get("src"):
+            tag = copy.copy(tag)
+            tag["src"] = resource_url(str(tag["src"]), page_url, prefix)
+            key = "src:" + str(tag["src"])
+        elif tag.get("id"):
+            key = "id:" + str(tag["id"])
+        else:
+            key = "text:" + (tag.string or "")
+
+        resources.scripts.append((key, str(tag)))
+
+    return resources
 
 
 @dataclass
 class _Resources:
-    """The stylesheets and scripts loaded by the shell."""
+    """The stylesheets and scripts loaded by the book so far."""
 
     stylesheets: set[str] = field(default_factory=set)
     styles: set[str] = field(default_factory=set)
@@ -807,63 +941,32 @@ class _Resources:
     head: list[str] = field(default_factory=list)
     body: list[str] = field(default_factory=list)
 
-    def script(self, tag: Tag, page_url: str, prefix: str) -> bool:
-        """Registers a script: is it new?"""
 
-        if tag.get("src"):
-            key = "src:" + resource_url(str(tag["src"]), page_url, prefix)
-        elif tag.get("id"):
-            key = "id:" + str(tag["id"])
-        else:
-            key = "text:" + (tag.string or "")
+def _merge(page: PageResources, resources: _Resources, shell: bool = False) -> None:
+    """Merges the stylesheets and scripts of a page into the book's.
 
-        new = key not in self.scripts
-        self.scripts.add(key)
-
-        return new
-
-
-def _merge(part: Part, resources: _Resources, prefix: str, shell: bool) -> None:
-    """Registers (or merges into the shell) the stylesheets and scripts of a page.
-
-    Stylesheets are deduplicated by resolved URL, styles by content. Scripts of the body
-    are deduplicated by URL, identifier or content, and appended to the body (a page may
-    load a script others don't, e.g. a diagram library). Scripts of the head usually
-    configure their own page: they are not merged.
+    Stylesheets are deduplicated by URL, styles by content, scripts by URL, identifier or
+    content (a page may load a script others don't, e.g. a diagram library). Those of
+    the shell (the first page) are only registered.
     """
 
-    html, url = part.html, part.document.url
-
-    for tag in _stylesheet_links(html):
-        href = resource_url(str(tag["href"]), url, prefix)
-
+    for href in page.stylesheets:
         if href not in resources.stylesheets and not shell:
             resources.head.append(f'<link rel="stylesheet" href="{href}">')
 
         resources.stylesheets.add(href)
 
-    for tag in html.soup.find_all("style"):
-        text = tag.string
-
-        if not text or within(tag, part.content):
-            continue
+    for text in page.styles:
         if text not in resources.styles and not shell:
-            resources.head.append(str(tag))
+            resources.head.append(f"<style>{text}</style>")
 
         resources.styles.add(text)
 
-    head = html.soup.head
+    for key, html in page.scripts:
+        if key not in resources.scripts and not shell:
+            resources.body.append(html)
 
-    for tag in html.soup.find_all("script"):
-        if within(tag, part.content):
-            continue
-        if head is not None and within(tag, head) and not shell:
-            continue
-        if resources.script(tag, url, prefix) and not shell:
-            if tag.get("src"):
-                tag["src"] = resource_url(str(tag["src"]), url, prefix)
-
-            resources.body.append(str(tag))
+        resources.scripts.add(key)
 
 
 def assemble(parts: Sequence[Part], options: BookOptions, toc: str | None) -> Book:
@@ -879,8 +982,22 @@ def assemble(parts: Sequence[Part], options: BookOptions, toc: str | None) -> Bo
     shell = first.html
     resources = _Resources()
 
+    if shell is None:
+        raise ValueError("The first part of a book must hold its page")
+
     for part in parts:
-        _merge(part, resources, options.prefix, shell=part is first)
+        page = part.resources
+
+        if page is None and part.html is not None:
+            page = page_resources(
+                part.html,
+                part.content,
+                part.document.url,
+                options.prefix,
+                head=part is first,
+            )
+
+        _merge(page or PageResources(), resources, shell=part is first)
 
     if toc is not None:
         element = shell.fragment(toc, **{"class": "mkdocs-exporter-toc"})

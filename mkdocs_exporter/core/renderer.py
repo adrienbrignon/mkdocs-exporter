@@ -14,6 +14,7 @@ from urllib.parse import urlsplit
 from bs4 import Tag
 
 from mkdocs_exporter.core import margins
+from mkdocs_exporter.core.book import Prepared, page_resources, teleported
 from mkdocs_exporter.core.browser import Browser, Printed, PrintResult, RenderError
 from mkdocs_exporter.core.cache import Assets, Cache, digest, environment, fingerprint
 from mkdocs_exporter.core.document import Document, Heading, Layout, Site
@@ -98,6 +99,10 @@ class Renderer:
         self.cache = cache
         self.reused = 0
         """The number of documents reused from the cache."""
+        self.keep: set[str] = set()
+        """The documents whose prepared content is kept for books (see `prepared`)."""
+        self.prepared: dict[str, Prepared] = {}
+        """The content prepared for documents to keep, by identifier."""
         self._assets: Assets = {}
 
         from mkdocs_exporter.core.resources import css
@@ -155,6 +160,14 @@ class Renderer:
         self.prepare_content(html, content, document, kept)
         html.mark_ancestors(content, ANCESTOR)
 
+        keep = document.id in self.keep
+        resources = (
+            page_resources(html, content, document.url, self.site.prefix)
+            if keep
+            else None
+        )
+        moved = teleported(content) if keep else []
+
         headings = _headings(content)
 
         if headings:
@@ -205,7 +218,19 @@ class Renderer:
             lambda href: resolve_link(href, document.url, self.site.prefix, base)
         )
 
-        return str(html), headings
+        output = str(html)
+
+        if resources is not None:
+            # Books reuse the content instead of parsing the page again (the rest of
+            # the page's document is left to the garbage collector).
+            for _, _, element in moved:
+                element.extract()
+
+            self.prepared[document.id] = Prepared(
+                content=content.extract(), resources=resources, teleported=moved
+            )
+
+        return output, headings
 
     async def render(self, document: Document) -> PrintResult:
         """Renders a document to PDF."""

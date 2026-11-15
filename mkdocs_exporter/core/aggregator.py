@@ -611,13 +611,23 @@ async def aggregate(
     parts = []
 
     for index, page in enumerate(documents):
+        covers = kept_covers(aggregation.covers, index, len(documents)) & set(
+            page.covers
+        )
+        prepared = renderer.prepared.pop(page.id, None)
+
+        if prepared is not None and index > 0:
+            # The content prepared for the page's own document (the first page is
+            # parsed again: its whole document is the book's shell).
+            parts.append(book.reuse(index, page, covers, prepared))
+            continue
+
         html = HtmlDocument(page.html)
         parts.append(
             book.Part(
                 index=index,
                 document=page,
-                covers=kept_covers(aggregation.covers, index, len(documents))
-                & set(page.covers),
+                covers=covers,
                 html=html,
                 content=theme.content_element(html),
             )
@@ -648,13 +658,13 @@ async def aggregate(
         toc_title=aggregation.toc.title if aggregation.toc else "",
     )
 
-    book.prepare(
-        parts,
-        settings,
-        lambda part: renderer.prepare_content(
-            part.html, part.content, part.document, part.covers
-        ),
-    )
+    def prepare(part: book.Part) -> None:
+        if part.html is not None:
+            renderer.prepare_content(
+                part.html, part.content, part.document, part.covers
+            )
+
+    book.prepare(parts, settings, prepare)
 
     by_document = {part.document.id: part for part in parts}
     toc = aggregation.toc

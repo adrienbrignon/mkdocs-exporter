@@ -70,6 +70,12 @@ class Exporter:
                     self.options,
                     self.cache,
                 )
+                # Books reuse the content of pages prepared for their own document.
+                renderer.keep = {
+                    document.id
+                    for aggregation in aggregations
+                    for document in aggregation.documents
+                }
                 outcomes = await renderer.render_all(documents)
 
                 if renderer.reused:
