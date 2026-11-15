@@ -17,6 +17,12 @@ class Theme:
     hidden: ClassVar[tuple[str, ...]] = ()
     """Selectors of elements that must not appear in PDF documents."""
 
+    removed: ClassVar[tuple[str, ...]] = ()
+    """Selectors of elements removed before the theme's scripts run.
+
+    Only for elements whose removal the theme's scripts tolerate (others are hidden).
+    """
+
     content: ClassVar[str] = "main, [role='main'], article"
     """Selector of the element holding the page's content."""
 

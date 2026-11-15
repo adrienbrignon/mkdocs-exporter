@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+
 import pytest
 
 from tests.conftest import Project
@@ -150,3 +152,24 @@ def test_titles_can_be_inserted(project: Project) -> None:
     text = site.pdf("reference/index.pdf").text
 
     assert text.index("The reference") < text.index("No heading here.")
+
+
+def test_material_search_is_not_loaded(project: Project, exporter_logs) -> None:
+    """Material's search index isn't loaded by every document."""
+
+    pytest.importorskip("material")
+    project.write(
+        "scripts/search.js",
+        "window.MkDocsExporter = { after: () => document.querySelector('article')"
+        ".insertAdjacentHTML('beforeend', document.querySelector("
+        "'[data-md-component=search]') ? '<p>SEARCH-PRESENT</p>' : '') };",
+    )
+
+    site = project.build(
+        exporter={"formats": {"pdf": {"scripts": ["scripts/search.js"]}}},
+        plugins=["search"],
+    )
+
+    assert "SEARCH-PRESENT" not in site.pdf("index.pdf").text
+    assert 'data-md-component="search"' in site.html("index.html")
+    assert exporter_logs(logging.WARNING) == []

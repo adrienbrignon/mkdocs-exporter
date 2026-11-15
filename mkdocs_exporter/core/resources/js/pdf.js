@@ -4,7 +4,8 @@
  * Contract with the exporter (Python side):
  * - `window.__MKDOCS_EXPORTER__` holds options (`delay`);
  * - once ready, `body[mkdocs-exporter]` is set to `true`, or to `error` (with the reason in
- *   `window.__MKDOCS_EXPORTER_ERROR__`);
+ *   `window.__MKDOCS_EXPORTER_ERROR__`), and `window.__MKDOCS_EXPORTER_READY__` (a promise)
+ *   resolves with that state;
  * - uncaught errors are recorded with the phase they occurred in (`loading`, `rendering`,
  *   `printing`) in `window.__MKDOCS_EXPORTER_ERRORS__`; errors thrown by the hooks below
  *   are recorded with the `hook` phase and don't stop the rendering.
@@ -17,8 +18,12 @@
 (() => {
   const errors = [];
   let phase = 'loading';
+  let ready;
 
   window.__MKDOCS_EXPORTER_ERRORS__ = errors;
+  window.__MKDOCS_EXPORTER_READY__ = new Promise((resolve) => {
+    ready = resolve;
+  });
 
   window.addEventListener('error', (event) => {
     if (event instanceof ErrorEvent) {
@@ -36,6 +41,7 @@
 
   const signal = (state) => {
     document.body.setAttribute('mkdocs-exporter', state);
+    ready(state);
   };
 
   const call = async (name, ...args) => {

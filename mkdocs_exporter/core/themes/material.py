@@ -23,6 +23,9 @@ class MaterialTheme(Theme):
         ".md-container > nav",
         "nav.md-tags",
     )
+    # Without its search box, Material doesn't load the search index in every document
+    # (the index grows with the website: loading it in every page is quadratic).
+    removed = ('[data-md-component="search"]',)
     content = "article.md-content__inner"
     stylesheet = "material.css"
     script = "material.js"

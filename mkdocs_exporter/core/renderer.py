@@ -171,7 +171,7 @@ class Renderer:
                     content.append(cover)
 
         html.set_attribute("details:not([open])", "open", "")
-        html.remove(".headerlink")
+        html.remove([".headerlink", *self.theme.removed])
 
         headings = _headings(content)
 
@@ -233,7 +233,9 @@ class Renderer:
         """Renders a document to PDF."""
 
         render_pass = render_pass or Pass()
-        html, headings = await asyncio.to_thread(self.prepare, document, render_pass)
+        # A few milliseconds of CPU: a thread would mostly wait for the GIL (measured
+        # about 5 times slower with 4 documents rendered concurrently).
+        html, headings = self.prepare(document, render_pass)
         path = f"{document.url}?mkdocs-exporter={render_pass.name}"
         url = self.server.publish(path, html)
         refine = None

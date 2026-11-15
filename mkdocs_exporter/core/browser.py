@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import asyncio
 import contextlib
+import logging
 from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass, field
 from types import TracebackType
@@ -22,6 +24,13 @@ from playwright.async_api import TimeoutError as PlaywrightTimeoutError
 
 from mkdocs_exporter.core.document import Layout
 from mkdocs_exporter.logging import logger
+
+READY = """() => window.__MKDOCS_EXPORTER_READY__.then((state) => ({
+  state,
+  reason: window.__MKDOCS_EXPORTER_ERROR__ || null,
+  errors: window.__MKDOCS_EXPORTER_ERRORS__.splice(0),
+}))"""
+"""Waits for the page to be ready to print (see `pdf.js`)."""
 
 ARGUMENTS = (
     "--disable-background-timer-throttling",
@@ -217,17 +226,17 @@ class Browser:
         try:
             await page.goto(url, wait_until="load", timeout=self.timeout)
 
-            state = await page.wait_for_function(
-                "() => document.body && document.body.getAttribute('mkdocs-exporter')",
-                timeout=self.timeout,
-            )
+            try:
+                state = await asyncio.wait_for(
+                    page.evaluate(READY), timeout=self.timeout / 1000
+                )
+            except TimeoutError:
+                raise PlaywrightTimeoutError("Timed out") from None
 
-            await self._collect_errors(page, diagnostics)
+            self._record_errors(state["errors"], diagnostics)
 
-            if await state.json_value() == "error":
-                reason = await page.evaluate("() => window.__MKDOCS_EXPORTER_ERROR__")
-
-                raise RenderError(f"Rendering failed: {reason}", diagnostics)
+            if state["state"] == "error":
+                raise RenderError(f"Rendering failed: {state['reason']}", diagnostics)
 
             pdf = await page.pdf(
                 prefer_css_page_size=True,
@@ -246,7 +255,9 @@ class Browser:
                     tagged=tagged,
                 )
 
-            await self._collect_errors(page, diagnostics)
+            if logger.isEnabledFor(logging.DEBUG):
+                # Only logged at the debug level.
+                await self._collect_errors(page, diagnostics)
         except PlaywrightTimeoutError as error:
             await self._collect_errors(page, diagnostics)
 
@@ -272,8 +283,14 @@ class Browser:
         except PlaywrightError:
             return
 
-        for error in errors or []:
-            phase = error.get("phase")
+        Browser._record_errors(errors or [], diagnostics)
+
+    @staticmethod
+    def _record_errors(errors: list[dict[str, Any]], diagnostics: Diagnostics) -> None:
+        """Sorts the errors recorded by the page by the phase they occurred in."""
+
+        for error in errors:
+            phase = str(error.get("phase"))
             target = {
                 "hook": diagnostics.hook_errors,
                 "loading": diagnostics.errors,
