@@ -711,12 +711,18 @@ async def aggregate(
     async def refine(printed: Any) -> str | None:
         nonlocal attempts, applied
 
-        computed, _ = patch(Measure.parse(printed.measure))
+        try:
+            computed, _ = patch(Measure.parse(printed.measure))
+        except ValueError as error:
+            logger.warning("[mkdocs-exporter.pdf] %s ('%s')", error, output)
+            return None
+
         attempts += 1
 
         if computed == applied and not printed.draft:
             return None
-        if attempts > ATTEMPTS:
+        if attempts >= ATTEMPTS:
+            # The document is printed once more, without being checked.
             logger.warning(
                 "[mkdocs-exporter.pdf] The page numbering of '%s' did not stabilize, "
                 "page numbers may be inaccurate",
