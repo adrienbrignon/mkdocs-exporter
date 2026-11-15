@@ -3,6 +3,8 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
+from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from mkdocs.commands.build import build
@@ -152,6 +154,40 @@ def test_timeouts_are_reported_with_diagnostics(
         )
 
     assert "- index.md: Timed out after 2000 ms" in caplog.text
+
+
+def test_rendering_failures_fail_the_build(
+    project: Project, caplog: pytest.LogCaptureFixture
+) -> None:
+    project.write(
+        "scripts/broken.js",
+        "window.MkDocsExporterTheme = { settle() { throw new Error('BROKEN'); } };",
+    )
+
+    with pytest.raises(Abort):
+        project.build(exporter={"formats": {"pdf": {"scripts": ["scripts/broken.js"]}}})
+
+    assert "- index.md: Rendering failed: Error: BROKEN" in caplog.text
+
+
+def test_files_of_documents_are_watched_while_serving(project: Project) -> None:
+    cfg = project.config({"formats": {"pdf": {"serve": True}}})
+    plugin = cfg.plugins["exporter"]
+    watched: list[str] = []
+
+    cfg.plugins.on_startup(command="serve", dirty=False)
+
+    try:
+        build(cfg)
+        plugin.on_serve(SimpleNamespace(watch=watched.append), config=cfg, builder=None)
+    finally:
+        cfg.plugins.on_shutdown()
+
+    assert {Path(path) for path in watched} == {
+        project.path / "pdf.css",
+        project.path / "covers" / "front.html",
+        project.path / "covers" / "back.html",
+    }
 
 
 def test_script_errors_do_not_prevent_rendering(
