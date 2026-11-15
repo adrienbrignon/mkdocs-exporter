@@ -164,6 +164,7 @@ class Plugin(BasePlugin[Config]):
                 "url": path,
                 "pages": 0,
                 "covers": [],
+                "books": [],
             }
 
     @event_priority(100)
