@@ -265,8 +265,8 @@ class Browser:
             refine: Adjusts the page from a print (see above).
             draft: Is the first print only meant to be measured? Only its first page is
                 then printed: the whole document is still laid out (and measured) for
-                about a quarter of the cost of a full print. Requires `refine`, which
-                can't then read the document of that print.
+                a quarter to a third of the cost of a full print. Requires `refine`,
+                which can't then read the document of that print.
             attempts: How many times the page may be adjusted and printed again.
             measure: Should what the page measures while printed be read (it always is
                 with `refine`)?

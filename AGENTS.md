@@ -116,8 +116,9 @@ Design decisions backed by measurements (don't revert them without measuring aga
 - **Combined documents are a single HTML document printed once**, not every page rendered again and
   merged with pypdf: on the 201-page project, 3.4 s instead of 9.6 s (6.4 s when parsing every page
   again: keeping the renderer's prepared content halves the cost); 2.3 s for 800 text-only pages against
-  29 s for the per-page approach with Paged.js. The draft print costs about a quarter of a full one
-  (2.8 s instead of 11.7 s for 925 pages); `@counter-style` with 5,000 symbols adds 2 % to a print.
+  29 s for the per-page approach with Paged.js. The draft print costs a quarter to a third of a full
+  one (0.9 s instead of 2.6 s for the 829 pages of the 201-page project, 2.8 s instead of 11.7 s for
+  925 pages heavy with code); `@counter-style` with 5,000 symbols adds 2 % to a print.
   Native printing is superlinear beyond a few thousand pages (5,000 trivial pages: 6 s; 20,000: 180 s).
 - **A change of named page starts a new page**, even for an empty box: `body` and each part are given the
   name of their first page and parts lose their pseudo-elements, else books get blank pages.

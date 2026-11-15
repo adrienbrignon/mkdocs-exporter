@@ -173,9 +173,6 @@ class Part:
 class BookOptions:
     """How pages are turned into a book."""
 
-    content: str
-    """The selector of the content element (the theme's)."""
-
     prefix: str = "/"
     """The path under which the website is served (e.g. `/docs/`)."""
 
