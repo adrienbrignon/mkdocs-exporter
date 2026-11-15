@@ -28,7 +28,7 @@ typecheck:
 > uv run mypy
 
 test:
-> uv run pytest $(ARGS)
+> uv run pytest -n auto --dist loadscope $(ARGS)
 
 build:
 >@ MKDOCS_EXPORTER_PDF=$(PDF) MKDOCS_EXPORTER_BOOKS=$(BOOKS) uv run properdocs build -f mkdocs.yml $(ARGS)
