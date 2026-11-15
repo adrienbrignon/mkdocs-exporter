@@ -30,7 +30,7 @@ from bs4 import BeautifulSoup, Tag
 
 from mkdocs_exporter.core import margins
 from mkdocs_exporter.core.document import Document
-from mkdocs_exporter.core.html import HtmlDocument, resolve_link
+from mkdocs_exporter.core.html import ANCESTOR, HtmlDocument, resolve_link
 
 FRONT_COVER_PAGE = "mkdocs-exporter-front-cover"
 """The named page of front covers."""
@@ -925,13 +925,8 @@ def assemble(parts: Sequence[Part], options: BookOptions, toc: str | None) -> Bo
     # Teleported styles last, so that they take precedence (like in single documents).
     css += styles
 
-    # Flex and grid containers starting on a page whose size differs from the following
-    # pages' lay their items out at a wrong width: the shell's containers are made blocks.
-    for ancestor in first.content.parents:
-        if ancestor.name in ("html", "[document]"):
-            break
-
-        ancestor["data-mkdocs-exporter-ancestor"] = ""
+    # Containers of the content are laid out as blocks in print (see `base.css`).
+    shell.mark_ancestors(first.content, ANCESTOR)
 
     content = [str(part.content) for part in parts]
     first.content.replace_with(BeautifulSoup(PLACEHOLDER, "html.parser"))

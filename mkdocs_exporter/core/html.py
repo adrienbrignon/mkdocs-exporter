@@ -11,6 +11,9 @@ from bs4 import BeautifulSoup, Tag
 
 from mkdocs_exporter.logging import logger
 
+ANCESTOR = "data-mkdocs-exporter-ancestor"
+"""Marks the ancestors of a document's content (laid out as blocks in print)."""
+
 
 class HtmlDocument:
     """An HTML document being prepared, either for the website or for printing."""
@@ -94,6 +97,17 @@ class HtmlDocument:
 
             del element["data-teleport"]
             destination.append(element.extract())
+
+        return self
+
+    def mark_ancestors(self, element: Tag, attribute: str) -> HtmlDocument:
+        """Sets an (empty) attribute on the ancestors of an element, up to the body."""
+
+        for ancestor in element.parents:
+            if ancestor.name in ("html", "[document]"):
+                break
+
+            ancestor[attribute] = ""
 
         return self
 

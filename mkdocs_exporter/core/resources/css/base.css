@@ -17,6 +17,17 @@ body > * {
   }
 }
 
+/*
+ * Flex and grid containers starting on a page whose size differs from the following
+ * pages' (e.g. a cover without margins) lay their items out at a wrong width: the
+ * ancestors of the content are made blocks (they are marked by the exporter).
+ */
+@media print {
+  [data-mkdocs-exporter-ancestor] {
+    display: block !important;
+  }
+}
+
 .page-break,
 .page-break-after {
   break-after: page;

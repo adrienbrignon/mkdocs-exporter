@@ -17,7 +17,7 @@ from mkdocs_exporter.core import margins
 from mkdocs_exporter.core.browser import Browser, Printed, PrintResult, RenderError
 from mkdocs_exporter.core.cache import Assets, Cache, digest, environment, fingerprint
 from mkdocs_exporter.core.document import Document, Heading, Layout, Site
-from mkdocs_exporter.core.html import HtmlDocument, resolve_link
+from mkdocs_exporter.core.html import ANCESTOR, HtmlDocument, resolve_link
 from mkdocs_exporter.core.pdf import (
     RELATIVE_LINKS_BASE,
     fix_uri,
@@ -153,6 +153,7 @@ class Renderer:
         content = self.theme.content_element(html)
 
         self.prepare_content(html, content, document, kept)
+        html.mark_ancestors(content, ANCESTOR)
 
         headings = _headings(content)
 

@@ -10,14 +10,3 @@
   margin-left: 0 !important;
   margin-right: 0 !important;
 }
-
-/*
- * Flex containers are laid out at the width of the page they start on: when pages have
- * different widths (e.g. a cover without margins), the browser would shrink every page.
- */
-.md-container,
-.md-main,
-.md-main__inner,
-.md-content {
-  display: block !important;
-}
