@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 from functools import cached_property
 from pathlib import Path
@@ -129,6 +130,24 @@ class PdfDocument:
         """The document information dictionary."""
 
         return {key: str(value) for key, value in (self.reader.metadata or {}).items()}
+
+    def font_size(self, needle: str) -> float | None:
+        """The size (in points, as printed) of the first text starting with `needle`."""
+
+        sizes: list[float] = []
+
+        def visit(text: str, cm: list, tm: list, font: object, size: float) -> None:
+            if not sizes and text.strip().startswith(needle):
+                scale = math.hypot(tm[0], tm[1]) * math.hypot(cm[0], cm[1])
+                sizes.append(round(size * scale, 1))
+
+        for page in self.reader.pages:
+            page.extract_text(visitor_text=visit)
+
+            if sizes:
+                return sizes[0]
+
+        return None
 
     def image_count(self) -> int:
         """The number of images drawn in the document."""
