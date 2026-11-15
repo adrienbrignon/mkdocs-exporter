@@ -30,7 +30,7 @@ Read the [migration guide](https://adrienbrignon.github.io/mkdocs-exporter/migra
 - Documents are printed by Chromium itself instead of the Paged.js polyfill: faster, with better CSS support (nesting, `@page` rules in media queries, different page sizes). Paged.js can still be loaded with `formats.pdf.scripts`.
 - Requires Python 3.11+, MkDocs 1.6+ (#72) and Playwright 1.53+ (Chromium 138).
 - Faster: pages are printed natively, about 2.4 times faster than with Paged.js (which was also inlined in every page), and opened as soon as they are loaded.
-- Documents are rendered twice as many at a time as there are CPUs, up to 16, by default (`formats.pdf.concurrency`, 4 before).
+- Documents are rendered twice as many at a time as there are CPUs, up to 8, by default (`formats.pdf.concurrency`, 4 before).
 - Combined documents are printed as a single document instead of rendering every page again and merging the documents: about 3 times faster on a 200-page website (3.4 s instead of 9.6 s), with page counters continuous in custom stylesheets too, identifiers of different pages kept apart (footnotes, tabs) and bookmarks pointing exactly at their headings.
 - Pages are served to the browser by a local HTTP server: absolute paths, `srcset`, CSS `url()` and fetches resolve like on the website (#58, #62, #65).
 - Pagination failures are reported immediately with the JavaScript error instead of timing out (#59, #79), and a failing page no longer prevents the others from being rendered.

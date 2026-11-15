@@ -187,8 +187,8 @@ class Config(BaseConfig):
     """Should the page's title be inserted at the top of documents lacking a `h1`?"""
 
     concurrency = c.Optional(PositiveInteger())
-    """The number of documents rendered at once (twice the number of CPUs, up to 16,
-    by default)."""
+    """The number of documents rendered at once (twice the number of CPUs, up to 8, by
+    default)."""
 
     stylesheets = c.ListOfItems(Stylesheet(exists=True), default=[])
     """A list of custom stylesheets to apply before rendering documents."""

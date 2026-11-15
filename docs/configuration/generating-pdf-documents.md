@@ -61,7 +61,7 @@ The browser is then kept open from one rebuild to the next.
 
 ### Concurrency
 
-Documents are rendered concurrently: by default, twice as many at a time as there are CPUs, up to 16 (rendering mostly waits for the browser). The number can be set, e.g. to use less memory:
+Documents are rendered concurrently: by default, twice as many at a time as there are CPUs, up to 8 (rendering mostly waits for the browser, which then uses about 1.4 GB of memory). The number can be set, e.g. to use less memory:
 
 ```yaml
 plugins:

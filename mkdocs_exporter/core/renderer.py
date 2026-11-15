@@ -39,7 +39,9 @@ def default_concurrency() -> int:
     """The number of documents rendered at once by default.
 
     Rendering mostly waits for the browser: twice the number of CPUs available to the
-    process renders fastest on small machines, and more than 16 brings nothing.
+    process renders fastest on small machines. Beyond 8, documents render barely faster
+    (6 % at 16 on 28 CPUs) for much more memory (the browser peaked at 1.4 GiB with 8
+    documents at a time, 2.4 GiB with 16).
     """
 
     if hasattr(os, "sched_getaffinity"):
@@ -47,7 +49,7 @@ def default_concurrency() -> int:
     else:
         cpus = os.cpu_count() or 1
 
-    return min(2 * cpus, 16)
+    return min(2 * cpus, 8)
 
 
 @dataclass
