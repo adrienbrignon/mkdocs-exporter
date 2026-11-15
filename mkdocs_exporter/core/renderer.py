@@ -432,7 +432,7 @@ class Renderer:
 
         if path not in self._assets:
             resource = self.server.resolve(path)
-            self._assets[path] = digest(resource[0] if resource else None)
+            self._assets[path] = digest(resource.data if resource else None)
 
         return self._assets[path]
 

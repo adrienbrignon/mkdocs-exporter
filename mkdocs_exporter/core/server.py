@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.resources
 import mimetypes
 import threading
+from dataclasses import dataclass
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -12,66 +13,69 @@ from urllib.parse import unquote, urlsplit
 RESERVED = "/__mkdocs_exporter__/"
 """The path under which the server exposes its own assets."""
 
-CONTENT_TYPES = {
-    ".css": "text/css",
-    ".gif": "image/gif",
-    ".html": "text/html",
-    ".ico": "image/x-icon",
-    ".jpeg": "image/jpeg",
-    ".jpg": "image/jpeg",
-    ".js": "text/javascript",
-    ".json": "application/json",
-    ".mjs": "text/javascript",
-    ".otf": "font/otf",
-    ".png": "image/png",
-    ".svg": "image/svg+xml",
-    ".ttf": "font/ttf",
-    ".webp": "image/webp",
-    ".woff": "font/woff",
-    ".woff2": "font/woff2",
-}
-"""Content types that must not depend on the platform's registry (e.g. Windows)."""
+TYPES = mimetypes.MimeTypes()
+"""Content types by extension (Python's defaults: unlike the module's functions, they
+don't depend on the platform's registry)."""
+
+for kind, extension in [
+    ("text/javascript", ".js"),
+    ("text/javascript", ".mjs"),
+    ("font/otf", ".otf"),
+    ("font/ttf", ".ttf"),
+    ("font/woff", ".woff"),
+    ("font/woff2", ".woff2"),
+    ("image/webp", ".webp"),
+]:
+    TYPES.add_type(kind, extension)
+
+TEXTUAL = ("application/json", "image/svg+xml")
+"""Content types of text, besides `text/*`."""
+
+HTML = "text/html; charset=utf-8"
+"""The content type of pages published from memory."""
 
 
 def content_type(path: str) -> str:
-    """Guesses the content type of a file."""
+    """The content type of a file."""
 
-    suffix = Path(path).suffix.lower()
-    kind = CONTENT_TYPES.get(suffix) or mimetypes.guess_type(path)[0]
+    kind = TYPES.guess_type(path)[0] or "application/octet-stream"
 
-    if kind is None:
-        return "application/octet-stream"
-    if kind.startswith("text/") or kind in ("application/json", "image/svg+xml"):
+    if kind.startswith("text/") or kind in TEXTUAL:
         return kind + "; charset=utf-8"
 
     return kind
 
 
+@dataclass(frozen=True)
+class Resource:
+    """Something served to the browser."""
+
+    data: bytes
+    type: str
+    cacheable: bool = True
+    """May the browser reuse it (pages published from memory change between prints)?"""
+
+
 class Server:
-    """Serves a website's directory, plus documents held in memory, on 127.0.0.1.
+    """Serves a website's directory, plus pages published from memory, on 127.0.0.1.
 
     Paths are resolved against the website's path prefix first (e.g. `/docs/`), then
     against its root, so that root-absolute paths (`/assets/logo.png`) keep working when
     the website is published under a sub-path.
     """
 
-    def __init__(
-        self,
-        directory: Path,
-        prefix: str = "/",
-    ) -> None:
-        self.directory = directory.resolve()
-        self.prefix = prefix if prefix.endswith("/") else prefix + "/"
-        self.documents: dict[str, tuple[bytes, str]] = {}
-        self.volatile: set[str] = set()
-        self._server: ThreadingHTTPServer | None = None
-        self._thread: threading.Thread | None = None
-
+    def __init__(self, directory: Path, prefix: str = "/") -> None:
         from mkdocs_exporter.core.resources import js
 
-        for name in ("pdf.js", "book.js"):
-            source = importlib.resources.files(js).joinpath(name).read_bytes()
-            self.documents[RESERVED + name] = (source, content_type(name))
+        self.directory = directory.resolve()
+        self.prefix = prefix if prefix.endswith("/") else prefix + "/"
+        self.pages: dict[str, bytes] = {}
+        self.assets = {
+            RESERVED + name: importlib.resources.files(js).joinpath(name).read_bytes()
+            for name in ("pdf.js", "book.js")
+        }
+        self._server: _HttpServer | None = None
+        self._thread: threading.Thread | None = None
 
     @property
     def origin(self) -> str:
@@ -89,41 +93,65 @@ class Server:
 
         return self.origin + self.prefix + path
 
-    def publish(self, path: str, content: str | bytes, kind: str = "text/html") -> str:
-        """Serves some content from memory at a path relative to the website's root.
+    def publish(self, path: str, html: str) -> str:
+        """Serves an HTML page from memory at a path relative to the website's root.
 
         The path may contain a query string, which lets several versions of a page be
         served at once while relative URLs keep resolving against the page's location.
         """
 
-        data = content.encode("utf-8") if isinstance(content, str) else content
-        key = self._key(self.prefix + path)
-
-        self.documents[key] = (
-            data,
-            content_type("x.html") if kind == "text/html" else kind,
-        )
-        self.volatile.add(key)
+        self.pages[_key(self.prefix + path)] = html.encode("utf-8")
 
         return self.url(path)
 
     def unpublish(self, path: str) -> None:
-        """Stops serving content published with `publish`."""
+        """Stops serving a page published with `publish`."""
 
-        key = self._key(self.prefix + path)
+        self.pages.pop(_key(self.prefix + path), None)
 
-        self.documents.pop(key, None)
-        self.volatile.discard(key)
+    def resolve(self, url: str) -> Resource | None:
+        """What is served at a URL, if anything."""
+
+        key = _key(url)
+
+        if (page := self.pages.get(key)) is not None:
+            return Resource(page, HTML, cacheable=False)
+        if (asset := self.assets.get(key)) is not None:
+            return Resource(asset, content_type(key))
+        if (file := self.file(url)) is not None:
+            return Resource(file.read_bytes(), content_type(file.name))
+
+        return None
+
+    def file(self, url: str) -> Path | None:
+        """The file of the website served at a URL, if any."""
+
+        path = unquote(urlsplit(url).path)
+        candidates = [path.lstrip("/")]
+
+        if path.startswith(self.prefix):
+            candidates.insert(0, path[len(self.prefix) :])
+
+        for candidate in candidates:
+            file = (self.directory / candidate).resolve()
+
+            if not file.is_relative_to(self.directory):
+                continue
+            if file.is_dir():
+                file = file / "index.html"
+            if file.is_file():
+                return file
+
+        return None
 
     def start(self) -> Server:
         """Starts the server in a background thread."""
 
-        server = ThreadingHTTPServer(("127.0.0.1", 0), self._handler())
-        server.daemon_threads = True
-
-        self._server = server
+        self._server = _HttpServer(self)
         self._thread = threading.Thread(
-            target=server.serve_forever, name="mkdocs-exporter-server", daemon=True
+            target=self._server.serve_forever,
+            name="mkdocs-exporter-server",
+            daemon=True,
         )
         self._thread.start()
 
@@ -152,80 +180,51 @@ class Server:
     ) -> None:
         self.stop()
 
-    def resolve(self, url: str) -> tuple[bytes, str] | None:
-        """Returns the content and content type served at some URL, if any."""
 
-        key = self._key(url)
+class _HttpServer(ThreadingHTTPServer):
+    daemon_threads = True
 
-        if key in self.documents:
-            return self.documents[key]
+    def __init__(self, site: Server) -> None:
+        super().__init__(("127.0.0.1", 0), _Handler)
+        self.site = site
 
-        path = unquote(urlsplit(url).path)
-        candidates = [path.lstrip("/")]
 
-        if path.startswith(self.prefix):
-            candidates.insert(0, path[len(self.prefix) :])
+class _Handler(BaseHTTPRequestHandler):
+    protocol_version = "HTTP/1.1"
+    server: _HttpServer
 
-        for candidate in candidates:
-            file = (self.directory / candidate).resolve()
+    def do_GET(self) -> None:
+        self._respond(body=True)
 
-            if not file.is_relative_to(self.directory):
-                continue
-            if file.is_dir():
-                file = file / "index.html"
-            if file.is_file():
-                return self._read(file)
+    def do_HEAD(self) -> None:
+        self._respond(body=False)
 
-        return None
+    def _respond(self, body: bool) -> None:
+        resource = self.server.site.resolve(self.path)
 
-    def _read(self, file: Path) -> tuple[bytes, str]:
-        """Reads a file of the website."""
+        if resource is None:
+            self.send_error(HTTPStatus.NOT_FOUND)
+            return
 
-        return file.read_bytes(), content_type(file.name)
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", resource.type)
+        self.send_header("Content-Length", str(len(resource.data)))
+        self.send_header(
+            "Cache-Control", "max-age=3600" if resource.cacheable else "no-store"
+        )
+        self.end_headers()
 
-    @staticmethod
-    def _key(url: str) -> str:
-        """The key of a document published in memory."""
+        if body:
+            self.wfile.write(resource.data)
 
-        parts = urlsplit(url)
-        path = unquote(parts.path)
+    def log_message(self, format: str, *args: object) -> None:
+        pass
 
-        return f"{path}?{parts.query}" if parts.query else path
 
-    def _handler(self) -> type[BaseHTTPRequestHandler]:
-        server = self
+def _key(url: str) -> str:
+    """The path and query of a URL (the key of what is served from memory)."""
 
-        class Handler(BaseHTTPRequestHandler):
-            protocol_version = "HTTP/1.1"
+    parts = urlsplit(url)
+    path = unquote(parts.path)
 
-            def do_GET(self) -> None:
-                self._respond(body=True)
-
-            def do_HEAD(self) -> None:
-                self._respond(body=False)
-
-            def _respond(self, body: bool) -> None:
-                resource = server.resolve(self.path)
-
-                if resource is None:
-                    self.send_error(HTTPStatus.NOT_FOUND)
-                    return
-
-                data, kind = resource
-
-                self.send_response(HTTPStatus.OK)
-                self.send_header("Content-Type", kind)
-                self.send_header("Content-Length", str(len(data)))
-                cacheable = server._key(self.path) not in server.volatile
-                self.send_header(
-                    "Cache-Control", "max-age=3600" if cacheable else "no-store"
-                )
-                self.end_headers()
-
-                if body:
-                    self.wfile.write(data)
-
-            def log_message(self, format: str, *args: object) -> None:
-                pass
-
-        return Handler
+    return f"{path}?{parts.query}" if parts.query else path
