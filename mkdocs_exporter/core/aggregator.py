@@ -840,6 +840,13 @@ def finish(
     ]
     anchors = measure.anchors() if len(heights) == measure.pages else {}
 
+    if len(heights) != measure.pages:
+        logger.warning(
+            "[mkdocs-exporter.pdf] The layout of '%s' could not be measured (Chromium 138"
+            " or later is required): page numbers and bookmarks may be inaccurate",
+            aggregation.output,
+        )
+
     def destination(id: str) -> tuple[int, float] | None:
         position = anchors.get(id)
 

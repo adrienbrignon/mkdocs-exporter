@@ -176,7 +176,7 @@ plugins:
         pdf:
           browser:
             timeout: 60000 # Time given to each document to render (ms)
-            channel: chrome # Use an installed browser instead of Chromium
+            channel: chrome # Use an installed browser instead of Chromium (138 or later)
             debug: true # Log the browser's console
             args: [] # Extra command-line arguments
 ```
