@@ -1,10 +1,6 @@
-/**
- * MkDocs Exporter: Material for MkDocs adjustments (loaded before the theme's scripts).
- *
- * Material renders Mermaid diagrams asynchronously, replacing each `pre.mermaid` block by
- * a `div.mermaid` element: documents are paginated once every diagram has been rendered.
- */
 (() => {
+  // Material renders Mermaid diagrams asynchronously, replacing each `pre.mermaid` block
+  // by a `div.mermaid` element: documents are paginated once every diagram is rendered.
   let expected = 0;
 
   document.addEventListener('DOMContentLoaded', () => {

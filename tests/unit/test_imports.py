@@ -1,5 +1,3 @@
-"""Tests of the package's import-time requirements."""
-
 import subprocess
 import sys
 

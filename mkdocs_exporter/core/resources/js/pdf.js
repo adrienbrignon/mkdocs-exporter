@@ -1,23 +1,3 @@
-/**
- * MkDocs Exporter: gets pages ready to be printed and reports when they are.
- *
- * Contract with the exporter (Python side):
- * - `window.__MKDOCS_EXPORTER__` holds options (`delay`);
- * - once ready, `body[mkdocs-exporter]` is set to `true`, or to `error` (with the reason in
- *   `window.__MKDOCS_EXPORTER_ERROR__`), and `window.__MKDOCS_EXPORTER_READY__` (a promise)
- *   resolves with that state;
- * - uncaught errors are recorded with the phase they occurred in (`loading`, `rendering`,
- *   `printing`) in `window.__MKDOCS_EXPORTER_ERRORS__`; errors thrown by the hooks below
- *   are recorded with the `hook` phase and don't stop the rendering.
- *
- * This script must be loaded in the document's head, before the website's scripts.
- *
- * Users can define `window.MkDocsExporter.before`, `.render` and `.after`: they are
- * awaited, in this order, once the page and its resources are loaded and before printing.
- *
- * Pages are given the body's font family, and `html[data-mkdocs-exporter-page-background]`
- * is set when a `@page` rule sets a background (see `canvas`).
- */
 (() => {
   const errors = [];
   let phase = 'loading';

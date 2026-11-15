@@ -1,5 +1,3 @@
-"""Generic helpers."""
-
 from collections import UserDict
 from typing import Any
 

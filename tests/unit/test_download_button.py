@@ -1,5 +1,3 @@
-"""Tests of the download button's helpers."""
-
 from types import SimpleNamespace
 
 import pytest

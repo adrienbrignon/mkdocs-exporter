@@ -1,5 +1,3 @@
-"""The headless browser that prints pages to PDF."""
-
 from __future__ import annotations
 
 import asyncio

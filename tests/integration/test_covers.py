@@ -1,5 +1,3 @@
-"""End-to-end tests of cover pages."""
-
 from __future__ import annotations
 
 import pytest

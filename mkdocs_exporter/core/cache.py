@@ -1,5 +1,3 @@
-"""A cache of printed documents, reused while their inputs don't change."""
-
 from __future__ import annotations
 
 import contextlib

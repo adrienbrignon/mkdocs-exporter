@@ -1,24 +1,3 @@
-"""Combined documents ("books"): every page in a single HTML document, printed once.
-
-A book is the first page's shell (head, scripts, hidden chrome) whose content element is
-replaced by one *part* per page, in order. A part is the page's own content element
-(e.g. Material's `article.md-content__inner`, attributes included, so that child
-selectors such as `.md-content__inner > pre` still match) holding its kept covers.
-
-Since every page lives in the same document:
-
-- relative URLs are resolved against the page they come from (`rewrite_urls`), links to
-  other parts become anchors within the book, other links lead to the website;
-- identifiers (and every reference to them) are prefixed by part, as well as the names of
-  radio groups (tabs), so that parts don't interfere with each other (`namespace_ids`);
-- stylesheets and scripts loaded by some pages only are merged into the shell;
-- styles teleported to the head (e.g. by cover templates) are translated: `@page :first`
-  becomes the covers' named page, and styles that differ between pages are scoped to their
-  part (`part_styles`);
-- named pages give covers, the table of contents and blank pages their own margin boxes,
-  and each part its own `{page_title}` (`structure`).
-"""
-
 from __future__ import annotations
 
 import copy

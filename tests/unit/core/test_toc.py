@@ -1,5 +1,3 @@
-"""Tests of printed tables of contents."""
-
 from mkdocs_exporter.core.toc import (
     TocEntry,
     TocOptions,

@@ -1,5 +1,3 @@
-"""Runs coroutines without interfering with the caller's event loop."""
-
 from __future__ import annotations
 
 import asyncio

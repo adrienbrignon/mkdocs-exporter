@@ -1,16 +1,3 @@
-/**
- * MkDocs Exporter: measures a book (pages combined in one document) while it is printed,
- * and updates it between prints. Loaded after `pdf.js`.
- *
- * - Every time the document is printed, its layout is measured from a `matchMedia('print')`
- *   listener (the print layout is live there; the listener only reads it) and exposed as
- *   `window.__MKDOCS_EXPORTER_LAYOUT__`: the number of pages, the pages of each part, of
- *   its covers and of the table of contents, the position of headings, the `@page` rules
- *   setting a top margin and the layout width.
- * - `window.__MKDOCS_EXPORTER_BOOK__.apply(patch)` updates the document: table of contents
- *   (`toc`), blank pages before parts (`blanks`, part identifiers), generated styles
- *   (`css`).
- */
 (() => {
   const EXCLUDED = '.mkdocs-exporter-front-cover, .mkdocs-exporter-back-cover, .mkdocs-exporter-toc';
 

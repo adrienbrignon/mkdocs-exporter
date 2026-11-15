@@ -1,5 +1,3 @@
-"""Tests of the PDF post-processing helpers."""
-
 import pytest
 
 from mkdocs_exporter.core.pdf import relative_url

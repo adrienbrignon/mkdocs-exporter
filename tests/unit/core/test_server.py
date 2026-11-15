@@ -1,5 +1,3 @@
-"""Tests of the loopback server."""
-
 from pathlib import Path
 from urllib.error import HTTPError
 from urllib.request import urlopen

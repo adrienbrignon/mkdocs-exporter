@@ -1,5 +1,3 @@
-"""End-to-end tests of the customization points offered to users."""
-
 from __future__ import annotations
 
 import logging

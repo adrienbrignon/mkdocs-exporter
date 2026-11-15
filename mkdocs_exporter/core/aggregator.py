@@ -1,13 +1,3 @@
-"""Combines documents into a single PDF document (a "book").
-
-The documents are assembled into a single HTML document (see `mkdocs_exporter.core.book`)
-printed once by the browser. What browsers can't print natively is computed from a first
-print (a draft: only its first page is printed, the whole document is laid out), measured
-by `book.js`: page numbers of the table of contents, blank pages making documents start
-on odd pages, running heads (`{section}`). The document is patched and printed again;
-bookmarks are then added from the final print's measurement.
-"""
-
 from __future__ import annotations
 
 import io

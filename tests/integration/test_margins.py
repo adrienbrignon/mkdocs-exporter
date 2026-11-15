@@ -1,5 +1,3 @@
-"""End-to-end tests of headers and footers."""
-
 from __future__ import annotations
 
 import pytest

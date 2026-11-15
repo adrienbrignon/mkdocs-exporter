@@ -1,5 +1,3 @@
-"""Tests of the generic helpers."""
-
 from mkdocs_exporter.helpers import resolve
 
 

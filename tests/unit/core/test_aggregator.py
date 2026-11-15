@@ -1,5 +1,3 @@
-"""Tests of the aggregation logic."""
-
 from typing import Any
 
 import pytest

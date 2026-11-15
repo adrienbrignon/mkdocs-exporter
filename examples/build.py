@@ -1,15 +1,3 @@
-"""Builds the example projects shown by the documentation.
-
-Every folder holding a `mkdocs.yml` file is an example project, built into
-`.cache/examples/<site>` (warnings fail the build):
-
-- `make examples` renders the pages listed in `PREVIEWS` to
-  `docs/assets/images/examples/<site>-<n>.webp` (it needs `pdftoppm`, from Poppler, and
-  Pillow, a dependency of the documentation);
-- the documentation's build publishes the documents of the examples with the website
-  (`publish`, called by `macros/__init__.py`).
-"""
-
 from __future__ import annotations
 
 import shutil

@@ -1,5 +1,3 @@
-"""Headers and footers, generated as CSS page margin boxes."""
-
 from __future__ import annotations
 
 import re

@@ -1,5 +1,3 @@
-"""Typing helpers for the pages handed to user-defined callables."""
-
 from typing import Any, Protocol
 
 

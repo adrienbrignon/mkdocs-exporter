@@ -1,5 +1,3 @@
-"""A loopback HTTP server exposing a built website to the browser."""
-
 from __future__ import annotations
 
 import importlib.resources

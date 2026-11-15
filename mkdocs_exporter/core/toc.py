@@ -1,10 +1,3 @@
-"""Printed tables of contents, of combined documents and of pages' own documents.
-
-Browsers can't print the page number of a link's target (`target-counter()`): tables of
-contents are rendered with placeholder numbers, then filled from a print's layout and
-printed again.
-"""
-
 from __future__ import annotations
 
 import importlib.resources

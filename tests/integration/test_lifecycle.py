@@ -1,5 +1,3 @@
-"""End-to-end tests of the plugin's lifecycle and error handling."""
-
 from __future__ import annotations
 
 import asyncio

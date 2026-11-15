@@ -1,5 +1,3 @@
-"""End-to-end tests of aggregated documents: bookmarks, links, table of contents..."""
-
 from __future__ import annotations
 
 import re

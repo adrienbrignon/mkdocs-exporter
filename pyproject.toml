@@ -101,7 +101,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
-"mkdocs".msg = "The core must not depend on MkDocs (see mkdocs_exporter/core/__init__.py)."
+"mkdocs".msg = "The core must not depend on MkDocs (see AGENTS.md)."
 
 [tool.ruff.lint.per-file-ignores]
 "!mkdocs_exporter/core/**" = ["TID251"]

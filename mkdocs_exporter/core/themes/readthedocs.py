@@ -1,5 +1,3 @@
-"""The Read the Docs theme."""
-
 from __future__ import annotations
 
 from mkdocs_exporter.core.html import HtmlDocument

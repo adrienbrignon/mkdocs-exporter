@@ -1,5 +1,3 @@
-"""End-to-end tests: build the fixture project and inspect the PDF documents."""
-
 from __future__ import annotations
 
 import logging

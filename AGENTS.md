@@ -88,11 +88,16 @@ Before considering a change done, run the linter, the formatter check, the type 
    print's measurement (up to 3 times). Bookmarks are added with pypdf from that measurement, and named
    destinations are lowered by the top margin of their page.
 
-**Browser contract** (see `core/resources/js/pdf.js`): `pdf.js` is the first script of the page. It
-records uncaught errors by phase, waits for the `load` event, fonts, images, MathJax and the theme
-(`window.MkDocsExporterTheme.settle`), runs the `window.MkDocsExporter.before/render/after` hooks, then
-sets `body[mkdocs-exporter]` to `true` or `error` and resolves `window.__MKDOCS_EXPORTER_READY__` (awaited by
-`Browser.print` in a single round-trip).
+**Browser contract** (see `core/resources/js/pdf.js`): `pdf.js` is the first script of the page (in the
+head, before the website's scripts), its options in `window.__MKDOCS_EXPORTER__` (`delay`). It records
+uncaught errors by phase (`loading`, `rendering`, `printing`, and `hook` for errors of the hooks, which
+don't stop the rendering) in `window.__MKDOCS_EXPORTER_ERRORS__`, waits for the `load` event, fonts,
+images, MathJax and the theme (`window.MkDocsExporterTheme.settle`), runs the
+`window.MkDocsExporter.before/render/after` hooks, gives pages the body's font and marks the root when a
+`@page` rule sets a background, then sets `body[mkdocs-exporter]` to `true` or `error` (the reason in
+`window.__MKDOCS_EXPORTER_ERROR__`) and resolves `window.__MKDOCS_EXPORTER_READY__` (awaited by
+`Browser.print` in a single round-trip). For books, `book.js` exposes the measurement of every print as
+`window.__MKDOCS_EXPORTER_LAYOUT__` and applies patches with `window.__MKDOCS_EXPORTER_BOOK__.apply`.
 
 **Layout data** of single documents comes from the printed PDF: hidden links to every heading make
 Chromium create named destinations (`core/pdf.py:read_layout`). Combined documents are measured while

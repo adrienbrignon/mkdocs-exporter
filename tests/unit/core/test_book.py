@@ -1,5 +1,3 @@
-"""Tests of the assembly of combined documents."""
-
 from bs4 import BeautifulSoup
 
 from mkdocs_exporter.core.book import (

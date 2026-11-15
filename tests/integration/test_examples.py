@@ -1,9 +1,3 @@
-"""End-to-end tests of the example projects shown by the documentation (`examples/`).
-
-Each example is built from a copy of `examples/`, and checked against what the
-documentation says it does.
-"""
-
 from __future__ import annotations
 
 import shutil

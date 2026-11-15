@@ -1,5 +1,3 @@
-"""Theme adapters."""
-
 from __future__ import annotations
 
 from mkdocs_exporter.core.themes.base import Theme

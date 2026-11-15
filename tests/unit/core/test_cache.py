@@ -1,5 +1,3 @@
-"""Tests of the cache of printed documents."""
-
 from pathlib import Path
 
 from mkdocs_exporter.core.browser import Diagnostics, PrintResult

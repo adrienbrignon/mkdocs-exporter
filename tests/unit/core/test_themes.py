@@ -1,5 +1,3 @@
-"""Tests of the theme adapters."""
-
 import pytest
 
 from mkdocs_exporter.core.themes import (

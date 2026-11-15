@@ -1,5 +1,3 @@
-"""Exports a built website to PDF documents."""
-
 from __future__ import annotations
 
 import contextlib

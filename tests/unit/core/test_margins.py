@@ -1,5 +1,3 @@
-"""Tests of headers and footers."""
-
 import pytest
 
 from mkdocs_exporter.core.document import Layout, Position

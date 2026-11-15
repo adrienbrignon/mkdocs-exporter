@@ -1,5 +1,3 @@
-"""Tests of the HTML helpers."""
-
 import pytest
 
 from mkdocs_exporter.core.html import HtmlDocument, resolve_link

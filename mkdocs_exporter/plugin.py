@@ -1,5 +1,3 @@
-"""The MkDocs plugin (registered as `exporter`)."""
-
 from __future__ import annotations
 
 import os

@@ -1,14 +1,3 @@
-"""Callables for a "download as PDF" button, to reference from `mkdocs.yml`.
-
-```yaml
-buttons:
-  - title: Download as PDF
-    icon: material-file-download-outline
-    enabled: !!python/name:mkdocs_exporter.formats.pdf.buttons.download.enabled
-    attributes: !!python/name:mkdocs_exporter.formats.pdf.buttons.download.attributes
-```
-"""
-
 from typing import Any
 
 from mkdocs.utils import get_relative_url

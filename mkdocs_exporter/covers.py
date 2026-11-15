@@ -1,5 +1,3 @@
-"""Rendering of cover page templates."""
-
 from __future__ import annotations
 
 import os

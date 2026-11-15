@@ -1,5 +1,3 @@
-"""Tests of the coroutine runner."""
-
 import asyncio
 import threading
 

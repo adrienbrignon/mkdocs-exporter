@@ -1,5 +1,3 @@
-"""The core must not depend on MkDocs."""
-
 import subprocess
 import sys
 

@@ -1,5 +1,3 @@
-"""Tests of the plugin's configuration schema."""
-
 from pathlib import Path
 
 import pytest

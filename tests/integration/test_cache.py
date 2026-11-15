@@ -1,5 +1,3 @@
-"""End-to-end tests of the cache of documents."""
-
 from __future__ import annotations
 
 import pytest

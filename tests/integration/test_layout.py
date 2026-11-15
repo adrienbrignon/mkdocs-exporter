@@ -1,5 +1,3 @@
-"""End-to-end tests of how pages are laid out by the browser."""
-
 from __future__ import annotations
 
 import re

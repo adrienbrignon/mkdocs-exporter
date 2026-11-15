@@ -1,5 +1,3 @@
-"""The data the core works on."""
-
 from __future__ import annotations
 
 import posixpath
