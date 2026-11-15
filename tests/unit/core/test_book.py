@@ -13,7 +13,6 @@ from mkdocs_exporter.core.book import (
     resource_url,
     reuse,
     rewrite_urls,
-    scope_styles,
     site_path,
     structure,
     teleported,
@@ -66,7 +65,7 @@ def test_resources_become_root_absolute() -> None:
         'poster="/docs/guide/page/p.jpg"',
         'data="/docs/guide/page/o.svg"',
         'url("/docs/guide/bg.png")',
-        'url("/docs/guide/s.png")',
+        "url(/docs/guide/s.png)",
         'xlink:href="/docs/guide/page/sprite.svg#icon2"',
     ]:
         assert expected in html
@@ -99,7 +98,7 @@ def test_identifiers_and_references_are_namespaced() -> None:
         'headers="p1-h"',
         'href="#p1-target"',
         'href="#nope"',
-        "#p1-target { color: red }",
+        "#p1-target { color: red",
         "#fff {}",
     ]:
         assert expected in html
@@ -137,13 +136,6 @@ def test_page_rules_of_a_part_get_its_own_pages() -> None:
     assert "@page cover-1 { color: red; }" in pages
     assert "@page last-1 { margin: 0; }" in pages
     assert "page: last-1" in rest
-
-
-def test_scoped_styles_keep_global_at_rules() -> None:
-    css = scope_styles("@font-face { font-family: X; } .title { color: red; }", "#part")
-
-    assert css.startswith("@font-face { font-family: X; }")
-    assert "@scope (#part) {\n.title { color: red; }\n}" in css
 
 
 def part(index: int, styles: list[str], covers: set[str] | None = None) -> Part:

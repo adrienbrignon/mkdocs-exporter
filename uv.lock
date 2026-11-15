@@ -1215,6 +1215,7 @@ dependencies = [
     { name = "mkdocs" },
     { name = "playwright" },
     { name = "pypdf" },
+    { name = "tinycss2" },
 ]
 
 [package.dev-dependencies]
@@ -1248,6 +1249,7 @@ requires-dist = [
     { name = "mkdocs", specifier = ">=1.6,<2" },
     { name = "playwright", specifier = ">=1.53" },
     { name = "pypdf", specifier = ">=6.16" },
+    { name = "tinycss2", specifier = ">=1.3" },
 ]
 
 [package.metadata.requires-dev]

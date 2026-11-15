@@ -23,6 +23,7 @@ from mkdocs_exporter.core.cache import Cache
 from mkdocs_exporter.core.document import Document, Site
 from mkdocs_exporter.core.exporter import Exporter
 from mkdocs_exporter.core.html import HtmlDocument
+from mkdocs_exporter.core.margins import Margins
 from mkdocs_exporter.core.renderer import Outcome, RenderOptions
 from mkdocs_exporter.core.runner import Loop, run
 from mkdocs_exporter.core.themes import Theme, get_theme
@@ -307,10 +308,9 @@ class Plugin(BasePlugin[Config]):
                 delay=options.browser.delay,
                 concurrency=options.concurrency,
                 title=options.title,
-                margins={
-                    "header": dict(options.header),
-                    "footer": dict(options.footer),
-                },
+                margins=Margins.of(
+                    {"header": dict(options.header), "footer": dict(options.footer)}
+                ),
                 variables={"site_name": config.site_name},
                 toc=_toc(options.toc),
             ),

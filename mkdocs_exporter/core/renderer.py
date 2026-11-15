@@ -18,6 +18,7 @@ from mkdocs_exporter.core.browser import Browser, Printed, PrintResult, RenderEr
 from mkdocs_exporter.core.cache import Assets, Cache, digest, environment, fingerprint
 from mkdocs_exporter.core.document import Document, Heading, Layout, Site
 from mkdocs_exporter.core.html import ANCESTOR, HtmlDocument, resolve_link
+from mkdocs_exporter.core.margins import Margins
 from mkdocs_exporter.core.pdf import (
     RELATIVE_LINKS_BASE,
     fix_uri,
@@ -98,8 +99,8 @@ class RenderOptions:
     title: bool = False
     """Should the document's title be inserted when its content has no `h1` heading?"""
 
-    margins: Mapping[str, Mapping[str, str | None]] = field(default_factory=dict)
-    """Headers and footers (see `mkdocs_exporter.core.margins.stylesheet`)."""
+    margins: Margins = field(default_factory=Margins)
+    """Headers and footers."""
 
     variables: Mapping[str, str] = field(default_factory=dict)
     """Values of the placeholders of headers and footers (e.g. `site_name`)."""
@@ -225,8 +226,7 @@ class Renderer:
 
         stylesheets = [
             *self.base_stylesheets,
-            margins.stylesheet(
-                self.options.margins,
+            self.options.margins.stylesheet(
                 {**self.options.variables, "page_title": document.title},
                 front_cover="front" in kept,
             ),
@@ -334,7 +334,7 @@ class Renderer:
         path = f"{document.url}?mkdocs-exporter=default"
         url = self.server.publish(path, html)
         refine = None
-        sections = margins.uses(self.options.margins, "section")
+        sections = self.options.margins.uses("section")
         listed = bool(self._toc_entries(headings, lambda _: 0))
 
         if sections or listed:
@@ -350,8 +350,15 @@ class Renderer:
                 patch = {}
 
                 if sections:
-                    titles = margins.running_heads(running, layout)
-                    patch["css"] = margins.sections(titles)
+                    heads = margins.running_heads(
+                        (
+                            (layout.anchors[id].page, title)
+                            for id, title in running
+                            if id in layout.anchors
+                        ),
+                        range(layout.pages),
+                    )
+                    patch["css"] = margins.sections(list(heads.values()))
                 if listed and self.options.toc is not None:
                     entries = self._toc_entries(
                         headings,

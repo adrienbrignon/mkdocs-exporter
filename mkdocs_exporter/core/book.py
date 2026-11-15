@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import copy
-import re
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from urllib.parse import unquote, urljoin, urlsplit, urlunsplit
@@ -9,13 +8,24 @@ from urllib.parse import unquote, urljoin, urlsplit, urlunsplit
 from bs4 import BeautifulSoup, Comment, PageElement, Tag
 
 from mkdocs_exporter.core import margins
+from mkdocs_exporter.core.css import (
+    PageSelector,
+    rename_pages,
+    rename_selector_ids,
+    rewrite_ids,
+    scope,
+    split_page_rules,
+)
+from mkdocs_exporter.core.css import (
+    rewrite_urls as rewrite_css_urls,
+)
 from mkdocs_exporter.core.document import Document
 from mkdocs_exporter.core.html import ANCESTOR, HtmlDocument, resolve_link
 
 FRONT_COVER_PAGE = "mkdocs-exporter-front-cover"
 """The named page of front covers."""
 
-BACK_COVER_PAGE = "mkdocs-exporter-cover"
+BACK_COVER_PAGE = margins.COVER_PAGE
 """The named page of back covers (the same as in single documents)."""
 
 CONTENT_PAGE = "mkdocs-exporter-content"
@@ -85,14 +95,6 @@ RESOURCES = {
 
 HYPERLINKS = ("a", "area")
 """Elements whose `href` is a link (the `href` of other elements is a resource)."""
-
-CSS_URL = re.compile(r"""url\(\s*(['"]?)([^'")]*)\1\s*\)""")
-CSS_ID = re.compile(r"#([^\W\d][\w-]*)")
-PAGE_RULE = re.compile(r"@page\b([^{;]*)\{")
-PAGE_PROPERTY = re.compile(r"(?<![\w-])page\s*:\s*([A-Za-z_][\w-]*)")
-UNSCOPABLE = re.compile(
-    r"@(?:font-face|keyframes|counter-style|property|font-feature-values|import)\b"
-)
 
 
 @dataclass
@@ -176,8 +178,8 @@ class BookOptions:
     scripts: Sequence[str] = ()
     """Scripts appended to the body."""
 
-    margins: Mapping[str, Mapping[str, str | None]] = field(default_factory=dict)
-    """Headers and footers (see `mkdocs_exporter.core.margins`)."""
+    margins: margins.Margins = field(default_factory=margins.Margins)
+    """Headers and footers."""
 
     variables: Mapping[str, str] = field(default_factory=dict)
     """Values of the placeholders of headers and footers (e.g. `site_name`)."""
@@ -256,10 +258,6 @@ def site_path(url: str, page_url: str, prefix: str) -> tuple[str, str] | None:
     return path, unquote(target.fragment)
 
 
-def _rewrite_css_urls(css: str, rewrite: Callable[[str], str]) -> str:
-    return CSS_URL.sub(lambda m: f'url("{rewrite(m.group(2))}")', css)
-
-
 def _rewrite_srcset(srcset: str, rewrite: Callable[[str], str]) -> str:
     candidates = []
 
@@ -297,10 +295,10 @@ def rewrite_urls(
         tag["srcset"] = _rewrite_srcset(str(tag["srcset"]), resource)
     for tag in element.find_all(True, attrs={"style": True}):
         if "url(" in str(tag["style"]):
-            tag["style"] = _rewrite_css_urls(str(tag["style"]), resource)
+            tag["style"] = rewrite_css_urls(str(tag["style"]), resource)
     for tag in element.find_all("style"):
         if tag.string and "url(" in tag.string:
-            tag.string = _rewrite_css_urls(tag.string, resource)
+            tag.string = rewrite_css_urls(tag.string, resource)
     for tag in element.find_all(True, attrs={"href": True}):
         href = str(tag["href"])
 
@@ -349,14 +347,6 @@ def namespace_ids(element: Tag, prefix: str, ids: set[str]) -> None:
 
         return href
 
-    def urls(text: str) -> str:
-        return CSS_URL.sub(
-            lambda m: f"url({m.group(1)}{anchor(m.group(2))}{m.group(1)})", text
-        )
-
-    def selectors(text: str) -> str:
-        return CSS_ID.sub(lambda m: "#" + reference(m.group(1)), text)
-
     for tag in element.find_all(True):
         attrs = tag.attrs
 
@@ -381,64 +371,17 @@ def namespace_ids(element: Tag, prefix: str, ids: set[str]) -> None:
                 attrs[key] = " ".join(reference(token) for token in tokens)
         for key in URL_REFERENCES:
             if key in attrs and "url(" in str(attrs[key]):
-                attrs[key] = urls(str(attrs[key]))
+                attrs[key] = rewrite_css_urls(str(attrs[key]), anchor)
 
         if "data-clipboard-target" in attrs:
-            attrs["data-clipboard-target"] = selectors(
-                str(attrs["data-clipboard-target"])
+            attrs["data-clipboard-target"] = rename_selector_ids(
+                str(attrs["data-clipboard-target"]), reference
             )
         if tag.name == "style" and tag.string:
-            tag.string = selectors(urls(tag.string))
+            tag.string = rewrite_ids(tag.string, reference)
 
 
 # --- Styles ----------------------------------------------------------------------------
-
-
-def _block_end(css: str, start: int) -> int:
-    """The index following the `}` closing the block opened at `start` (a `{`)."""
-
-    depth = 0
-    index = start
-    quote = None
-
-    while index < len(css):
-        char = css[index]
-
-        if quote:
-            if char == "\\":
-                index += 1
-            elif char == quote:
-                quote = None
-        elif css.startswith("/*", index):
-            end = css.find("*/", index + 2)
-            index = len(css) if end < 0 else end + 1
-        elif char in "\"'":
-            quote = char
-        elif char == "{":
-            depth += 1
-        elif char == "}":
-            depth -= 1
-
-            if depth == 0:
-                return index + 1
-
-        index += 1
-
-    return len(css)
-
-
-def page_rules(css: str) -> list[tuple[int, int, str]]:
-    """The `@page` rules of a stylesheet, at any depth: (start, end, selector)."""
-
-    rules = []
-    position = 0
-
-    while match := PAGE_RULE.search(css, position):
-        end = _block_end(css, match.end() - 1)
-        rules.append((match.start(), end, match.group(1).strip()))
-        position = end
-
-    return rules
 
 
 def translate_selector(
@@ -456,32 +399,27 @@ def translate_selector(
         The selectors of the rules to write (one per named page).
     """
 
-    translated = []
+    parsed = PageSelector.parse(selector)
 
-    for item in selector.split(","):
-        item = item.strip()
-        match = re.fullmatch(r"([A-Za-z_][\w-]*)?((?::[\w-]+)*)", item)
+    if parsed is None:
+        return [selector]
 
-        if match is None:
-            translated.append(item)
-            continue
+    pseudos = "".join(f":{pseudo}" for pseudo in parsed.pseudos)
 
-        name, pseudos = match.group(1), match.group(2)
+    if parsed.name:
+        return [names.get(parsed.name, parsed.name) + pseudos]
+    if "first" in parsed.pseudos:
+        others = "".join(f":{pseudo}" for pseudo in parsed.pseudos if pseudo != "first")
 
-        if name:
-            translated.append(names.get(name, name) + pseudos)
-        elif ":first" in pseudos:
-            translated += [page + pseudos.replace(":first", "") for page in first]
-        elif every:
-            translated += [page + pseudos for page in every]
-        else:
-            translated.append(item)
+        return [page + others for page in first]
+    if every:
+        return [page + pseudos for page in every]
 
-    return translated
+    return [selector]
 
 
 def translate_page_rules(
-    css: str,
+    stylesheet: str,
     first: Sequence[str],
     every: Sequence[str] = (),
     names: Mapping[str, str] | None = None,
@@ -497,60 +435,26 @@ def translate_page_rules(
     """
 
     names = names or {}
-    pages = []
-    rest = []
-    position = 0
+    rules, rest = split_page_rules(stylesheet)
+    pages = [
+        f"@page {translated} {rule.block}"
+        for rule in rules
+        for selector in rule.selectors
+        for translated in translate_selector(selector, first, every, names)
+    ]
 
-    for start, end, selector in page_rules(css):
-        body = css[css.index("{", start) : end]
-
-        for translated in translate_selector(selector, first, every, names):
-            pages.append(f"@page {translated} {body}")
-
-        rest.append(css[position:start])
-        position = end
-
-    rest.append(css[position:])
-    remainder = "".join(rest)
-
-    if names:
-        remainder = PAGE_PROPERTY.sub(
-            lambda m: f"page: {names.get(m.group(1), m.group(1))}", remainder
-        )
-
-    return "\n".join(pages), remainder
+    return "\n".join(pages), rename_pages(rest, names) if names else rest
 
 
-def scope_styles(css: str, scope: str) -> str:
-    """Scopes the rules of a stylesheet to the elements matching a selector (`@scope`).
+def page_names(stylesheet: str) -> set[str]:
+    """The names of the pages a stylesheet defines `@page` rules for."""
 
-    At-rules that can't be scoped (`@font-face`, `@keyframes`...) stay global.
-    """
-
-    outside = []
-    inside = []
-    position = 0
-
-    while match := UNSCOPABLE.search(css, position):
-        brace = css.find("{", match.end())
-        semicolon = css.find(";", match.end())
-
-        if brace < 0 or 0 <= semicolon < brace:
-            end = semicolon + 1 if semicolon >= 0 else len(css)
-        else:
-            end = _block_end(css, brace)
-
-        inside.append(css[position : match.start()])
-        outside.append(css[match.start() : end])
-        position = end
-
-    inside.append(css[position:])
-    scoped = "".join(inside).strip()
-
-    if scoped:
-        outside.append(f"@scope ({scope}) {{\n{scoped}\n}}")
-
-    return "\n".join(outside)
+    return {
+        parsed.name
+        for rule in split_page_rules(stylesheet)[0]
+        for selector in rule.selectors
+        if (parsed := PageSelector.parse(selector)) is not None and parsed.name
+    }
 
 
 def part_styles(parts: Sequence[Part]) -> tuple[list[str], PageNames]:
@@ -588,19 +492,14 @@ def part_styles(parts: Sequence[Part]) -> tuple[list[str], PageNames]:
         names.front[part.id] = front
         names.content[part.id] = content
 
-        for css in part.styles:
-            defined = {
-                name
-                for _, _, selector in page_rules(css)
-                for name in re.findall(r"(?:^|,)\s*([A-Za-z_][\w-]*)", selector)
-            }
+        for stylesheet in part.styles:
             pages, rest = translate_page_rules(
-                css,
+                stylesheet,
                 [front],
                 [content, front],
-                {name: f"{name}-{part.index}" for name in defined},
+                {name: f"{name}-{part.index}" for name in page_names(stylesheet)},
             )
-            styles.append(scope_styles(rest, f"#{part.id}") + "\n" + pages)
+            styles.append(scope(rest, f"#{part.id}") + "\n" + pages)
 
     return styles, names
 
@@ -1016,13 +915,10 @@ def assemble(parts: Sequence[Part], options: BookOptions, toc: str | None) -> Bo
             first.content.insert(0, element)
 
     styles, names = part_styles(parts)
-    titled = margins.uses(options.margins, "page_title")
-    boxes = any(
-        template is not None
-        for positions in options.margins.values()
-        for template in positions.values()
+    titled = options.margins.uses("page_title")
+    layout = structure(
+        parts, names, toc is not None, titled, back_covers=bool(options.margins.boxes)
     )
-    layout = structure(parts, names, toc is not None, titled, back_covers=boxes)
     titles = {
         names.content[part.id]: part.document.title
         for part in parts
@@ -1030,8 +926,7 @@ def assemble(parts: Sequence[Part], options: BookOptions, toc: str | None) -> Bo
     }
     css = [
         *options.base_stylesheets,
-        margins.book_stylesheet(
-            options.margins,
+        options.margins.book_stylesheet(
             options.variables,
             {**titles, TOC_PAGE: options.toc_title},
             [*sorted(set(names.front.values())), BACK_COVER_PAGE],

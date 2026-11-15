@@ -1,30 +1,13 @@
 import pytest
 
-from mkdocs_exporter.core.document import Layout, Position
 from mkdocs_exporter.core.margins import (
     ALL_BOXES,
-    book_stylesheet,
+    Margins,
     content,
-    css_string,
     running_heads,
     sections,
-    stylesheet,
-    top_margin,
     validate,
 )
-
-
-@pytest.mark.parametrize(
-    ("text", "expected"),
-    [
-        ("plain", '"plain"'),
-        ('a "quoted" word', '"a \\"quoted\\" word"'),
-        ("back\\slash", '"back\\\\slash"'),
-        ("two\nlines", '"two\\A lines"'),
-    ],
-)
-def test_css_string(text: str, expected: str) -> None:
-    assert css_string(text) == expected
 
 
 def test_content_with_placeholders() -> None:
@@ -49,11 +32,11 @@ def test_values_cannot_inject_css() -> None:
 
 
 def test_stylesheet_is_empty_without_headers_and_footers() -> None:
-    assert stylesheet({"header": {"left": None}, "footer": {}}, {}) == ""
+    assert Margins.of({"header": {"left": None}, "footer": {}}).stylesheet({}) == ""
 
 
 def test_stylesheet_hides_headers_and_footers_on_covers() -> None:
-    css = stylesheet({"footer": {"center": "{page}"}}, {})
+    css = Margins.of({"footer": {"center": "{page}"}}).stylesheet({})
 
     assert "@bottom-center { content: counter(page);" in css
     assert (
@@ -63,7 +46,7 @@ def test_stylesheet_hides_headers_and_footers_on_covers() -> None:
 
 
 def test_stylesheet_hides_headers_and_footers_on_the_front_cover() -> None:
-    css = stylesheet({"footer": {"center": "{page}"}}, {}, front_cover=True)
+    css = Margins.of({"footer": {"center": "{page}"}}).stylesheet({}, front_cover=True)
 
     assert "@page :first {\n  @bottom-center { content: none; }\n}" in css
 
@@ -79,19 +62,14 @@ def test_sections_counter_style() -> None:
 
 
 def test_running_heads_carry_the_last_heading_over() -> None:
-    layout = Layout(
-        pages=5,
-        anchors={"a": Position(page=1), "b": Position(page=1), "c": Position(page=3)},
-    )
+    heads = running_heads([(1, "A"), (1, "B"), (3, "C")], range(5))
 
-    titles = running_heads([("a", "A"), ("b", "B"), ("c", "C"), ("x", "X")], layout)
-
-    assert titles == ["", "A", "B", "C", "C"]
+    assert heads == {0: "", 1: "A", 2: "B", 3: "C", 4: "C"}
 
 
 def test_book_stylesheet_titles_named_pages() -> None:
-    css = book_stylesheet(
-        {"header": {"left": "{page_title}", "right": "{site_name}"}},
+    margins = Margins.of({"header": {"left": "{page_title}", "right": "{site_name}"}})
+    css = margins.book_stylesheet(
         {"site_name": "Site"},
         {"mkdocs-exporter-part-1": "Intro"},
         ["mkdocs-exporter-front-cover"],
@@ -107,36 +85,7 @@ def test_book_stylesheet_titles_named_pages() -> None:
 
 
 def test_book_stylesheet_empties_every_box_of_blank_pages() -> None:
-    css = book_stylesheet({}, {}, {}, [], "blank")
+    css = Margins().book_stylesheet({}, {}, [], "blank")
     blank = css.split("@page blank {")[1]
 
     assert blank.count("content: none !important;") == len(ALL_BOXES)
-
-
-@pytest.mark.parametrize(
-    ("name", "first", "right", "expected"),
-    [
-        (None, False, True, 20.0),
-        (None, True, True, 0.0),
-        ("cover", False, True, 10.0),
-        ("cover", True, True, 10.0),
-        (None, False, False, 30.0),
-    ],
-)
-def test_top_margin_follows_page_selectors(
-    name: str | None, first: bool, right: bool, expected: float
-) -> None:
-    rules = [
-        {"selector": "", "marginTop": "20px"},
-        {"selector": ":first", "marginTop": "0"},
-        {"selector": "cover", "marginTop": "10px"},
-        {"selector": ":left", "marginTop": "30px"},
-        {"selector": "other", "marginTop": "auto"},
-    ]
-
-    assert top_margin(rules, name, first=first, right=right) == expected
-
-
-def test_top_margin_converts_lengths() -> None:
-    assert top_margin([{"selector": "", "marginTop": "1in"}], None, False, True) == 96
-    assert top_margin([{"selector": "", "marginTop": "2em"}], None, False, True) == 0

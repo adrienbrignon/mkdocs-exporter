@@ -21,6 +21,7 @@ from pypdf.generic import (
 
 from mkdocs_exporter.core import book, margins, toc
 from mkdocs_exporter.core.browser import RenderError
+from mkdocs_exporter.core.css import PageMargin, top_margin
 from mkdocs_exporter.core.document import Document
 from mkdocs_exporter.core.html import HtmlDocument
 from mkdocs_exporter.core.pdf import RELATIVE_LINKS_BASE, fix_uri, info, link_actions
@@ -186,8 +187,8 @@ class Measure:
     blanks: list[int] = field(default_factory=list)
     """The blank pages."""
 
-    rules: list[dict[str, str]] = field(default_factory=list)
-    """The `@page` rules setting a top margin (`selector`, `marginTop`), in order."""
+    rules: list[PageMargin] = field(default_factory=list)
+    """The `@page` rules setting a top margin, in order."""
 
     width: float = 0.0
     """The width of the layout (wider than pages when the browser shrinks them)."""
@@ -227,7 +228,12 @@ class Measure:
             ],
             toc=_span(data.get("toc")),
             blanks=[int(blank[0]) for blank in data.get("blanks") or []],
-            rules=list(data.get("pageRules") or []),
+            rules=[
+                PageMargin(
+                    str(rule.get("selector", "")), str(rule.get("marginTop", ""))
+                )
+                for rule in data.get("pageRules") or []
+            ],
             width=float(data.get("width") or 0),
         )
 
@@ -305,21 +311,20 @@ def running_heads(measure: Measure, plan: Plan) -> list[str]:
 
     for part in measure.parts:
         shift = plan.shifts.get(part.id, 0)
-        headings = [heading for heading in part.headings if heading.level <= 2]
-        current = ""
+        heads = margins.running_heads(
+            (
+                (heading.position.page, heading.title)
+                for heading in part.headings
+                if heading.level <= 2
+            ),
+            measure.content(part),
+        )
 
-        for page in measure.content(part):
-            found = [h.title for h in headings if h.position.page == page]
-
+        for page, head in heads.items():
             if 0 <= page + shift < len(sections):
-                sections[page + shift] = found[0] if found else current
-
-            current = found[-1] if found else current
+                sections[page + shift] = head
 
     return sections
-
-
-# --- Table of contents and bookmarks ---------------------------------------------------
 
 
 def _first(node: NavNode, parts: Mapping[str, book.Part]) -> book.Part | None:
@@ -596,7 +601,7 @@ async def aggregate(
         return toc.render(contents, toc_entries(nav, by_document, page, contents.depth))
 
     assembled = book.assemble(parts, settings, render(lambda _: 0))
-    sections = margins.uses(options.margins, "section")
+    sections = options.margins.uses("section")
     applied: dict[str, Any] = {}
     attempts = 0
 
@@ -746,7 +751,7 @@ def finish(
     heights = [float(page.mediabox.height) for page in writer.pages]
     names = page_names(measure, assembled.pages)
     tops = [
-        margins.top_margin(measure.rules, name, first=index == 0, right=index % 2 == 0)
+        top_margin(measure.rules, name, first=index == 0, right=index % 2 == 0)
         * POINTS_PER_PIXEL
         for index, name in enumerate(names)
     ]
