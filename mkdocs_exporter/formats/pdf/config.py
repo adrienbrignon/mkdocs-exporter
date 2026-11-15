@@ -115,16 +115,16 @@ class CacheConfig(BaseConfig):
 
 
 class TocConfig(BaseConfig):
-    """The table of contents of an aggregated document."""
+    """A table of contents (of a document's headings, or of an aggregated document)."""
 
     enabled = c.Type(bool, default=False)
-    """Should a table of contents be inserted after the first document's front cover?"""
+    """Should a table of contents be inserted after the (first) front cover?"""
 
     title = c.Type(str, default="Table of contents")
     """The title of the table of contents."""
 
     depth = PositiveInteger(default=2)
-    """The depth of entries: 1 for pages only, 2 to add their second-level headings..."""
+    """The deepest level of headings listed (in aggregated documents, 1 lists pages only)."""
 
     template = c.Optional(c.File(exists=True))
     """A Jinja template replacing the default one (variables: `title`, `entries`)."""
@@ -209,6 +209,9 @@ class Config(BaseConfig):
 
     url = c.Optional(c.Type(str))
     """The URL replacing the website's root in links (defaults to `site_url`)."""
+
+    toc = c.SubConfig(TocConfig)
+    """The table of contents of each document (its headings)."""
 
     aggregator = c.SubConfig(SingleAggregatorConfig)
     """The aggregated document combining pages (shorthand for a single aggregator)."""

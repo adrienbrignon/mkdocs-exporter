@@ -293,3 +293,40 @@ def test_document_information(project: Project) -> None:
     assert combined.metadata["/Title"] == "Fixture"
     assert combined.metadata["/Author"] == "Jane"
     assert combined.reader.root_object["/Lang"] == "en"
+
+
+ENTRY = re.compile(r"^(\w[\w ]*?)\s*(\d+)$", re.MULTILINE)
+"""An entry of a printed table of contents: title, page number."""
+
+
+@pytest.mark.parametrize("theme", ["material", "readthedocs"])
+def test_documents_can_start_with_a_table_of_contents(
+    project: Project, theme: str
+) -> None:
+    site = project.build(
+        exporter={"formats": {"pdf": {"toc": {"enabled": True, "depth": 3}}}},
+        theme={"name": theme},
+    )
+
+    for path, titles in [
+        ("guide/advanced/index.pdf", ["Deep dive", "Sub section", "Another section"]),
+        ("guide/intro/index.pdf", ["Lorem"]),
+    ]:
+        document = site.pdf(path)
+        pages = document.pages_containing("Table of contents")
+        entries = ENTRY.findall(document.pages_text[pages[0]])
+
+        assert pages == [1], path  # After the front cover.
+        assert [title for title, _ in entries] == titles
+
+        for title, number in entries:
+            assert int(number) - 1 > pages[0]
+            assert title in document.pages_text[int(number) - 1], title
+
+        assert {link.target_page for link in document.internal_links} >= {
+            int(number) - 1 for _, number in entries
+        }
+
+    # Pages without headings besides their title, and combined documents, have none.
+    assert site.pdf("reference/index.pdf").count("Table of contents") == 0
+    assert site.pdf("combined.pdf").count("Table of contents") == 0

@@ -10,7 +10,6 @@ bookmarks are then added from the final print's measurement.
 
 from __future__ import annotations
 
-import importlib.resources
 import io
 import json
 import posixpath
@@ -19,7 +18,6 @@ from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, cast
 
-from jinja2 import Environment
 from pypdf import PdfReader, PdfWriter
 from pypdf.generic import (
     ArrayObject,
@@ -31,12 +29,13 @@ from pypdf.generic import (
     TextStringObject,
 )
 
-from mkdocs_exporter.core import book, margins
+from mkdocs_exporter.core import book, margins, toc
 from mkdocs_exporter.core.browser import RenderError
 from mkdocs_exporter.core.document import Document
 from mkdocs_exporter.core.html import HtmlDocument
 from mkdocs_exporter.core.pdf import RELATIVE_LINKS_BASE, fix_uri, info, link_actions
 from mkdocs_exporter.core.server import RESERVED
+from mkdocs_exporter.core.toc import TocEntry, TocOptions
 from mkdocs_exporter.logging import logger
 
 if TYPE_CHECKING:
@@ -90,18 +89,6 @@ class NavNode:
     """The identifier of the document (`None` for sections)."""
 
     children: list[NavNode] = field(default_factory=list)
-
-
-@dataclass
-class TocOptions:
-    """Options of the table of contents of an aggregated document."""
-
-    title: str = "Table of contents"
-    depth: int = 2
-    """The depth of the entries: 1 for documents only, 2 to add their `h2` headings..."""
-
-    template: str | None = None
-    """A Jinja template replacing the default one."""
 
 
 @dataclass
@@ -345,42 +332,6 @@ def running_heads(measure: Measure, plan: Plan) -> list[str]:
 # --- Table of contents and bookmarks ---------------------------------------------------
 
 
-@dataclass
-class TocEntry:
-    """An entry of the table of contents."""
-
-    title: str
-    page: int
-    href: str
-    children: list[TocEntry] = field(default_factory=list)
-
-
-def _nested(
-    headings: Sequence[tuple[int, str, str]], depth: int
-) -> Iterator[tuple[int, tuple[int, str, str], int]]:
-    """Headings up to a level: (index, heading, index of the parent heading or -1)."""
-
-    stack: list[tuple[int, int]] = []
-
-    for index, heading in enumerate(headings):
-        if heading[0] > depth:
-            continue
-
-        while stack and stack[-1][0] >= heading[0]:
-            stack.pop()
-
-        yield index, heading, stack[-1][1] if stack else -1
-        stack.append((heading[0], index))
-
-
-def _sub_headings(part: book.Part) -> list[tuple[int, str, str]]:
-    """The headings of a part, without its title."""
-
-    headings = part.headings
-
-    return list(headings[1:] if headings and headings[0][0] == 1 else headings)
-
-
 def _first(node: NavNode, parts: Mapping[str, book.Part]) -> book.Part | None:
     """The first part of a navigation entry."""
 
@@ -429,44 +380,15 @@ def toc_entries(
             if node.document is None:
                 entry.children = entries(node.children)
             else:
-                created: dict[int, TocEntry] = {}
-
-                for index, (_, id, title), parent in _nested(
-                    _sub_headings(part), depth
-                ):
-                    if (number := page(id)) is None:
-                        continue
-
-                    child = TocEntry(title=title, page=number, href="#" + id)
-                    created[index] = child
-                    siblings = (
-                        created[parent].children if parent >= 0 else entry.children
-                    )
-                    siblings.append(child)
+                entry.children = toc.heading_entries(
+                    toc.subheadings(part.headings), page, depth
+                )
 
             result.append(entry)
 
         return result
 
     return entries(nav)
-
-
-def render_toc(options: TocOptions, entries: Sequence[TocEntry]) -> str:
-    """Renders the table of contents."""
-
-    from mkdocs_exporter.core import resources
-
-    source = options.template or (
-        importlib.resources.files(resources)
-        .joinpath("toc.html")
-        .read_text(encoding="utf-8")
-    )
-
-    return (
-        Environment(autoescape=True)
-        .from_string(source)
-        .render(title=options.title, entries=entries)
-    )
 
 
 def outline(
@@ -514,8 +436,8 @@ def outline(
 
             items: dict[int, Any] = {}
 
-            for index, (_, id, title), parent_index in _nested(
-                _sub_headings(part), depth
+            for index, (_, id, title), parent_index in toc.nested(
+                toc.subheadings(part.headings), depth
             ):
                 if (position := destination(id)) is None:
                     continue
@@ -675,13 +597,13 @@ async def aggregate(
     book.prepare(parts, settings, prepare)
 
     by_document = {part.document.id: part for part in parts}
-    toc = aggregation.toc
+    contents = aggregation.toc
 
     def render(page: Callable[[str], int | None]) -> str | None:
-        if toc is None:
+        if contents is None:
             return None
 
-        return render_toc(toc, toc_entries(nav, by_document, page, toc.depth))
+        return toc.render(contents, toc_entries(nav, by_document, page, contents.depth))
 
     assembled = book.assemble(parts, settings, render(lambda _: 0))
     sections = margins.uses(options.margins, "section")
@@ -711,8 +633,8 @@ async def aggregate(
 
         if sections:
             result["css"] = margins.sections(running_heads(measure, blank_plan))
-        if (contents := render(number)) is not None:
-            result["toc"] = contents
+        if (html := render(number)) is not None:
+            result["toc"] = html
 
         return result, blank_plan
 
@@ -741,7 +663,7 @@ async def aggregate(
 
         return f"window.__MKDOCS_EXPORTER_BOOK__.apply({json.dumps(computed)})"
 
-    needs_patch = toc is not None or aggregation.start == "odd" or sections
+    needs_patch = contents is not None or aggregation.start == "odd" or sections
     path = f"{documents[0].url}?mkdocs-exporter={name}"
     url = renderer.server.publish(path, assembled.html)
 

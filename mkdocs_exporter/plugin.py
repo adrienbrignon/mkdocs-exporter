@@ -19,7 +19,7 @@ from mkdocs.structure.nav import Navigation, Section
 from mkdocs.structure.pages import Page
 
 from mkdocs_exporter.config import Config
-from mkdocs_exporter.core.aggregator import Aggregation, NavNode, TocOptions
+from mkdocs_exporter.core.aggregator import Aggregation, NavNode
 from mkdocs_exporter.core.browser import Browser
 from mkdocs_exporter.core.cache import Cache
 from mkdocs_exporter.core.document import Document, Site
@@ -28,6 +28,7 @@ from mkdocs_exporter.core.html import HtmlDocument
 from mkdocs_exporter.core.renderer import Outcome, RenderOptions
 from mkdocs_exporter.core.runner import Loop, run
 from mkdocs_exporter.core.themes import Theme, get_theme
+from mkdocs_exporter.core.toc import TocOptions
 from mkdocs_exporter.covers import CoverRenderer
 from mkdocs_exporter.helpers import resolve
 from mkdocs_exporter.logging import logger
@@ -315,6 +316,7 @@ class Plugin(BasePlugin[Config]):
                     "footer": dict(options.footer),
                 },
                 variables={"site_name": config.site_name},
+                toc=_toc(options.toc),
             ),
             cache,
         )
@@ -370,15 +372,6 @@ class Plugin(BasePlugin[Config]):
                 fnmatchcase(key, pattern) for pattern in options.include
             ) and not any(fnmatchcase(key, pattern) for pattern in options.exclude)
 
-        toc = None
-
-        if options.toc.enabled:
-            toc = TocOptions(
-                title=options.toc.title,
-                depth=options.toc.depth,
-                template=_read(options.toc.template) if options.toc.template else None,
-            )
-
         return Aggregation(
             output=options.output.replace(os.sep, "/"),
             documents=[
@@ -396,7 +389,7 @@ class Plugin(BasePlugin[Config]):
             },
             nav=self.nav,
             outline=options.outline,
-            toc=toc,
+            toc=_toc(options.toc),
         )
 
     def _exported(self, page: Page) -> bool:
@@ -423,6 +416,19 @@ def _metadata(page: Page, config: MkDocsConfig) -> dict[str, str]:
         }.items()
         if value
     }
+
+
+def _toc(options: Any) -> TocOptions | None:
+    """The options of a table of contents (`None` when it is disabled)."""
+
+    if not options.enabled:
+        return None
+
+    return TocOptions(
+        title=options.title,
+        depth=options.depth,
+        template=_read(options.template) if options.template else None,
+    )
 
 
 def _read(path: str) -> str:

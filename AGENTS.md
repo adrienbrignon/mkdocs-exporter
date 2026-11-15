@@ -47,6 +47,7 @@ Before considering a change done, run the linter, the formatter check, the type 
 | `core/aggregator.py` | Combined documents: printing, measurements, table of contents, bookmarks (pypdf) |
 | `core/book.py` | Combined documents assembled as a single HTML document (parts, URLs, identifiers, named pages) |
 | `core/margins.py` | Headers and footers compiled to CSS page margin boxes |
+| `core/toc.py` | Printed tables of contents (entries from headings, Jinja template) |
 | `core/themes/` | Theme adapters (`material`, `readthedocs`, generic fallback) |
 | `core/resources/` | `pdf.js` (gets pages ready, reports readiness), `book.js` (measures combined documents), theme scripts, print CSS, TOC template |
 | `core/runner.py` | Runs coroutines on an event loop owned by the exporter (`Loop`: kept across `serve` rebuilds) |
@@ -95,8 +96,10 @@ sets `body[mkdocs-exporter]` to `true` or `error` and resolves `window.__MKDOCS_
 Chromium create named destinations (`core/pdf.py:read_layout`). Combined documents are measured while
 they are printed (`book.js`, from a `matchMedia('print')` listener: the print layout is live there, the
 root element having one fragment per page). Features browsers lack are computed from a first print:
-`{section}` running heads become a `@counter-style` with one symbol per page
-(`Browser.print(refine=...)` patches the page and prints again).
+`{section}` running heads become a `@counter-style` with one symbol per page, tables of contents are
+rendered with placeholder page numbers then filled (`Browser.print(refine=...)` patches the page and prints
+again, until the patch is stable).
+Requires Chromium 138 (Playwright 1.53): older versions don't expose the root element's page fragments.
 
 Design decisions backed by measurements (don't revert them without measuring again):
 

@@ -7,13 +7,13 @@ import dataclasses
 import importlib.resources
 import json
 import re
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from urllib.parse import urlsplit
 
 from bs4 import Tag
 
-from mkdocs_exporter.core import margins
+from mkdocs_exporter.core import margins, toc
 from mkdocs_exporter.core.book import Prepared, page_resources, teleported
 from mkdocs_exporter.core.browser import Browser, Printed, PrintResult, RenderError
 from mkdocs_exporter.core.cache import Assets, Cache, digest, environment, fingerprint
@@ -28,12 +28,34 @@ from mkdocs_exporter.core.pdf import (
 )
 from mkdocs_exporter.core.server import RESERVED, Server
 from mkdocs_exporter.core.themes import Theme
+from mkdocs_exporter.core.toc import TocOptions
 from mkdocs_exporter.logging import logger
 
 COVER_LOCATIONS = ("front", "back")
 """The locations of cover pages."""
 
 HEADING = re.compile(r"^h[1-6]$")
+
+PATCH = """(patch) => {
+  if (patch.css !== undefined) {
+    let style = document.getElementById('mkdocs-exporter-sections');
+
+    if (!style) {
+      style = document.createElement('style');
+      style.id = 'mkdocs-exporter-sections';
+      document.head.appendChild(style);
+    }
+
+    style.textContent = patch.css;
+  }
+
+  const contents = document.querySelector('.mkdocs-exporter-toc');
+
+  if (patch.toc !== undefined && contents) {
+    contents.innerHTML = patch.toc;
+  }
+}"""
+"""Updates a printed document: running heads (`css`), table of contents (`toc`)."""
 """Heading elements."""
 
 
@@ -67,6 +89,10 @@ class RenderOptions:
 
     variables: Mapping[str, str] = field(default_factory=dict)
     """Values of the placeholders of headers and footers (e.g. `site_name`)."""
+
+    toc: TocOptions | None = None
+    """A table of contents of the document's headings, inserted after its front cover
+    (when it has headings besides its title)."""
 
 
 @dataclass
@@ -171,6 +197,7 @@ class Renderer:
         moved = teleported(content) if keep else []
 
         headings = _headings(content)
+        contents = self._insert_toc(html, content, headings)
 
         if headings:
             anchors = html.soup.new_tag(
@@ -228,11 +255,50 @@ class Renderer:
             for _, _, element in moved:
                 element.extract()
 
+            # Books have a table of contents of their own.
+            if contents is not None:
+                contents.extract()
+
             self.prepared[document.id] = Prepared(
                 content=content.extract(), resources=resources, teleported=moved
             )
 
         return output, headings
+
+    def _toc_entries(
+        self, headings: Sequence[toc.Heading], page: Callable[[str], int | None]
+    ) -> list[toc.TocEntry]:
+        """The entries of a document's table of contents (none without the option)."""
+
+        if self.options.toc is None:
+            return []
+
+        return toc.heading_entries(
+            toc.subheadings(headings), page, self.options.toc.depth
+        )
+
+    def _insert_toc(
+        self, html: HtmlDocument, content: Tag, headings: Sequence[toc.Heading]
+    ) -> Tag | None:
+        """Inserts a document's table of contents after its front cover, with
+        placeholder page numbers (filled once printed, see `render`)."""
+
+        entries = self._toc_entries(headings, lambda _: 0)
+
+        if self.options.toc is None or not entries:
+            return None
+
+        element = html.fragment(
+            toc.render(self.options.toc, entries), **{"class": toc.CLASS}
+        )
+        covers = content.find_all(class_="mkdocs-exporter-front-cover", recursive=False)
+
+        if covers:
+            covers[0].insert_after(element)
+        else:
+            content.insert(0, element)
+
+        return element
 
     async def render(self, document: Document) -> PrintResult:
         """Renders a document to PDF."""
@@ -254,24 +320,44 @@ class Renderer:
         path = f"{document.url}?mkdocs-exporter=default"
         url = self.server.publish(path, html)
         refine = None
+        sections = margins.uses(self.options.margins, "section")
+        listed = bool(self._toc_entries(headings, lambda _: 0))
 
-        if margins.uses(self.options.margins, "section"):
-            # The browser can't print running headings (`string-set`): print once to find
-            # out where headings land, then print again with the section of every page.
-            sections = [(i, title) for level, i, title in headings if level <= 2]
+        if sections or listed:
+            # The browser can't print running headings (`string-set`) nor the page
+            # numbers of links' targets (`target-counter()`): print once to find out
+            # where headings land, then print again with the section of every page and
+            # the page numbers of the table of contents (until they are stable).
+            running = [(i, title) for level, i, title in headings if level <= 2]
+            applied: dict[str, str] = {}
 
             async def refine(printed: Printed) -> str | None:
-                titles = margins.running_heads(sections, read_layout(printed.pdf))
-                css = margins.sections(titles)
+                layout = read_layout(printed.pdf)
+                patch = {}
 
-                return (
-                    "(() => { const style = document.createElement('style');"
-                    f" style.textContent = {json.dumps(css)};"
-                    " document.head.appendChild(style); })()"
-                )
+                if sections:
+                    titles = margins.running_heads(running, layout)
+                    patch["css"] = margins.sections(titles)
+                if listed and self.options.toc is not None:
+                    entries = self._toc_entries(
+                        headings,
+                        lambda i: (
+                            layout.anchors[i].page + 1 if i in layout.anchors else None
+                        ),
+                    )
+                    patch["toc"] = toc.render(self.options.toc, entries)
+                if patch == applied:
+                    return None
+
+                applied.clear()
+                applied.update(patch)
+
+                return f"({PATCH})({json.dumps(patch)})"
 
         try:
-            result = await self.browser.print(url, refine=refine)
+            result = await self.browser.print(
+                url, refine=refine, attempts=2 if listed else 1
+            )
         finally:
             self.server.unpublish(path)
 

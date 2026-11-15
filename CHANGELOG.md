@@ -12,6 +12,7 @@ Read the [migration guide](https://adrienbrignon.github.io/mkdocs-exporter/migra
 - Combined documents have bookmarks following the navigation and the pages' headings (`outline`).
 - Links between pages of combined documents point within the document (#52).
 - Combined documents can have a table of contents with page numbers (`toc`) (#46).
+- Documents of pages can start with a table of contents of their headings (`formats.pdf.toc`) (#24).
 - Several combined documents can be generated, selecting pages with patterns (`aggregators`, `include`, `exclude`) (#31).
 - Pages of combined documents can start on odd pages (`start: odd`) (#67).
 - Headers and footers with placeholders (`header`, `footer`) (#84).

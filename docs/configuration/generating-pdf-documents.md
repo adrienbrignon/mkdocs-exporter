@@ -125,6 +125,25 @@ tags:
 ---
 ```
 
+### Table of contents
+
+Documents can start with a table of contents of the page's headings, with their page numbers, inserted after the front cover:
+
+```yaml
+plugins:
+  - exporter:
+      formats:
+        pdf:
+          toc:
+            enabled: true
+            title: Contents
+            depth: 3 # Second and third-level headings
+```
+
+Pages without headings besides their title don't get one, nor do [combined documents](combining-pages.md#table-of-contents), which have a table of contents of their own.
+Like the table of contents of combined documents, its appearance can be changed with CSS or a template of your own (`toc.template`).
+The page numbers are filled from a first print of the document, which is then printed again.
+
 ## Cover pages
 
 Cover pages are added at the beginning (`front`) and at the end (`back`) of documents. They are [Jinja](https://jinja.palletsprojects.com/) templates rendering HTML:
