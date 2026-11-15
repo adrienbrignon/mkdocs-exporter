@@ -234,3 +234,159 @@ def test_aggregated_documents_must_have_distinct_outputs(
         )
 
     assert "Several aggregators write to the same file: combined.pdf" in caplog.text
+
+
+def test_bookmarks_show_their_heading(book: Site) -> None:
+    """Destinations are lowered by the page's top margin (Chromium leaves it out)."""
+
+    combined = book.pdf("combined.pdf")
+    advanced = combined.outline[1].children[1]
+
+    for item in [advanced, *advanced.children]:
+        assert item.page is not None
+        assert item.top is not None
+
+        position = combined.baseline(item.title, item.page)
+
+        assert position is not None, item.title
+
+        baseline, size = position
+
+        assert 0 < item.top - baseline < 2 * size, item.title
+
+
+def test_documents_with_covers_can_start_on_odd_pages(project: Project) -> None:
+    site = project.build(
+        exporter=aggregator(covers="front", start="odd", toc={"enabled": True})
+    )
+    combined = site.pdf("combined.pdf")
+    covers = combined.pages_containing("FRONT-COVER")
+    blanks = [i for i, text in enumerate(combined.pages_text) if not text.strip()]
+
+    assert len(covers) == 4
+    assert all(page % 2 == 0 for page in covers)
+    assert blanks == [covers[1] - 1]
+
+
+@pytest.mark.parametrize("covers", ["all", "none", "limits", "book", "front", "back"])
+def test_pages_are_numbered_across_documents(project: Project, covers: str) -> None:
+    combined = project.build(exporter=aggregator(covers=covers)).pdf("combined.pdf")
+
+    for index, text in enumerate(combined.pages_text):
+        assert f"{index + 1} / {combined.page_count}" in text
+
+
+def test_every_table_of_contents_entry_leads_to_its_page(project: Project) -> None:
+    site = project.build(exporter=aggregator(covers="all", toc={"enabled": True}))
+    combined = site.pdf("combined.pdf")
+    toc = combined.pages_text[page_of(combined, "Table of contents")]
+    entries = re.findall(r"^(\w[\w ]*?)\s*(\d+)$", toc, re.MULTILINE)
+
+    assert len(entries) >= 8
+
+    for title, number in entries:
+        if title != "Guide":  # A section of the navigation.
+            assert title in combined.pages_text[int(number) - 1], title
+
+
+def test_no_link_points_to_the_local_server(project: Project) -> None:
+    """Links created by scripts are resolved against the website, not the server."""
+
+    project.write(
+        "scripts/link.js",
+        "const link = document.createElement('a');\n"
+        "link.href = '/docs/reference/';\n"
+        "link.textContent = 'SCRIPTED-LINK';\n"
+        "document.querySelector('article').appendChild(link);\n",
+    )
+
+    site = project.build(
+        exporter={"formats": {"pdf": {"scripts": ["scripts/link.js"]}}}
+    )
+    combined = site.pdf("combined.pdf")
+
+    assert "https://example.org/docs/reference/" in combined.external_links
+    assert not [link for link in combined.external_links if "127.0.0.1" in link]
+
+
+def test_links_without_site_url_are_relative_to_the_document(project: Project) -> None:
+    site = project.build(
+        exporter=aggregator(output="pdf/book.pdf", covers="none", exclude=["guide/*"]),
+        site_url="",
+    )
+    links = site.pdf("pdf/book.pdf").external_links
+
+    assert "../guide/intro/" in links
+    assert not any(link.startswith(("file:", "http://127.")) for link in links)
+
+
+def test_tabs_of_several_pages_keep_their_content(project: Project) -> None:
+    """Tabs of several pages are printed (their radio groups are namespaced)."""
+
+    project.write(
+        "docs/reference.md",
+        '# Reference\n\n=== "One"\n\n    REFERENCE-TAB-ONE\n\n'
+        '=== "Two"\n\n    REFERENCE-TAB-TWO\n',
+    )
+
+    combined = project.build(exporter=aggregator(covers="none")).pdf("combined.pdf")
+
+    for marker in [
+        "Content of the first tab.",
+        "TAB-TWO-MARKER",
+        "REFERENCE-TAB-ONE",
+        "REFERENCE-TAB-TWO",
+    ]:
+        assert combined.count(marker) == 1, marker
+
+
+def test_cover_styles_depending_on_the_page_stay_in_their_part(
+    project: Project,
+) -> None:
+    project.write(
+        "covers/front.html",
+        '<style data-teleport="head">'
+        '.cover-title::after { content: " ({{ page.title }})"; }</style>\n'
+        '<div class="front-cover"><h1 class="cover-title">FRONT-COVER</h1></div>\n',
+    )
+
+    combined = project.build(exporter=aggregator(covers="front")).pdf("combined.pdf")
+    covers = combined.pages_containing("FRONT-COVER")
+
+    assert [
+        re.search(r"FRONT-COVER \((.*)\)", combined.pages_text[page]).group(1)  # type: ignore[union-attr]
+        for page in covers
+    ] == ["Home", "Introduction", "Advanced", "Reference"]
+
+
+def test_first_page_rules_apply_to_every_front_cover(project: Project) -> None:
+    project.write("first.css", "@page :first { @bottom-center { content: none; } }")
+
+    site = project.build(
+        exporter={
+            "formats": {
+                "pdf": {
+                    "stylesheets": ["pdf.css", "first.css"],
+                    "aggregator": {"covers": "front"},
+                }
+            }
+        }
+    )
+    combined = site.pdf("combined.pdf")
+
+    for page in combined.pages_containing("FRONT-COVER"):
+        assert " / " not in combined.pages_text[page]
+
+    assert f"2 / {combined.page_count}" in combined.pages_text[1]
+
+
+def test_wide_content_does_not_shrink_other_documents(project: Project) -> None:
+    project.write(
+        "docs/reference.md", '# Reference\n\n<div style="width: 3000px">Wide.</div>\n'
+    )
+
+    site = project.build(exporter=aggregator(covers="none"))
+
+    assert site.pdf("combined.pdf").font_size("Introduction") == site.pdf(
+        "guide/intro/index.pdf"
+    ).font_size("Introduction")

@@ -32,6 +32,8 @@ class OutlineItem:
     title: str
     page: int | None
     children: list[OutlineItem] = field(default_factory=list)
+    top: float | None = None
+    """The position it shows (from the bottom of the page, in points), if any."""
 
 
 class PdfDocument:
@@ -119,7 +121,14 @@ class PdfDocument:
                     continue
 
                 page = self.reader.get_destination_page_number(item)
-                result.append(OutlineItem(title=str(item.title), page=page))
+                top = item.get("/Top")
+                result.append(
+                    OutlineItem(
+                        title=str(item.title),
+                        page=page,
+                        top=None if top is None else float(top),
+                    )
+                )
 
             return result
 
@@ -130,6 +139,20 @@ class PdfDocument:
         """The document information dictionary."""
 
         return {key: str(value) for key, value in (self.reader.metadata or {}).items()}
+
+    def baseline(self, needle: str, page: int) -> tuple[float, float] | None:
+        """The baseline (from the bottom, in points) and size of a text on a page."""
+
+        found: list[tuple[float, float]] = []
+
+        def visit(text: str, cm: list, tm: list, font: object, size: float) -> None:
+            if not found and text.strip().startswith(needle):
+                scale = math.hypot(tm[0], tm[1]) * math.hypot(cm[0], cm[1])
+                found.append((tm[5] * cm[3] + cm[5], size * scale))
+
+        self.reader.pages[page].extract_text(visitor_text=visit)
+
+        return found[0] if found else None
 
     def font_size(self, needle: str) -> float | None:
         """The size (in points, as printed) of the first text starting with `needle`."""

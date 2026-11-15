@@ -69,3 +69,27 @@ def test_page_titles_follow_aggregated_documents(project: Project) -> None:
     reference = combined.pages_containing("Plain reference page")[0]
 
     assert "TITLE Reference" in combined.pages_text[reference]
+
+
+def test_sections_and_titles_follow_aggregated_documents(project: Project) -> None:
+    site = project.build(
+        exporter={
+            "formats": {
+                "pdf": {
+                    **MARGINS,
+                    "aggregator": {"covers": "none", "toc": {"enabled": True}},
+                }
+            }
+        }
+    )
+    combined = site.pdf("combined.pdf")
+    toc = combined.pages_containing("Table of contents")[0]
+    reference = combined.pages_containing("Plain reference page")[0]
+    advanced = combined.pages_containing("Back to home")[0]
+
+    assert "TITLE Table of contents" in combined.pages_text[toc]
+    assert "SECTION  END" in combined.pages_text[toc]
+    assert "TITLE Reference" in combined.pages_text[reference]
+    assert "SECTION Reference END" in combined.pages_text[reference]
+    assert "TITLE Advanced" in combined.pages_text[advanced]
+    assert "SECTION Advanced END" in combined.pages_text[advanced]
