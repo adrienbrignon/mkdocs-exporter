@@ -147,6 +147,25 @@ class Browser:
         return self.headless, tuple(self.args), self.channel
 
     @property
+    def version(self) -> str:
+        """The version of the browser."""
+
+        if self._browser is None:
+            raise RuntimeError("The browser has not been launched")
+
+        return self._browser.version
+
+    async def renew(self) -> None:
+        """Starts afresh (new cache, cookies and storage) for the next pages."""
+
+        if self._browser is None or self._context is None:
+            raise RuntimeError("The browser has not been launched")
+
+        await self._context.close()
+
+        self._context = await self._browser.new_context()
+
+    @property
     def running(self) -> bool:
         """Whether the browser has been launched and is still usable."""
 

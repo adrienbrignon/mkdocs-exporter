@@ -337,6 +337,9 @@ class Plugin(BasePlugin[Config]):
         if kept is not None and kept.running and kept.options == browser.options:
             kept.timeout, kept.debug = browser.timeout, browser.debug
 
+            # Pages are served by a new server: forget what was cached for the last one.
+            await kept.renew()
+
             return kept
         if kept is not None:
             await kept.close()
