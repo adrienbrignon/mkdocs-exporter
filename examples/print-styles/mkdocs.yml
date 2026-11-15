@@ -1,0 +1,9 @@
+INHERIT: ../base.yml
+site_url: https://field-guide.example.com/
+
+plugins:
+  - exporter:
+      formats:
+        pdf:
+          stylesheets:
+            - pdf.css

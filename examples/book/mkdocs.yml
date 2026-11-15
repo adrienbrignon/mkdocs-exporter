@@ -1,0 +1,23 @@
+INHERIT: ../base.yml
+
+plugins:
+  - exporter:
+      formats:
+        pdf:
+          stylesheets:
+            - pdf.css
+          covers:
+            front: covers/front.html.j2
+          header:
+            center: "{page_title}"
+          footer:
+            center: "{page}"
+          aggregator:
+            enabled: true
+            output: field-guide.pdf
+            covers: limits
+            start: odd
+            outline: 2
+            toc:
+              enabled: true
+              title: Contents

@@ -37,11 +37,7 @@ serve:
 >@ MKDOCS_EXPORTER_PDF=$(PDF) MKDOCS_EXPORTER_PDF_AGGREGATOR=$(PDF_AGGREGATOR) uv run mkdocs serve $(ARGS)
 
 examples:
-> @for theme in material readthedocs; do \
->   uv run mkdocs build -q -f examples/project/mkdocs.yml -t $$theme -d $(CURDIR)/.cache/examples/$$theme || exit 1; \
->   cp .cache/examples/$$theme/guide/writing/index.pdf examples/themes/$$theme.pdf; \
-> done
-> cp .cache/examples/material/example.pdf examples/example.pdf
+> uv run python examples/build.py
 
 dist:
 > uv build

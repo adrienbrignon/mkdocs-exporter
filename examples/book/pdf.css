@@ -1,0 +1,15 @@
+@page {
+  size: 6in 9in;
+  margin: 2cm 1.5cm;
+}
+
+/* Wider inner margins, for binding */
+@page :right {
+  margin-left: 2cm;
+  margin-right: 1.2cm;
+}
+
+@page :left {
+  margin-left: 1.2cm;
+  margin-right: 2cm;
+}

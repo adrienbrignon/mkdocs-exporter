@@ -1,0 +1,39 @@
+/* Number second and third-level headings */
+.md-typeset {
+  counter-reset: h2;
+
+  h2 {
+    counter-reset: h3;
+  }
+
+  h2::before {
+    counter-increment: h2;
+    content: counter(h2) ". ";
+  }
+
+  h3::before {
+    counter-increment: h3;
+    content: counter(h2) "." counter(h3) ". ";
+  }
+}
+
+/* Print the address of links to other websites */
+.md-typeset a[href^="http"]::after {
+  content: " (" attr(href) ")";
+  color: #757575;
+  font-size: 0.85em;
+  overflow-wrap: anywhere;
+}
+
+/* Mark every page as a draft */
+body::after {
+  content: "DRAFT";
+  position: fixed;
+  top: 40%;
+  left: 0;
+  right: 0;
+  color: rgb(0 0 0 / 6%);
+  font: 700 96pt sans-serif;
+  text-align: center;
+  transform: rotate(-35deg);
+}

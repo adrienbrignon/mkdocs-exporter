@@ -1,9 +1,10 @@
 .venv/
-.cache/
+**/.cache/
 .mypy_cache/
 .pytest_cache/
 .ruff_cache/
 
 dist/
 site/
-examples/
+examples/**/*.pdf
+examples/*/site/

@@ -27,7 +27,7 @@ third-party plugins, so neither is supported as a plugin host.
 | Tests | `uv run pytest` (`-m "not browser"` to skip the end-to-end tests; `--cov` for coverage, which fails under 85 % without them) |
 | Tests on ProperDocs | `MKDOCS_EXPORTER_TEST_PROPERDOCS=1 uv run --with properdocs --with properdocs-theme-mkdocs --with properdocs-theme-readthedocs pytest` |
 | Build / serve the documentation | `make build` / `make serve` (`PDF=false` or `PDF_AGGREGATOR=false` to speed things up) |
-| Regenerate the example documents | `make examples` (from `examples/project`) |
+| Build the examples (documents and previews) | `make examples` (needs `pdftoppm`, from Poppler) |
 | Build distributions | `uv build` |
 
 Set `NO_MKDOCS_2_WARNING=1` to silence the end-of-life banner Material for MkDocs prints on every build.
@@ -59,6 +59,7 @@ Before considering a change done, run the linter, the formatter check, the type 
 | `mkdocs_exporter/formats/pdf/buttons/download.py` | Callables referenced from users' `mkdocs.yml` via `!!python/name:` |
 | `tests/unit/`, `tests/integration/` | Unit tests; end-to-end tests building `tests/fixtures/site` (marker `browser`) |
 | `docs/`, `mkdocs.yml`, `resources/`, `macros/`, `overrides/` | This project's own documentation site (it dogfoods the plugin) |
+| `examples/` | Example projects shown by the documentation: `base.yml` and `content/` (the *Field Guide* website) are shared, each folder with a `mkdocs.yml` is a project; `build.py` builds them and renders the previews of `docs/assets/images/examples/` (`make examples`) |
 
 ## How it works
 
@@ -167,6 +168,8 @@ Design decisions backed by measurements (don't revert them without measuring aga
   `project.build(exporter={...}, **mkdocs_config)` merges options into the defaults of
   `tests/conftest.py`; `project.serve(builds=2, dirty=False)` reproduces `mkdocs serve` rebuilds;
   `project.write(path, content)` customizes the project first.
+- The example projects (`examples/`) are built by `tests/integration/test_examples.py`, which checks what the
+  documentation says each one does: a new project needs a test, and `make examples` to refresh its previews.
 - Inspect output with `site.pdf(path)` (`tests/support/pdf.py`): text per page, links, outline, metadata,
   images. Never compare PDF bytes (pypdf output isn't deterministic).
 - A known, unfixed bug gets a test marked `@pytest.mark.xfail(reason="#N: ...")`; xfail is strict, so the

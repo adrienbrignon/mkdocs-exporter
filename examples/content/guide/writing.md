@@ -1,3 +1,7 @@
+---
+description: Text, lists, code, admonitions, tabs and footnotes, as they are printed.
+---
+
 # Writing pages
 
 Pages are written in Markdown, like the rest of the website: everything Markdown extensions render can be printed.

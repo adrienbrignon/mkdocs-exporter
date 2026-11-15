@@ -1,3 +1,7 @@
+---
+description: Page sizes, headers and footers, and cover pages.
+---
+
 # Printing pages
 
 Documents are laid out by the browser: CSS rules decide the size of pages and what they show.

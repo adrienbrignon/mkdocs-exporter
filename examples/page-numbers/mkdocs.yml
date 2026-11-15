@@ -1,0 +1,13 @@
+INHERIT: ../base.yml
+
+plugins:
+  - exporter:
+      formats:
+        pdf:
+          stylesheets:
+            - pdf.css
+          header:
+            left: "{site_name}"
+            right: "{section}"
+          footer:
+            right: "Page {page} of {pages}"

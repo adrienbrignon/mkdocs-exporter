@@ -1,0 +1,50 @@
+<style data-teleport="head">
+  @page :first {
+    margin: 0;
+    background: #1a237e url("/assets/frame.svg") center / 100% 100%;
+  }
+
+  .book-cover {
+    break-after: page;
+    padding: 5cm 2cm 0;
+    color: #fff;
+    font-family: Georgia, "DejaVu Serif", serif;
+    text-align: center;
+
+    .title {
+      font-size: 28pt;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .rule {
+      width: 1.5cm;
+      height: 1px;
+      margin: 0.6cm auto;
+      background: #ffca28;
+    }
+
+    .subtitle {
+      color: #c5cae9;
+      font-size: 12pt;
+      font-style: italic;
+      line-height: 1.5;
+    }
+
+    .author {
+      margin-top: 8cm;
+      color: #c5cae9;
+      font-size: 9pt;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+    }
+  }
+</style>
+<div class="book-cover">
+  <div class="title">{{ config.site_name }}</div>
+  <div class="rule"></div>
+  <div class="subtitle">
+    {{ config.site_description if page.is_homepage else page.title }}
+  </div>
+  <div class="author">{{ config.site_author }}</div>
+</div>

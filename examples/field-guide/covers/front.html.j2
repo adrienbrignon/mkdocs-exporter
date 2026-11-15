@@ -1,0 +1,67 @@
+<style data-teleport="head">
+  @page :first {
+    margin: 0;
+    background: #1a237e url("/assets/contours.svg") center / cover;
+  }
+
+  .cover {
+    break-after: page;
+    padding: 2.5cm 2.5cm 0;
+    color: #fff;
+    font-family: "Helvetica Neue", Arial, sans-serif;
+
+    .brand {
+      font-size: 10pt;
+      font-weight: 600;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+
+      &::before {
+        content: "";
+        display: block;
+        width: 1.2cm;
+        height: 3px;
+        margin-bottom: 0.4cm;
+        background: #ffca28;
+      }
+    }
+
+    .heading {
+      margin-top: 8cm;
+    }
+
+    .section {
+      margin-bottom: 0.3cm;
+      color: #ffca28;
+      font-size: 11pt;
+      font-weight: 600;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+    }
+
+    .title {
+      font-size: 44pt;
+      font-weight: 700;
+      line-height: 1.05;
+    }
+
+    .description {
+      max-width: 12cm;
+      margin-top: 0.7cm;
+      color: #c5cae9;
+      font-size: 14pt;
+      line-height: 1.5;
+    }
+  }
+</style>
+{% set home = page.is_homepage %}
+<div class="cover">
+  <div class="brand">{{ config.site_author if home else config.site_name }}</div>
+  <div class="heading">
+    {% if page.parent %}<div class="section">{{ page.parent.title }}</div>{% endif %}
+    <div class="title">{{ config.site_name if home else page.title }}</div>
+    <div class="description">
+      {{ config.site_description if home else page.meta.description }}
+    </div>
+  </div>
+</div>
