@@ -1,7 +1,7 @@
 # Changelog
 
-All notable changes to this project are documented in this file.
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/).
+All notable changes to this project are documented in this file, and this project adheres to [Semantic Versioning](https://semver.org/).
+Entries are generated from commit messages ([Conventional Commits](https://www.conventionalcommits.org/)) by [release-please](https://github.com/googleapis/release-please), in release pull requests where they can be edited; earlier entries follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [7.0.0] - Unreleased
 

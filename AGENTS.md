@@ -175,7 +175,8 @@ Design decisions backed by measurements (don't revert them without measuring aga
   - the `window.MkDocsExporter` JavaScript hooks and the `mkdocs-exporter-*` CSS classes.
 - Commits follow [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`,
   `refactor:`, `test:`, `build:`, `ci:`, `chore:`, `style:`); mark breaking changes with `!` and a
-  `BREAKING CHANGE:` footer; reference issues with `Fixes #N` / `Refs #N`.
+  `BREAKING CHANGE:` footer; reference issues with `Fixes #N` / `Refs #N`. The subjects of `feat`, `fix`
+  and `perf` commits make the changelog (see [Releasing](#releasing)): write them for users.
 - Formatting-only commits go into `.git-blame-ignore-revs`.
 
 ## Testing
@@ -196,7 +197,18 @@ Design decisions backed by measurements (don't revert them without measuring aga
 
 ## Releasing
 
-1. Update the version: `uv version <x.y.z>`.
-2. Update the changelog and the documentation.
-3. Tag `v<x.y.z>` and push the tag: the `Release` workflow builds, publishes to PyPI (trusted publishing)
-   and creates the GitHub release.
+Releases are automated by [release-please](https://github.com/googleapis/release-please)
+(`release-please-config.json`, `.release-please-manifest.json`) and the `Release` workflow; never bump
+the version or tag by hand.
+
+1. Every push to `master` updates a release pull request with the next version (from the Conventional
+   Commits since the last release), `pyproject.toml`, `uv.lock` and `CHANGELOG.md`. Edit its changelog
+   (and its description, the release notes) before merging it, as the last change: new commits rewrite it.
+2. Merging it tags `v<version>` and creates a draft GitHub release. The workflow then builds the
+   distributions once, attests their build provenance (`actions/attest`), publishes them to PyPI (trusted
+   publishing, with PEP 740 attestations), attaches them to the release and publishes it. If a job fails,
+   re-run the failed jobs of that run: the release is only created once.
+3. A commit body with `Release-As: <version>` forces the next version (e.g. `Release-As: 7.0.0-rc.1`).
+4. Release candidates: while `"versioning": "prerelease"` and `"prerelease": true` are set, versions are
+   `x.y.z-rc.N` (`x.y.zrcN` on PyPI) and GitHub releases are marked as pre-releases. For the final
+   version, remove both settings in a commit whose body has `Release-As: x.y.z`.

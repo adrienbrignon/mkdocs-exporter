@@ -1,0 +1,36 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "packages": {
+    ".": {
+      "release-type": "python",
+      "package-name": "mkdocs-exporter",
+      "include-component-in-tag": false,
+      "versioning": "prerelease",
+      "prerelease": true,
+      "prerelease-type": "rc",
+      "draft": true,
+      "force-tag-creation": true,
+      "changelog-sections": [
+        { "type": "feat", "section": "Added" },
+        { "type": "fix", "section": "Fixed" },
+        { "type": "perf", "section": "Changed" },
+        { "type": "revert", "section": "Reverted" },
+        { "type": "deps", "section": "Dependencies" },
+        { "type": "docs", "section": "Documentation", "hidden": true },
+        { "type": "refactor", "section": "Changed", "hidden": true },
+        { "type": "style", "section": "Styles", "hidden": true },
+        { "type": "test", "section": "Tests", "hidden": true },
+        { "type": "build", "section": "Build", "hidden": true },
+        { "type": "ci", "section": "Continuous integration", "hidden": true },
+        { "type": "chore", "section": "Chores", "hidden": true }
+      ],
+      "extra-files": [
+        {
+          "type": "toml",
+          "path": "uv.lock",
+          "jsonpath": "$.package[?(@.name.value=='mkdocs-exporter')].version"
+        }
+      ]
+    }
+  }
+}

@@ -2,30 +2,69 @@ name: Release
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - master
+  workflow_dispatch:
 
-permissions:
-  contents: read
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
 
 jobs:
+  release-please:
+    name: Release pull request
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Release commits, tags and draft releases
+      issues: write  # Labels of the release pull request
+      pull-requests: write  # The release pull request
+    outputs:
+      created: ${{ steps.release.outputs.release_created }}
+      tag: ${{ steps.release.outputs.tag_name }}
+    steps:
+      - name: Update the release pull request, or release once it is merged
+        id: release
+        uses: googleapis/release-please-action@v5
+
   build:
     name: Build
+    needs: release-please
+    if: needs.release-please.outputs.created == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      attestations: write  # Stores the provenance attestation
+      id-token: write  # Signs the provenance attestation
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.release-please.outputs.tag }}
+          persist-credentials: false
       - name: Set up uv
         uses: astral-sh/setup-uv@v10.3.3
       - name: Check that the tag matches the project version
-        run: test "v$(uv version --short)" = "${GITHUB_REF_NAME}"
+        env:
+          TAG: ${{ needs.release-please.outputs.tag }}
+        # PEP 440 versions are compared: tag v7.0.0-rc.1 matches version 7.0.0rc1.
+        run: >-
+          uv run --no-project --with packaging python -c
+          'import sys; from packaging.version import Version; sys.exit(Version(sys.argv[1]) != Version(sys.argv[2]))'
+          "${TAG#v}" "$(uv version --short)"
       - name: Build distributions
         run: uv build
+      - name: Attest build provenance
+        uses: actions/attest@v4
+        with:
+          subject-path: dist/*
       - name: Upload distributions
         uses: actions/upload-artifact@v7
         with:
           name: dist
           path: dist/
+          if-no-files-found: error
 
   publish:
     name: Publish to PyPI
@@ -35,21 +74,19 @@ jobs:
       name: pypi
       url: https://pypi.org/project/mkdocs-exporter/
     permissions:
-      id-token: write  # Trusted publishing
+      id-token: write  # Trusted publishing, PEP 740 attestations
     steps:
       - name: Download distributions
         uses: actions/download-artifact@v8
         with:
           name: dist
           path: dist/
-      - name: Set up uv
-        uses: astral-sh/setup-uv@v10.3.3
-      - name: Publish distributions
-        run: uv publish dist/*
+      - name: Publish distributions (with attestations)
+        uses: pypa/gh-action-pypi-publish@release/v1
 
   github-release:
     name: GitHub release
-    needs: publish
+    needs: [release-please, publish]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -59,11 +96,10 @@ jobs:
         with:
           name: dist
           path: dist/
-      - name: Create release
+      - name: Attach the distributions and publish the release
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.release-please.outputs.tag }}
         run: |
-          flags=()
-          # Pre-releases (e.g. v7.0.0rc1) aren't marked as the latest release.
-          if [[ "${GITHUB_REF_NAME}" =~ (a|b|rc)[0-9]+$ ]]; then flags+=(--prerelease); fi
-          gh release create "${GITHUB_REF_NAME}" dist/* --repo "${GITHUB_REPOSITORY}" --verify-tag --generate-notes "${flags[@]}"
+          gh release upload "${TAG}" dist/* --repo "${GITHUB_REPOSITORY}"
+          gh release edit "${TAG}" --draft=false --repo "${GITHUB_REPOSITORY}"
