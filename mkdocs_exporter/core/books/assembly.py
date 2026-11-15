@@ -30,7 +30,7 @@ from mkdocs_exporter.core.html import headings as find_headings
 from mkdocs_exporter.core.toc import insert as insert_toc
 
 if TYPE_CHECKING:
-    from mkdocs_exporter.core.renderer import Prepared
+    from mkdocs_exporter.core.preparation import Prepared
 
 PLACEHOLDER = "<!--mkdocs-exporter-parts-->"
 """Where the parts are inserted in the serialized shell (a comment)."""

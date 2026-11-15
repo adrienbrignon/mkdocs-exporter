@@ -164,7 +164,7 @@ class BookPrinter:
         """A page, as a part of the book."""
 
         covers = kept_covers(self.book.covers, index, count) & set(document.covers)
-        prepared = self.renderer.prepared.pop(document.id, None)
+        prepared = self.renderer.preparer.prepared.pop(document.id, None)
 
         # The content prepared for the page's own document is reused, except for the
         # first page: its whole document is the book's shell.
@@ -180,7 +180,7 @@ class BookPrinter:
 
     def _prepare_content(self, part: Part) -> None:
         if part.html is not None:
-            self.renderer.prepare_content(
+            self.renderer.preparer.prepare_content(
                 part.html, part.content, part.document, part.covers
             )
 
@@ -204,7 +204,7 @@ class BookPrinter:
             scripts=options.scripts,
             margins=options.margins,
             variables=options.variables,
-            base_stylesheets=renderer.base_stylesheets,
+            base_stylesheets=renderer.preparer.base_stylesheets,
             stylesheets=options.stylesheets,
             toc_title=self.book.toc.title if self.book.toc else "",
         )

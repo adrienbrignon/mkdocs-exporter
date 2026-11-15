@@ -17,7 +17,7 @@ from mkdocs_exporter.core.html import (
     resource_url,
     teleported,
 )
-from mkdocs_exporter.core.renderer import Prepared
+from mkdocs_exporter.core.preparation import Prepared
 
 FRAGMENT = """<article>
 <img src="../img/a.png" srcset="../img/a.png 1x, ../img/a@2x.png 2x">

@@ -69,7 +69,7 @@ class Exporter:
                     self.cache,
                 )
                 # Books reuse the content of pages prepared for their own document.
-                renderer.keep = {
+                renderer.preparer.keep = {
                     document.id for book in books for document in book.documents
                 }
                 outcomes = await renderer.render_all(documents)
