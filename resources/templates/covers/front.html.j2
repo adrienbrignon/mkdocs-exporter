@@ -1,6 +1,5 @@
 <style data-teleport="head">
   .front-cover {
-    margin: var(--margin);
     height: calc(var(--height) - var(--offset));
     page-break-after: always;
     border: 1px solid #fff;
@@ -42,7 +41,6 @@
         line-height: 1.1;
         margin-top: 1em;
         color: #fff;
-        string-set: title content(text);
       }
 
       > .version {
@@ -53,16 +51,7 @@
     }
   }
 
-  @page {
-    @top-center {
-      font-size: 9pt;
-      color: #7f7f7f;
-      content: '{{ config.site_name }}' ' — ' string(title);
-    }
-  }
-
   @page :first {
-    margin: 0;
     background: var(--md-primary-fg-color);
 
     @top-center {

@@ -9,7 +9,7 @@ hide:
 
 [MkDocs Exporter](/) is a plugin for [MkDocs](https://www.mkdocs.org/) that exports your pages to PDF documents and can combine them into a single document, with bookmarks, a table of contents and working links.
 
-Documents are printed by a headless Chromium browser driven by [Playwright](https://playwright.dev/python/), with [Paged.js](https://pagedjs.org/) providing [CSS Paged Media](https://www.w3.org/TR/css-page-3/) support (page sizes, margins, headers and footers, page counters...).
+Documents are printed by a headless Chromium browser driven by [Playwright](https://playwright.dev/python/), which supports [CSS Paged Media](https://www.w3.org/TR/css-page-3/): page sizes, margins, headers and footers, page counters...
 
 ## Examples
 

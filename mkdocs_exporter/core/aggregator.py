@@ -44,9 +44,6 @@ COVER_MODES = ("all", "none", "limits", "book", "front", "back")
 START_MODES = ("any", "odd")
 """On which pages documents start in an aggregated document."""
 
-POINTS_PER_PIXEL = 0.75
-"""PDF points (1/72 in) per CSS pixel (1/96 in)."""
-
 
 def kept_covers(mode: str, index: int, count: int) -> set[str]:
     """The covers kept for the document at `index` among `count` aggregated documents.
@@ -147,18 +144,11 @@ class Part:
     """Is it preceded by a blank page?"""
 
     def start(self) -> Position:
-        """Where its content starts: its title, or the page following its front cover."""
+        """Where its content starts: its first heading, or its first page."""
 
         headings = self.layout.headings
 
-        if headings and headings[0].level == 1:
-            return headings[0].position
-
-        covers = (
-            self.layout.cover_pages.get("front", 0) if "front" in self.covers else 0
-        )
-
-        return Position(page=min(covers, max(0, self.pages - 1)), top=0)
+        return headings[0].position if headings else Position(page=0)
 
 
 def _number(parts: list[Part], start: str) -> list[Part]:
@@ -180,15 +170,18 @@ def plan(
     mode: str,
     start: str = "any",
 ) -> list[Part]:
-    """Plans the aggregated document from the layout of each rendered document."""
+    """Plans the aggregated document from the layout of each rendered document.
+
+    Page counts are estimates (removing covers changes them): the aggregated document is
+    numbered again once its parts have been rendered.
+    """
 
     parts = []
 
     for index, document in enumerate(documents):
         layout = layouts[document.id]
         covers = kept_covers(mode, index, len(documents)) & set(document.covers)
-        removed = set(document.covers) - covers
-        pages = layout.pages - sum(layout.cover_pages.get(c, 0) for c in removed)
+        pages = layout.pages
 
         parts.append(
             Part(
@@ -383,7 +376,7 @@ class Book:
             self.starts[part.document.id] + position.page, len(self.writer.pages) - 1
         )
         height = float(self.writer.pages[index].mediabox.height)
-        top = max(0.0, height - position.top * POINTS_PER_PIXEL)
+        top = max(0.0, height - position.top)
 
         return index, Fit.xyz(left=0, top=top)
 
@@ -676,7 +669,12 @@ def _result(outcome: Outcome) -> PrintResult:
 def _layout(outcome: Outcome) -> Layout:
     """The layout of a successfully rendered document."""
 
-    return _result(outcome).layout
+    layout = _result(outcome).layout
+
+    if layout is None:  # pragma: no cover - layouts are always read by the renderer
+        raise RuntimeError(f"The layout of '{outcome.document.id}' is unknown")
+
+    return layout
 
 
 def _failures(results: Mapping[str, Outcome]) -> list[Outcome]:

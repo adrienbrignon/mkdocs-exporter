@@ -1,3 +1,11 @@
+/*
+ * Content overflowing the page horizontally would make the browser shrink every page of
+ * the document: cut it off instead (clipping the body itself has no effect).
+ */
+body > * {
+  overflow-x: clip !important;
+}
+
 .page-break,
 .page-break-after {
   break-after: page;

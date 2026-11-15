@@ -13,13 +13,9 @@ from tests.conftest import Project, Site
 
 pytestmark = pytest.mark.browser
 
-FAILING_PAGINATION = """
+FAILING_PAGE = """
 window.MkDocsExporter = {
-  before: () => {
-    if (location.pathname.includes('reference')) {
-      window.PagedPolyfill.preview = () => Promise.reject(new Error('BOOM'));
-    }
-  },
+  before: () => location.pathname.includes('reference') ? new Promise(() => {}) : null,
 };
 """
 
@@ -75,12 +71,21 @@ def test_dirty_rebuilds_while_serving(project: Project) -> None:
 def test_a_failing_page_does_not_prevent_others_from_rendering(
     project: Project, caplog: pytest.LogCaptureFixture
 ) -> None:
-    project.write("scripts/fail.js", FAILING_PAGINATION)
+    project.write("scripts/fail.js", FAILING_PAGE)
 
     with pytest.raises(Abort):
-        project.build(exporter={"formats": {"pdf": {"scripts": ["scripts/fail.js"]}}})
+        project.build(
+            exporter={
+                "formats": {
+                    "pdf": {
+                        "scripts": ["scripts/fail.js"],
+                        "browser": {"timeout": 3000},
+                    }
+                }
+            }
+        )
 
-    assert re.search(r"- reference\.md: Pagination failed: .*BOOM", caplog.text)
+    assert re.search(r"- reference\.md: Timed out after 3000 ms", caplog.text)
     assert (project.path / "site" / "index.pdf").exists()
     assert not (project.path / "site" / "reference" / "index.pdf").exists()
 

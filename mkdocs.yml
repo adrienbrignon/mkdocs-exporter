@@ -90,6 +90,10 @@ plugins:
           covers:
             front: resources/templates/covers/front.html.j2
             back: resources/templates/covers/back.html.j2
+          header:
+            center: "{site_name} — {page_title}"
+          footer:
+            center: "Page {page} of {pages}"
           browser:
             debug: false
           aggregator:

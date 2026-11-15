@@ -64,7 +64,9 @@ class Exporter:
                         report.failures.append(outcome)
                         continue
 
-                    report.layouts[outcome.document.id] = outcome.result.layout
+                    if outcome.result.layout is not None:
+                        report.layouts[outcome.document.id] = outcome.result.layout
+
                     _write(
                         self.site.directory / outcome.document.path, outcome.result.pdf
                     )

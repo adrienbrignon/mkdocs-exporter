@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import contextlib
-from collections.abc import Sequence
+from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass, field
 from types import TracebackType
 from typing import Any
@@ -87,8 +87,13 @@ class PrintResult:
     """A page printed to PDF."""
 
     pdf: bytes
-    layout: Layout
     diagnostics: Diagnostics
+    layout: Layout | None = None
+    """The layout of the document, when it has been read."""
+
+
+Refine = Callable[[bytes], Awaitable[str | None]]
+"""Computes, from a first print, a script to run in the page before printing it again."""
 
 
 class RenderError(Exception):
@@ -161,9 +166,19 @@ class Browser:
         self._context = self._browser = self._playwright = None
 
     async def print(
-        self, url: str, *, outline: bool = True, tagged: bool = True
+        self,
+        url: str,
+        *,
+        outline: bool = True,
+        tagged: bool = True,
+        refine: Refine | None = None,
     ) -> PrintResult:
-        """Opens a page, waits for it to be paginated and prints it to PDF."""
+        """Opens a page, waits for it to be ready and prints it to PDF.
+
+        When `refine` is given, it receives the printed document and may return a script
+        adjusting the page (e.g. from the position of its elements), which is then
+        printed again.
+        """
 
         if self._context is None:
             raise RuntimeError("The browser has not been launched")
@@ -213,9 +228,8 @@ class Browser:
             if await state.json_value() == "error":
                 reason = await page.evaluate("() => window.__MKDOCS_EXPORTER_ERROR__")
 
-                raise RenderError(f"Pagination failed: {reason}", diagnostics)
+                raise RenderError(f"Rendering failed: {reason}", diagnostics)
 
-            result = await page.evaluate("() => window.__MKDOCS_EXPORTER_RESULT__")
             pdf = await page.pdf(
                 prefer_css_page_size=True,
                 print_background=True,
@@ -223,12 +237,22 @@ class Browser:
                 tagged=tagged,
             )
 
+            if refine is not None and (script := await refine(pdf)):
+                await page.evaluate(script)
+
+                pdf = await page.pdf(
+                    prefer_css_page_size=True,
+                    print_background=True,
+                    outline=outline,
+                    tagged=tagged,
+                )
+
             await self._collect_errors(page, diagnostics)
         except PlaywrightTimeoutError as error:
             await self._collect_errors(page, diagnostics)
 
             raise RenderError(
-                f"Timed out after {self.timeout} ms waiting for the page to be paginated",
+                f"Timed out after {self.timeout} ms waiting for the page to be ready",
                 diagnostics,
             ) from error
         except PlaywrightError as error:
@@ -236,9 +260,7 @@ class Browser:
         finally:
             await page.close()
 
-        layout = Layout.parse(result)
-
-        return PrintResult(pdf=pdf, layout=layout, diagnostics=diagnostics)
+        return PrintResult(pdf=pdf, diagnostics=diagnostics)
 
     @staticmethod
     async def _collect_errors(page: Any, diagnostics: Diagnostics) -> None:

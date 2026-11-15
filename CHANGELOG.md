@@ -25,6 +25,7 @@ Read the [migration guide](https://adrienbrignon.github.io/mkdocs-exporter/migra
 
 ### Changed
 
+- Documents are printed by Chromium itself instead of the Paged.js polyfill: faster, with better CSS support (nesting, `@page` rules in media queries, different page sizes). Paged.js can still be loaded with `formats.pdf.scripts`.
 - Requires Python 3.11+ and MkDocs 1.6+ (#72).
 - Faster: about 30 % on a 200-page website with a combined document (Paged.js is no longer inlined in every page, pages are opened as soon as they are loaded, and only documents whose numbering changed are rendered again).
 - Pages are served to the browser by a local HTTP server: absolute paths, `srcset`, CSS `url()` and fetches resolve like on the website (#58, #62, #65).
@@ -48,5 +49,6 @@ Read the [migration guide](https://adrienbrignon.github.io/mkdocs-exporter/migra
 
 ### Removed
 
+- The bundled Paged.js (see the migration guide).
 - Sass support: stylesheets must be plain CSS.
 - The internal modules of v6 (see the migration guide).

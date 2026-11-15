@@ -1,7 +1,8 @@
 <style data-teleport="head">
   .back-cover {
     page: last;
-    height: 100%;
+    position: relative;
+    height: calc(var(--height) - var(--offset));
   }
 
   .back-cover img {
@@ -24,7 +25,6 @@
   }
 
   @page last {
-    margin: 0;
     background: var(--md-primary-fg-color);
 
     @top-center {

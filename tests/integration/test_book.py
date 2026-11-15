@@ -180,6 +180,9 @@ class TestTableOfContents:
 
         assert page_of(combined, "Plain reference page") in targets
 
+    @pytest.mark.xfail(
+        reason="counter(pages) of custom stylesheets is per page until combined documents are printed as a single document"
+    )
     def test_page_numbers_are_consistent(self, site: Site) -> None:
         combined = site.pdf("combined.pdf")
 

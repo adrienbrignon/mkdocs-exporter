@@ -10,6 +10,8 @@ from typing import cast
 from pypdf import PdfReader, PdfWriter
 from pypdf.generic import DictionaryObject, NameObject, TextStringObject
 
+from mkdocs_exporter.core.document import Layout, Position
+
 RELATIVE_LINKS_BASE = "https://mkdocs-exporter.invalid/"
 """A placeholder base URL for links that must end up relative to the PDF document."""
 
@@ -108,3 +110,28 @@ def set_metadata(pdf: bytes, values: Mapping[str, object]) -> bytes:
     writer.write(output)
 
     return output.getvalue()
+
+
+def read_layout(pdf: bytes) -> Layout:
+    """Reads the number of pages and the position of named destinations of a document.
+
+    Chromium creates a named destination for every element targeted by a link of the
+    page (even a hidden one), named after the element's identifier.
+    """
+
+    reader = PdfReader(io.BytesIO(pdf))
+    anchors = {}
+
+    for name, destination in reader.named_destinations.items():
+        page = reader.get_destination_page_number(destination)
+
+        if page is None or page < 0:
+            continue
+
+        height = float(reader.pages[page].mediabox.height)
+        top = destination.top
+        anchors[str(name).lstrip("/")] = Position(
+            page=page, top=0.0 if top is None else max(0.0, height - float(top))
+        )
+
+    return Layout(pages=len(reader.pages), anchors=anchors)

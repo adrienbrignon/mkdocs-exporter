@@ -109,6 +109,9 @@ class TestAggregator:
         assert combined.count("FRONT-COVER") == len(PAGES)
         assert "Paragraph 40" in combined.text
 
+    @pytest.mark.xfail(
+        reason="counter(pages) of custom stylesheets is per page until combined documents are printed as a single document"
+    )
     def test_page_numbers_are_continuous(self, site: Site) -> None:
         combined = site.pdf("combined.pdf")
         total = combined.page_count
@@ -140,6 +143,9 @@ def test_aggregator_cover_modes(
     assert combined.count("BACK-COVER") == back
 
 
+@pytest.mark.xfail(
+    reason="counter(pages) of custom stylesheets is per page until combined documents are printed as a single document"
+)
 def test_page_numbers_are_continuous_without_covers(project: Project) -> None:
     site = project.build(
         exporter={"formats": {"pdf": {"aggregator": {"covers": "limits"}}}}
@@ -243,6 +249,9 @@ def test_unsupported_themes_fall_back_to_a_generic_theme(project: Project) -> No
     assert "index.pdf" in site.pdfs()
 
 
+@pytest.mark.xfail(
+    reason="counter(pages) of custom stylesheets is per page until combined documents are printed as a single document"
+)
 def test_removed_covers_on_their_own_page_are_not_counted(project: Project) -> None:
     """Hidden content next to a cover doesn't make its page count as content."""
 

@@ -74,7 +74,7 @@ class Server:
 
         from mkdocs_exporter.core.resources import js
 
-        for name in ("pdf.js", "pagedjs.min.js"):
+        for name in ("pdf.js",):
             source = importlib.resources.files(js).joinpath(name).read_bytes()
             self.documents[RESERVED + name] = (source, content_type(name))
 

@@ -38,7 +38,7 @@ Documents are styled like your website, with print media rules. Custom styleshee
 
 Stylesheets are plain CSS: nesting is supported, Sass isn't (see the [migration guide](../migration/v7.md#sass)).
 
-[Paged.js](https://pagedjs.org/documentation/) implements the paged media features Chromium lacks, such as running headers (`string-set`) or page references (`target-counter`).
+Documents are laid out by Chromium, which supports page sizes (they can differ from a page to another), margins, [margin boxes](https://www.w3.org/TR/css-page-3/#margin-boxes) with page counters, named pages (`page: ...`), `@page :first` and page breaks. Running headers are available through [headers and footers](headers-and-footers.md); for other features of the [CSS Generated Content for Paged Media](https://www.w3.org/TR/css-gcpm-3/) module, see [Using Paged.js](#using-paged-js).
 
 ## Page titles
 
@@ -92,13 +92,12 @@ Scripts can define hooks, awaited by the exporter:
 ```javascript
 window.MkDocsExporter = {
   /**
-   * Before rendering, once the website's scripts have run.
-   * Paged.js is available as `window.Paged`, e.g. to register handlers.
+   * Once the page and the website's scripts are loaded.
    */
   before: async () => {},
 
   /**
-   * Before rendering, e.g. to wait for diagrams to be drawn.
+   * Then, e.g. to wait for diagrams to be drawn.
    */
   render: async () => {
     if (window.mermaid) {
@@ -107,9 +106,9 @@ window.MkDocsExporter = {
   },
 
   /**
-   * Once pages have been rendered.
+   * Last, right before printing.
    */
-  after: async (flow) => {},
+  after: async () => {},
 };
 ```
 
@@ -123,6 +122,34 @@ plugins:
           browser:
             delay: 500
 ```
+
+## Using Paged.js
+
+[Paged.js](https://pagedjs.org/) implements features of [CSS Generated Content for Paged Media](https://www.w3.org/TR/css-gcpm-3/) that browsers lack, such as running headers (`string-set`), page references (`target-counter`) or footnotes.
+To use it, download [`paged.polyfill.min.js`](https://unpkg.com/pagedjs@0.4.3/dist/paged.polyfill.min.js) to your project and load it after a script running it before documents are printed:
+
+=== "`mkdocs.yml`"
+
+    ```yaml
+    plugins:
+      - exporter:
+          formats:
+            pdf:
+              scripts:
+                - resources/scripts/pagedjs.js
+                - resources/scripts/paged.polyfill.min.js
+    ```
+
+=== "`resources/scripts/pagedjs.js`"
+
+    ```javascript
+    window.PagedConfig = { auto: false };
+    window.MkDocsExporter = {
+      render: () => window.PagedPolyfill.preview(),
+    };
+    ```
+
+Paged.js lays out pages in JavaScript: expect documents to take longer to generate, especially combined ones.
 
 ## Browser
 

@@ -6,9 +6,10 @@ Guidance for AI coding agents (and humans) working on this repository.
 
 *MkDocs Exporter* is an MkDocs plugin (entry point `exporter`) that exports documentation pages to PDF.
 Each page is printed by a headless Chromium driven by [Playwright](https://playwright.dev/python/),
-with the [Paged.js](https://pagedjs.org/) polyfill providing CSS Paged Media (page sizes, margin boxes,
-running headers, page counters). Pages can also be combined into a single PDF document (aggregator,
-built on [pypdf](https://pypdf.readthedocs.io/)).
+using the browser's own CSS Paged Media support (page sizes, margin boxes, page counters, named pages).
+Pages can also be combined into a single PDF document (aggregator, with
+[pypdf](https://pypdf.readthedocs.io/) for bookmarks and links). Paged.js is not bundled anymore: users
+can load it through `formats.pdf.scripts` (documented recipe).
 
 Supported hosts: MkDocs `>=1.6,<2` and [ProperDocs](https://github.com/ProperDocs/properdocs) (a MkDocs
 1.x fork that runs MkDocs plugins unchanged). MkDocs 2.0 has no plugin API and Zensical silently ignores
@@ -46,7 +47,7 @@ Before considering a change done, run the linter, the formatter check, the type 
 | `core/aggregator.py` | Combined documents: covers, numbering, bookmarks, internal links, table of contents (pypdf) |
 | `core/margins.py` | Headers and footers compiled to CSS page margin boxes |
 | `core/themes/` | Theme adapters (`material`, `readthedocs`, generic fallback) |
-| `core/resources/` | `pdf.js` (Paged.js driver), theme scripts, print CSS, vendored Paged.js |
+| `core/resources/` | `pdf.js` (gets pages ready, reports readiness), theme scripts, print CSS, TOC template |
 | `core/runner.py` | Runs coroutines on an event loop owned by the exporter |
 | `mkdocs_exporter/plugin.py` | The MkDocs plugin (`exporter`): adapts MkDocs pages and navigation to core data |
 | `mkdocs_exporter/covers.py` | Renders cover templates with Jinja (through mkdocs-macros when enabled) |
@@ -72,18 +73,22 @@ Before considering a change done, run the linter, the formatter check, the type 
    positions of headings and anchors reported by the browser.
 
 **Browser contract** (see `core/resources/js/pdf.js`): `pdf.js` is the first script of the page. It
-records uncaught errors by phase, loads Paged.js after the website's scripts initialized (`load` event),
-runs `window.MkDocsExporter.before/render` hooks, flattens shadow trees, removes hidden elements,
-paginates (`PagedConfig.auto = false`), then sets `body[mkdocs-exporter]` to `true` or `error`.
+records uncaught errors by phase, waits for the `load` event, fonts, images, MathJax and the theme
+(`window.MkDocsExporterTheme.settle`), runs the `window.MkDocsExporter.before/render/after` hooks, then
+sets `body[mkdocs-exporter]` to `true` or `error`.
+
+**Layout data** comes from the printed PDF, never from the DOM: hidden links to every heading make
+Chromium create named destinations (`core/pdf.py:read_layout`). Features browsers lack are computed from
+a first print: `{section}` running heads become a `@counter-style` with one symbol per page
+(`Browser.print(refine=...)` patches the page and prints again).
 
 Design decisions backed by measurements (don't revert them without measuring again):
 
 - **Loopback HTTP server**, not Playwright routing (+55 % per page) nor `file://` (broken absolute paths,
   CORS, fetches).
-- **Hide theme chrome with CSS, remove it right before pagination**: removing it from the DOM up front
-  breaks the theme's scripts; leaving it in the DOM makes Paged.js repeat `position: fixed` elements on
-  every page.
-- **Load Paged.js after the website's scripts**: its polyfills break some of them (Bootstrap modals).
+- **Native printing, no Paged.js**: about 2.4x faster per page than Paged.js; missing
+  features (running heads, TOC page numbers) are rebuilt from a measuring print.
+- **Hide theme chrome with CSS**: removing it from the DOM breaks the theme's scripts.
 - **`wait_until="load"`**: identical output to `networkidle`, about 35 % faster.
 - Uncaught errors of the website's scripts are logged at debug level (they also happen on the website);
   errors in `MkDocsExporter` hooks and missing same-origin resources are warnings; only pagination failures
@@ -123,14 +128,6 @@ Design decisions backed by measurements (don't revert them without measuring aga
 - A known, unfixed bug gets a test marked `@pytest.mark.xfail(reason="#N: ...")`; xfail is strict, so the
   fix must remove the marker.
 - Browser tests are skipped when Chromium is missing, except on CI (`CI` set) where they fail.
-
-## Vendored Paged.js
-
-`mkdocs_exporter/core/resources/js/pagedjs.min.js` is the Paged.js **v0.4.3** polyfill build (the
-latest stable release). Do not edit it by hand. To update it, replace it with
-`https://unpkg.com/pagedjs@<version>/dist/paged.polyfill.min.js`, then run the full test suite (including
-browser tests) and compare a few generated PDF documents. Resource files are marked `-diff` in
-`.gitattributes`.
 
 ## Releasing
 

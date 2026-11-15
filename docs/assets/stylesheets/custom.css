@@ -13,12 +13,6 @@
   }
 }
 
-@page {
-  @bottom-center {
-    content: 'Page ' counter(page) ' of ' counter(pages);
-  }
-}
-
 .md-icon-spin {
   animation-name: spin;
   animation-duration: 3s;

@@ -4,15 +4,20 @@ from __future__ import annotations
 
 import asyncio
 import importlib.resources
+import json
+import re
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 
+from bs4 import Tag
+
 from mkdocs_exporter.core import margins
 from mkdocs_exporter.core.browser import Browser, PrintResult, RenderError
-from mkdocs_exporter.core.document import Document, Site
+from mkdocs_exporter.core.document import Document, Heading, Layout, Site
 from mkdocs_exporter.core.html import HtmlDocument, resolve_link
 from mkdocs_exporter.core.pdf import (
     RELATIVE_LINKS_BASE,
+    read_layout,
     relative_url,
     rewrite_links,
     set_metadata,
@@ -22,6 +27,9 @@ from mkdocs_exporter.core.themes import Theme
 from mkdocs_exporter.logging import logger
 
 COVER_LOCATIONS = ("front", "back")
+
+HEADING = re.compile(r"^h[1-6]$")
+"""Heading elements."""
 """The locations of cover pages."""
 
 
@@ -119,8 +127,15 @@ class Renderer:
             theme.print_stylesheet(),
         ]
 
-    def prepare(self, document: Document, render_pass: Pass | None = None) -> str:
-        """Returns the HTML to print for a document."""
+    def prepare(
+        self, document: Document, render_pass: Pass | None = None
+    ) -> tuple[str, list[tuple[int, str, str]]]:
+        """Returns the HTML to print for a document, and its headings.
+
+        Headings are returned as (level, identifier, title), outside of covers and tables
+        of contents. Hidden links to each of them make the browser create named
+        destinations, which tell where headings land (and let PDF readers link to them).
+        """
 
         render_pass = render_pass or Pass()
         html = HtmlDocument(document.html)
@@ -156,6 +171,19 @@ class Renderer:
                     content.append(cover)
 
         html.set_attribute("details:not([open])", "open", "")
+        html.remove(".headerlink")
+
+        headings = _headings(content)
+
+        if headings:
+            anchors = html.soup.new_tag(
+                "nav", attrs={"class": "mkdocs-exporter-anchors", "hidden": ""}
+            )
+
+            for _, identifier, _ in headings:
+                anchors.append(html.soup.new_tag("a", attrs={"href": f"#{identifier}"}))
+
+            html.body.append(anchors)
 
         stylesheets = [
             *self.base_stylesheets,
@@ -163,6 +191,8 @@ class Renderer:
                 self.options.margins,
                 {**self.options.variables, "page_title": document.title},
                 front_cover="front" in kept,
+                first_page=render_pass.page,
+                pages=render_pass.pages,
             ),
             *self.options.stylesheets,
         ]
@@ -179,23 +209,13 @@ class Renderer:
         html.teleport()
 
         # Inserted first in the head (hence in reverse order) to run before any script of
-        # the website, so that errors are recorded from the start (Paged.js is loaded by
-        # `pdf.js` itself, once the website's scripts have initialized).
+        # the website, so that errors are recorded from the start.
         if theme_script := self.theme.print_script():
             html.add_script(theme_script, head=True, first=True)
 
         html.add_script(src=RESERVED + "pdf.js", head=True, first=True)
         html.add_data(
-            "__MKDOCS_EXPORTER__",
-            {
-                "pagedjs": RESERVED + "pagedjs.min.js",
-                "hide": hidden,
-                "delay": self.options.delay,
-                "page": render_pass.page,
-                "pages": render_pass.pages,
-            },
-            head=True,
-            first=True,
+            "__MKDOCS_EXPORTER__", {"delay": self.options.delay}, head=True, first=True
         )
 
         for script in self.options.scripts:
@@ -205,7 +225,7 @@ class Renderer:
             lambda href: resolve_link(href, document.url, self.site.prefix, base)
         )
 
-        return str(html)
+        return str(html), headings
 
     async def render(
         self, document: Document, render_pass: Pass | None = None
@@ -213,15 +233,43 @@ class Renderer:
         """Renders a document to PDF."""
 
         render_pass = render_pass or Pass()
-        html = await asyncio.to_thread(self.prepare, document, render_pass)
+        html, headings = await asyncio.to_thread(self.prepare, document, render_pass)
         path = f"{document.url}?mkdocs-exporter={render_pass.name}"
         url = self.server.publish(path, html)
+        refine = None
+
+        if margins.uses(self.options.margins, "section"):
+            # The browser can't print running headings (`string-set`): print once to find
+            # out where headings land, then print again with the section of every page.
+            sections = [(i, title) for level, i, title in headings if level <= 2]
+
+            async def refine(pdf: bytes) -> str | None:
+                titles = margins.running_heads(sections, read_layout(pdf))
+                css = margins.sections(titles, first_page=render_pass.page or 1)
+
+                return (
+                    "(() => { const style = document.createElement('style');"
+                    f" style.textContent = {json.dumps(css)};"
+                    " document.head.appendChild(style); })()"
+                )
 
         try:
-            result = await self.browser.print(url, tagged=render_pass.name == "default")
+            result = await self.browser.print(
+                url, tagged=render_pass.name == "default", refine=refine
+            )
         finally:
             self.server.unpublish(path)
 
+        layout = read_layout(result.pdf)
+        result.layout = Layout(
+            pages=layout.pages,
+            anchors=layout.anchors,
+            headings=[
+                Heading(level=level, title=title, id=i, position=layout.anchors[i])
+                for level, i, title in headings
+                if i in layout.anchors
+            ],
+        )
         result.pdf = self._rewrite_links(result.pdf, document, render_pass)
 
         if render_pass.name == "default":
@@ -319,3 +367,31 @@ class Renderer:
             *diagnostics.external_failed_requests,
         ]:
             logger.debug("[mkdocs-exporter.pdf] '%s': %s", document.id, message)
+
+
+def _headings(content: Tag) -> list[tuple[int, str, str]]:
+    """The headings of a page's content: (level, identifier, title)."""
+
+    excluded = (
+        "mkdocs-exporter-front-cover",
+        "mkdocs-exporter-back-cover",
+        "mkdocs-exporter-toc",
+    )
+    headings = []
+
+    for element in content.find_all(HEADING):
+        identifier = element.get("id")
+
+        if not identifier or element.find_parent(class_=excluded) is not None:
+            continue
+
+        title = "".join(
+            text
+            for text in element.find_all(string=True)
+            if text.find_parent(class_="headerlink") is None
+        )
+        headings.append(
+            (int(element.name[1]), str(identifier), " ".join(title.split()))
+        )
+
+    return headings

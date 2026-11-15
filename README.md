@@ -36,9 +36,7 @@ Additionally, it can combine your entire documentation into a single PDF file.
   - Custom [stylesheets, scripts and hooks](https://adrienbrignon.github.io/mkdocs-exporter/configuration/customizing-documents/)
   - [Buttons](https://adrienbrignon.github.io/mkdocs-exporter/configuration/adding-buttons-to-pages/) at the top of your pages (e.g. to download the page as PDF)
   - Dedicated support for the [`material`](https://github.com/squidfunk/mkdocs-material) and [`readthedocs`](https://www.mkdocs.org/user-guide/choosing-your-theme/#readthedocs) themes, check out sample PDF documents [here](./examples/themes)
-- ⭐ **Powerful** - a headless browser and some awesome libraries under the hood
-  - [*Playwright*](https://github.com/microsoft/playwright-python) to drive Chromium
-  - [*Paged.js*](https://github.com/pagedjs/pagedjs) for [Paged Media](https://www.w3.org/TR/css-page-3/) and [Generated Content](https://www.w3.org/TR/css-gcpm-3/) CSS modules
+- ⭐ **Powerful** - documents are printed by Chromium, driven by [*Playwright*](https://github.com/microsoft/playwright-python), with [CSS Paged Media](https://www.w3.org/TR/css-page-3/) support
 
 ## Prerequisites
 

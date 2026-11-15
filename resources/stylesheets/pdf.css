@@ -19,7 +19,6 @@ summary::after {
 }
 
 .front-cover {
-  margin: var(--margin);
   height: calc(var(--height) - var(--offset));
   page-break-after: always;
   border: 1px solid #fff;
@@ -50,13 +49,20 @@ summary::after {
   }
 }
 
-h1, h2, h3 {
-  string-set: chapter content();
+@page {
+  @top-center {
+    color: #7f7f7f;
+  }
+
+  @bottom-center {
+    color: #7f7f7f;
+  }
 }
 
 body {
   print-color-adjust: exact;
   text-rendering: geometricPrecision;
+  background-color: transparent;
 }
 
 .md-main .md-main__inner {

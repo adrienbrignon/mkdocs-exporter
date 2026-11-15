@@ -48,7 +48,7 @@ def test_transforms_stylesheets(site: Path) -> None:
 def test_serves_bundled_assets(site: Path) -> None:
     content, kind = Server(site, "/").resolve(RESERVED + "pdf.js")  # type: ignore[misc]
 
-    assert b"PagedConfig" in content
+    assert b"__MKDOCS_EXPORTER__" in content
     assert kind.startswith("text/javascript")
 
 
