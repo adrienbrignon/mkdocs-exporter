@@ -1,9 +1,8 @@
-# Base configuration of the fixture project used by the integration tests.
-# Plugins are passed by the tests (see tests/conftest.py).
 site_name: Fixture
 site_url: https://example.org/docs/
 theme:
   name: material
+  font: false
 nav:
   - index.md
   - Guide:
