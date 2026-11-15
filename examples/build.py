@@ -109,7 +109,7 @@ def build(project: str, theme: str | None = None) -> Path:
 
     site = OUTPUT / name(project, theme)
     command = [
-        *(sys.executable, "-m", "mkdocs", "build", "--strict"),
+        *(sys.executable, "-m", "properdocs", "build", "--strict"),
         *("--config-file", str(ROOT / project / "mkdocs.yml")),
         *("--site-dir", str(site)),
         *(("--theme", theme) if theme else ()),

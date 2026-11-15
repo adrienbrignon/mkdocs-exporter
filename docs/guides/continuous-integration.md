@@ -2,6 +2,8 @@
 
 Building documents requires a browser: install it with Playwright, along with its system dependencies, before building your documentation.
 
+These recipes build the website with [ProperDocs](https://github.com/ProperDocs/properdocs), the continuation of MkDocs 1.x, which reads `properdocs.yml` (or `mkdocs.yml`, preferably passed with `-f mkdocs.yml`). With MkDocs, leave `properdocs` out and run `mkdocs build` instead.
+
 ## GitHub Actions
 
 ```yaml
@@ -18,11 +20,11 @@ jobs:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v10
       - name: Install dependencies
-        run: uv venv && uv pip install mkdocs-material mkdocs-exporter
+        run: uv venv && uv pip install properdocs mkdocs-material mkdocs-exporter
       - name: Install the browser
         run: .venv/bin/playwright install --with-deps --only-shell chromium
       - name: Build the documentation
-        run: .venv/bin/mkdocs build
+        run: .venv/bin/properdocs build
       - uses: actions/upload-pages-artifact@v5
         with:
           path: site
@@ -40,8 +42,8 @@ The official Playwright image ships the browser and its dependencies: install th
 pages:
   image: mcr.microsoft.com/playwright/python:v1.65.2-noble
   script:
-    - pip install mkdocs-material mkdocs-exporter playwright==1.65.2
-    - mkdocs build --site-dir public
+    - pip install properdocs mkdocs-material mkdocs-exporter playwright==1.65.2
+    - properdocs build --site-dir public
   artifacts:
     paths:
       - public
@@ -55,9 +57,9 @@ If your website is published under a sub-path (e.g. `https://group.gitlab.io/pro
 FROM mcr.microsoft.com/playwright/python:v1.65.2-noble
 
 WORKDIR /docs
-RUN pip install mkdocs-material mkdocs-exporter playwright==1.65.2
+RUN pip install properdocs mkdocs-material mkdocs-exporter playwright==1.65.2
 COPY . .
-RUN mkdocs build
+RUN properdocs build
 ```
 
 Or, starting from a smaller image (Playwright's driver needs `libatomic1` to install the browser):
@@ -69,10 +71,10 @@ WORKDIR /docs
 RUN apt-get update \
  && apt-get install -y --no-install-recommends libatomic1 \
  && rm -rf /var/lib/apt/lists/*
-RUN pip install mkdocs-material mkdocs-exporter \
+RUN pip install properdocs mkdocs-material mkdocs-exporter \
  && playwright install --with-deps --only-shell chromium
 COPY . .
-RUN mkdocs build
+RUN properdocs build
 ```
 
 This project's own [Dockerfile](https://github.com/adrienbrignon/mkdocs-exporter/blob/master/Dockerfile) builds this documentation with [uv](https://docs.astral.sh/uv/).

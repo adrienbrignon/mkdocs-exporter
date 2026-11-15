@@ -26,7 +26,7 @@ third-party plugins, so neither is supported as a plugin host.
 | Type check | `uv run mypy` |
 | Tests | `uv run pytest` (`-m "not browser"` to skip the end-to-end tests; `--cov` for coverage, which fails under 85 % without them) |
 | Tests on ProperDocs | `MKDOCS_EXPORTER_TEST_PROPERDOCS=1 uv run --with properdocs --with properdocs-theme-mkdocs --with properdocs-theme-readthedocs pytest` |
-| Build / serve the documentation | `make build` / `make serve` (`PDF=false` or `BOOKS=false` to speed things up) |
+| Build / serve the documentation | `make build` / `make serve`, with ProperDocs (`PDF=false` or `BOOKS=false` to speed things up) |
 | Build the examples (documents and previews) | `make examples` (needs `pdftoppm`, from Poppler) |
 | Build distributions | `uv build` |
 

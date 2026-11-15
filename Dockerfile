@@ -22,7 +22,7 @@ RUN uv sync --locked --no-default-groups --group docs \
 
 COPY . .
 
-RUN mkdocs build
+RUN properdocs build -f mkdocs.yml
 
 
 FROM docker.io/nginx:stable-alpine

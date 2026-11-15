@@ -43,7 +43,7 @@ jobs:
       - name: Install browser
         run: uv run --no-sync playwright install --with-deps --only-shell chromium
       - name: Build documentation
-        run: uv run --no-sync mkdocs build
+        run: uv run --no-sync properdocs build -f mkdocs.yml
       - name: Upload pages artifact
         uses: actions/upload-pages-artifact@v5
         with:

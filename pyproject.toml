@@ -65,6 +65,8 @@ docs = [
     "mkdocs-minify-plugin>=0.8",
     "mkdocs-redirects>=1.2",
     "mkdocstrings[python]>=1.0",
+    "properdocs>=1.6.7",
+    "properdocs-theme-readthedocs>=1.6.5",
 ]
 
 [tool.uv]

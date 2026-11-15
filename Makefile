@@ -31,10 +31,10 @@ test:
 > uv run pytest $(ARGS)
 
 build:
->@ MKDOCS_EXPORTER_PDF=$(PDF) MKDOCS_EXPORTER_BOOKS=$(BOOKS) uv run mkdocs build $(ARGS)
+>@ MKDOCS_EXPORTER_PDF=$(PDF) MKDOCS_EXPORTER_BOOKS=$(BOOKS) uv run properdocs build -f mkdocs.yml $(ARGS)
 
 serve:
->@ MKDOCS_EXPORTER_PDF=$(PDF) MKDOCS_EXPORTER_BOOKS=$(BOOKS) uv run mkdocs serve $(ARGS)
+>@ MKDOCS_EXPORTER_PDF=$(PDF) MKDOCS_EXPORTER_BOOKS=$(BOOKS) uv run properdocs serve -f mkdocs.yml $(ARGS)
 
 examples:
 > uv run python examples/build.py
