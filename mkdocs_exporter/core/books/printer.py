@@ -6,7 +6,7 @@ import posixpath
 import re
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, cast
+from typing import Any, cast
 
 from pypdf import PdfReader, PdfWriter
 from pypdf.generic import DictionaryObject, NameObject, TextStringObject
@@ -42,12 +42,11 @@ from mkdocs_exporter.core.css import top_margin
 from mkdocs_exporter.core.document import Document
 from mkdocs_exporter.core.html import HtmlDocument
 from mkdocs_exporter.core.pdf import RELATIVE_LINKS_BASE, fix_uri, info, link_actions
+from mkdocs_exporter.core.preparation import Prepared
+from mkdocs_exporter.core.renderer import Context, Outcome, report
 from mkdocs_exporter.core.server import RESERVED
 from mkdocs_exporter.core.toc import TocOptions
 from mkdocs_exporter.logging import logger
-
-if TYPE_CHECKING:
-    from mkdocs_exporter.core.renderer import Outcome, Renderer
 
 ATTEMPTS = 3
 """How many times a book may be patched and printed again."""
@@ -82,14 +81,6 @@ class Book:
     """The table of contents, inserted after the first page's front cover."""
 
 
-async def print_book(
-    renderer: Renderer, book: Book, name: str = "book"
-) -> list[Outcome]:
-    """Prints a book and writes it (see `BookPrinter`)."""
-
-    return await BookPrinter(renderer, book, name).print()
-
-
 class BookPrinter:
     """Prints a book: its pages assembled in a single HTML document, printed once.
 
@@ -100,9 +91,26 @@ class BookPrinter:
     are then added from the measurement of the final print.
     """
 
-    def __init__(self, renderer: Renderer, book: Book, name: str = "book") -> None:
-        self.renderer = renderer
+    def __init__(
+        self,
+        context: Context,
+        book: Book,
+        prepared: dict[str, Prepared] | None = None,
+        name: str = "book",
+    ) -> None:
+        """
+        Args:
+            context: What the book is rendered with.
+            book: The book.
+            prepared: The content prepared for the documents of pages, by identifier.
+                The book takes what it reuses: the content of a page is reused by a
+                single book, others parse the page again.
+            name: Identifies the book among others (in the query string of its URL).
+        """
+
+        self.context = context
         self.book = book
+        self.prepared = prepared if prepared is not None else {}
         self.name = name
         self.output = book.output.lstrip("/")
         self.nav = book.nav if book.nav is not None else flat_nav(book.documents)
@@ -118,8 +126,6 @@ class BookPrinter:
         Returns:
             The failure, if any (the book is then not written).
         """
-
-        from mkdocs_exporter.core.renderer import Outcome
 
         documents = list(self.book.documents)
 
@@ -138,9 +144,9 @@ class BookPrinter:
         except RenderError as error:
             return [Outcome(document=document, error=error)]
 
-        self.renderer.report(document, result)
+        report(document, result)
 
-        target = self.renderer.site.directory / self.output
+        target = self.context.site.directory / self.output
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(self._finish(result, assembly, documents[0].html))
 
@@ -164,7 +170,7 @@ class BookPrinter:
         """A page, as a part of the book."""
 
         covers = kept_covers(self.book.covers, index, count) & set(document.covers)
-        prepared = self.renderer.preparer.prepared.pop(document.id, None)
+        prepared = self.prepared.pop(document.id, None)
 
         # The content prepared for the page's own document is reused, except for the
         # first page: its whole document is the book's shell.
@@ -172,7 +178,7 @@ class BookPrinter:
             return reuse(index, document, covers, prepared)
 
         html = HtmlDocument(document.html)
-        content = part_element(html, self.renderer.theme.content_element(html))
+        content = part_element(html, self.context.theme.content_element(html))
 
         return Part(
             index=index, document=document, covers=covers, html=html, content=content
@@ -180,17 +186,17 @@ class BookPrinter:
 
     def _prepare_content(self, part: Part) -> None:
         if part.html is not None:
-            self.renderer.preparer.prepare_content(
+            self.context.preparer.prepare_content(
                 part.html, part.content, part.document, part.covers
             )
 
     def _options(self) -> AssemblyOptions:
-        renderer = self.renderer
-        theme, options = renderer.theme, renderer.options
+        context = self.context
+        theme, options = context.theme, context.options
         script = theme.print_script()
 
         return AssemblyOptions(
-            prefix=renderer.site.prefix,
+            prefix=context.site.prefix,
             links=options.links or RELATIVE_LINKS_BASE,
             removed=theme.removed,
             hidden=[*theme.hidden, *options.hidden],
@@ -204,7 +210,7 @@ class BookPrinter:
             scripts=options.scripts,
             margins=options.margins,
             variables=options.variables,
-            base_stylesheets=renderer.preparer.base_stylesheets,
+            base_stylesheets=context.preparer.base_stylesheets,
             stylesheets=options.stylesheets,
             toc_title=self.book.toc.title if self.book.toc else "",
         )
@@ -222,16 +228,16 @@ class BookPrinter:
     async def _print(self, url: str, html: str) -> PrintResult:
         """Prints the assembled document, patched from measured prints when needed."""
 
-        server = self.renderer.server
+        server = self.context.server
         path = f"{url}?mkdocs-exporter={self.name}"
         patched = (
             self.book.toc is not None
             or self.book.start == "odd"
-            or self.renderer.options.margins.uses("section")
+            or self.context.options.margins.uses("section")
         )
 
         try:
-            return await self.renderer.browser.print(
+            return await self.context.browser.print(
                 server.publish(path, html),
                 outline=False,
                 tagged=False,
@@ -290,7 +296,7 @@ class BookPrinter:
 
         patch: dict[str, Any] = {"blanks": blank_plan.blanks}
 
-        if self.renderer.options.margins.uses("section"):
+        if self.context.options.margins.uses("section"):
             patch["css"] = margins.sections(running_heads(measure, blank_plan))
         if (html := self._toc(number)) is not None:
             patch["toc"] = html
@@ -357,14 +363,14 @@ class BookPrinter:
     def _rewrite_links(self, writer: PdfWriter) -> None:
         """Fixes links to the local server and makes links relative when needed."""
 
-        renderer = self.renderer
-        links = renderer.options.links
+        context = self.context
+        links = context.options.links
 
         for _, annotation, uri in link_actions(writer):
             target = fix_uri(
                 uri,
-                renderer.server.origin,
-                renderer.site.prefix,
+                context.server.origin,
+                context.site.prefix,
                 links or RELATIVE_LINKS_BASE,
                 posixpath.dirname(self.output) if links is None else None,
             )

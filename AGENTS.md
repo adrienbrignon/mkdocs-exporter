@@ -44,7 +44,8 @@ Before considering a change done, run the linter, the formatter check, the type 
 | `core/css.py` | Stylesheets, parsed with tinycss2: URLs, identifiers, `@page` rules and their cascade, scoping |
 | `core/server.py` | Loopback HTTP server exposing the built site (and in-memory pages) to the browser |
 | `core/browser.py` | Playwright/Chromium: prints a URL to PDF, collects diagnostics |
-| `core/renderer.py` | Prepares a page's print HTML and renders documents concurrently (`Refinement`: second print, `Prepared`: content kept for books) |
+| `core/preparation.py` | The HTML printed for a document (`Preparer`: covers, styles, scripts, table of contents), the content kept for books (`Prepared`) |
+| `core/renderer.py` | Renders documents concurrently: prints, caches, refines (`Refinement`: second print); `Context`: what documents and books are rendered with |
 | `core/exporter.py` | Orchestrates an export: server, browser, documents, then books |
 | `core/books/printer.py` | Books (combined documents): `BookPrinter` assembles, prints, patches and finishes them |
 | `core/books/assembly.py` | A book as a single HTML document: its parts, their resources, the shell |
@@ -84,7 +85,7 @@ Before considering a change done, run the linter, the formatter check, the type 
    entry is valid while the same-origin resources the page loaded hash the same.
 5. Each book is printed as a single HTML document (`core/books/`): the first page's shell holding
    one part per page (the page's content element, with its kept covers), reusing the content the
-   renderer prepared (only the shell is parsed again). Relative URLs become root-absolute, links to
+   renderer prepared for its document (`Outcome.prepared`, used by one book; only the shell is parsed again). Relative URLs become root-absolute, links to
    other parts anchors, identifiers (and radio groups) are prefixed by part (`p2-`); covers, the table
    of contents, blank pages and each part's content (for `{page_title}`) are on named pages, styles
    teleported by covers are translated (`@page :first` → covers' named page) and scoped (`@scope`) to

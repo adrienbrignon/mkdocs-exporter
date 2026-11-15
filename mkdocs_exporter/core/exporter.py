@@ -5,11 +5,11 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from mkdocs_exporter.core.books import Book, print_book
+from mkdocs_exporter.core.books import Book, BookPrinter
 from mkdocs_exporter.core.browser import Browser
 from mkdocs_exporter.core.cache import Cache
 from mkdocs_exporter.core.document import Document, Layout, Site
-from mkdocs_exporter.core.renderer import Outcome, Renderer, RenderOptions
+from mkdocs_exporter.core.renderer import Context, Outcome, Renderer, RenderOptions
 from mkdocs_exporter.core.server import Server
 from mkdocs_exporter.core.themes import Theme
 from mkdocs_exporter.logging import logger
@@ -60,19 +60,13 @@ class Exporter:
                 await stack.enter_async_context(self.browser)
 
             with server:
-                renderer = Renderer(
-                    self.site,
-                    self.theme,
-                    self.browser,
-                    server,
-                    self.options,
-                    self.cache,
+                context = Context(
+                    self.site, self.theme, self.browser, server, self.options
                 )
+                renderer = Renderer(context, self.cache)
                 # Books reuse the content of pages prepared for their own document.
-                renderer.preparer.keep = {
-                    document.id for book in books for document in book.documents
-                }
-                outcomes = await renderer.render_all(documents)
+                keep = {document.id for book in books for document in book.documents}
+                outcomes = await renderer.render_all(documents, keep)
 
                 if renderer.reused:
                     logger.info(
@@ -96,10 +90,15 @@ class Exporter:
                 if report.failures:
                     return report
 
+                prepared = {
+                    outcome.document.id: outcome.prepared
+                    for outcome in outcomes
+                    if outcome.prepared is not None
+                }
+
                 for index, book in enumerate(books):
-                    report.failures += await print_book(
-                        renderer, book, name=f"book-{index}"
-                    )
+                    printer = BookPrinter(context, book, prepared, f"book-{index}")
+                    report.failures += await printer.print()
 
         return report
 

@@ -55,10 +55,6 @@ class Preparer:
         self.site = site
         self.theme = theme
         self.options = options
-        self.keep: set[str] = set()
-        """The documents whose prepared content is kept for books (see `prepared`)."""
-        self.prepared: dict[str, Prepared] = {}
-        """The content prepared for documents to keep, by identifier."""
         self.base_stylesheets = [
             importlib.resources.files(css).joinpath("base.css").read_text("utf-8"),
             theme.print_stylesheet(),
@@ -93,8 +89,11 @@ class Preparer:
         html.set_attribute("details:not([open])", "open", "")
         html.remove([".headerlink", *self.theme.removed])
 
-    def prepare(self, document: Document) -> tuple[str, list[Heading]]:
-        """The HTML to print for a document, and its headings (outside of covers)."""
+    def prepare(
+        self, document: Document, keep: bool = False
+    ) -> tuple[str, list[Heading], Prepared | None]:
+        """The HTML to print for a document, its headings (outside of covers) and, when
+        asked to `keep` it, its content prepared for books (see `Prepared`)."""
 
         html = HtmlDocument(document.html)
         content = self.theme.content_element(html)
@@ -104,7 +103,7 @@ class Preparer:
 
         # Without content element (the whole body), books parse the page again (see
         # `book.part_element`).
-        keep = document.id in self.keep and content.name != "body"
+        keep = keep and content.name != "body"
         resources = (
             page_resources(html, content, document.url, self.site.prefix)
             if keep
@@ -123,19 +122,21 @@ class Preparer:
 
         output = str(html)
 
-        if resources is not None:
-            # Books reuse the content (without what they print themselves) instead of
-            # parsing the page again.
-            for _, _, element in moved:
-                element.extract()
-            if contents is not None:
-                contents.extract()
+        if resources is None:
+            return output, headings, None
 
-            self.prepared[document.id] = Prepared(
-                content=content.extract(), resources=resources, teleported=moved
-            )
+        # Books reuse the content (without what they print themselves) instead of
+        # parsing the page again.
+        for _, _, element in moved:
+            element.extract()
+        if contents is not None:
+            contents.extract()
 
-        return output, headings
+        kept = Prepared(
+            content=content.extract(), resources=resources, teleported=moved
+        )
+
+        return output, headings, kept
 
     @property
     def _base(self) -> str:

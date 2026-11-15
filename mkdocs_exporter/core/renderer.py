@@ -4,8 +4,9 @@ import asyncio
 import dataclasses
 import json
 import os
-from collections.abc import Mapping, Sequence
+from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass, field
+from functools import cached_property
 from urllib.parse import urlsplit
 
 from mkdocs_exporter.core import margins, toc
@@ -20,7 +21,7 @@ from mkdocs_exporter.core.pdf import (
     rewrite_links,
     set_metadata,
 )
-from mkdocs_exporter.core.preparation import Preparer, toc_entries
+from mkdocs_exporter.core.preparation import Prepared, Preparer, toc_entries
 from mkdocs_exporter.core.server import Server
 from mkdocs_exporter.core.themes import Theme
 from mkdocs_exporter.core.toc import TocOptions
@@ -77,58 +78,76 @@ class RenderOptions:
 
 
 @dataclass
+class Context:
+    """What documents are rendered with: the website and its theme, the browser
+    printing them, the server exposing the website to it, and the options."""
+
+    site: Site
+    theme: Theme
+    browser: Browser
+    server: Server
+    options: RenderOptions = field(default_factory=RenderOptions)
+
+    @cached_property
+    def preparer(self) -> Preparer:
+        """Prepares the HTML printed for documents."""
+
+        return Preparer(self.site, self.theme, self.options)
+
+
+@dataclass
 class Outcome:
     """The outcome of rendering a document."""
 
     document: Document
     result: PrintResult | None = None
     error: RenderError | None = None
-    warnings: list[str] = field(default_factory=list)
+    prepared: Prepared | None = None
+    """The content prepared for the document, kept for books (see `Prepared`)."""
 
 
 class Renderer:
     """Renders documents to PDF with a browser, through a server exposing the website."""
 
-    def __init__(
-        self,
-        site: Site,
-        theme: Theme,
-        browser: Browser,
-        server: Server,
-        options: RenderOptions | None = None,
-        cache: Cache | None = None,
-    ) -> None:
-        self.site = site
-        self.theme = theme
-        self.browser = browser
-        self.server = server
-        self.options = options or RenderOptions()
+    def __init__(self, context: Context, cache: Cache | None = None) -> None:
+        self.context = context
         self.cache = cache
         self.reused = 0
         """The number of documents reused from the cache."""
-        self.preparer = Preparer(site, theme, self.options)
         self._assets: Assets = {}
 
-    async def render_all(self, documents: Sequence[Document]) -> list[Outcome]:
-        """Renders documents concurrently; a failing document doesn't stop the others."""
+    async def render_all(
+        self, documents: Sequence[Document], keep: Collection[str] = ()
+    ) -> list[Outcome]:
+        """Renders documents concurrently; a failing document doesn't stop the others.
 
-        semaphore = asyncio.Semaphore(self.options.concurrency or default_concurrency())
+        Args:
+            documents: The documents.
+            keep: The identifiers of the documents whose prepared content is kept for
+                books (unless they are reused from the cache).
+        """
+
+        options = self.context.options
+        semaphore = asyncio.Semaphore(options.concurrency or default_concurrency())
 
         async def render(document: Document) -> Outcome:
             async with semaphore:
                 try:
-                    result = await self.render(document)
+                    result, prepared = await self.render(document, document.id in keep)
                 except RenderError as error:
                     return Outcome(document=document, error=error)
 
-                self.report(document, result)
+                report(document, result)
 
-                return Outcome(document=document, result=result)
+                return Outcome(document=document, result=result, prepared=prepared)
 
         return list(await asyncio.gather(*(render(d) for d in documents)))
 
-    async def render(self, document: Document) -> PrintResult:
-        """Renders a document to PDF (or reuses it from the cache)."""
+    async def render(
+        self, document: Document, keep: bool = False
+    ) -> tuple[PrintResult, Prepared | None]:
+        """Renders a document to PDF (or reuses it from the cache), returning its
+        prepared content when asked to `keep` it."""
 
         key = self._key(document) if self.cache else ""
 
@@ -136,13 +155,13 @@ class Renderer:
             logger.debug("[mkdocs-exporter.pdf] Reusing '%s'", document.id)
             self.reused += 1
 
-            return result
+            return result, None
 
         logger.info("[mkdocs-exporter.pdf] Rendering '%s'...", document.id)
 
         # A few milliseconds of CPU: a thread would mostly wait for the GIL (measured
         # about 5 times slower with 4 documents rendered concurrently).
-        html, headings = self.preparer.prepare(document)
+        html, headings, prepared = self.context.preparer.prepare(document, keep)
         result = await self._print(document, html, headings)
 
         self._finish(result, document, headings)
@@ -152,30 +171,7 @@ class Renderer:
             assets = {_path(url): self._asset(url) for url in result.resources}
             self.cache.put(key, result, assets)
 
-        return result
-
-    def report(self, document: Document, result: PrintResult) -> None:
-        """Logs what looked suspicious while rendering a document."""
-
-        diagnostics = result.diagnostics
-
-        for error in diagnostics.hook_errors:
-            logger.warning(
-                "[mkdocs-exporter.pdf] Error in '%s': %s", document.id, error
-            )
-        for request in diagnostics.failed_requests:
-            logger.warning(
-                "[mkdocs-exporter.pdf] Failed to load a resource of '%s': %s",
-                document.id,
-                request,
-            )
-        for message in [
-            *diagnostics.errors,
-            *diagnostics.late_errors,
-            *diagnostics.console,
-            *diagnostics.external_failed_requests,
-        ]:
-            logger.debug("[mkdocs-exporter.pdf] '%s': %s", document.id, message)
+        return result, prepared
 
     async def _print(
         self, document: Document, html: str, headings: Sequence[Heading]
@@ -183,17 +179,19 @@ class Renderer:
         """Prints a document's HTML, refined from a first print when needed."""
 
         path = f"{document.url}?mkdocs-exporter=default"
-        url = self.server.publish(path, html)
-        refinement = Refinement(self, headings, document.toc)
+        url = self.context.server.publish(path, html)
+        refinement = Refinement(
+            headings, document.toc, self.context.options.margins.uses("section")
+        )
 
         try:
-            return await self.browser.print(
+            return await self.context.browser.print(
                 url,
                 refine=refinement if refinement.needed else None,
                 attempts=refinement.attempts,
             )
         finally:
-            self.server.unpublish(path)
+            self.context.server.unpublish(path)
 
     def _finish(
         self, result: PrintResult, document: Document, headings: Sequence[Heading]
@@ -222,8 +220,8 @@ class Renderer:
     def _rewrite_links(self, pdf: bytes, document: Document) -> bytes:
         """Fixes links to the local server and makes links relative when needed."""
 
-        origin = self.server.origin
-        relativize = self.options.links is None
+        origin = self.context.server.origin
+        relativize = self.context.options.links is None
 
         if origin.encode() not in pdf and not (
             relativize and RELATIVE_LINKS_BASE.encode() in pdf
@@ -235,7 +233,7 @@ class Renderer:
             lambda uri: fix_uri(
                 uri,
                 origin,
-                self.site.prefix,
+                self.context.site.prefix,
                 self._base,
                 document.directory if relativize else None,
             ),
@@ -245,22 +243,22 @@ class Renderer:
     def _base(self) -> str:
         """The URL links to the website start with, once resolved."""
 
-        return self.options.links or RELATIVE_LINKS_BASE
+        return self.context.options.links or RELATIVE_LINKS_BASE
 
     def _key(self, document: Document) -> str:
         """Identifies a document's inputs (besides the resources it loads)."""
 
-        options = dataclasses.asdict(self.options)
+        options = dataclasses.asdict(self.context.options)
 
         del options["concurrency"]
 
         return fingerprint(
             environment(),
-            self.browser.version,
-            self.browser.options,
-            self.theme.name,
-            self.site.url,
-            self.site.prefix,
+            self.context.browser.version,
+            self.context.browser.options,
+            self.context.theme.name,
+            self.context.site.url,
+            self.context.site.prefix,
             options,
             dataclasses.asdict(document),
         )
@@ -271,7 +269,7 @@ class Renderer:
         path = _path(url)
 
         if path not in self._assets:
-            resource = self.server.resolve(path)
+            resource = self.context.server.resolve(path)
             self._assets[path] = digest(resource.data if resource else None)
 
         return self._assets[path]
@@ -293,14 +291,13 @@ class Refinement:
 
     def __init__(
         self,
-        renderer: Renderer,
         headings: Sequence[Heading],
         contents: TocOptions | None,
+        sections: bool,
     ) -> None:
-        self.renderer = renderer
         self.headings = headings
         self.contents = contents
-        self.sections = renderer.options.margins.uses("section")
+        self.sections = sections
         """Do headers or footers show the section of pages?"""
         self.listed = bool(toc_entries(contents, headings, lambda _: 0))
         """Does the document have a table of contents?"""
@@ -349,6 +346,28 @@ class Refinement:
         self.applied = patch
 
         return f"window.__MKDOCS_EXPORTER_PATCH__({json.dumps(patch)})"
+
+
+def report(document: Document, result: PrintResult) -> None:
+    """Logs what looked suspicious while rendering a document."""
+
+    diagnostics = result.diagnostics
+
+    for error in diagnostics.hook_errors:
+        logger.warning("[mkdocs-exporter.pdf] Error in '%s': %s", document.id, error)
+    for request in diagnostics.failed_requests:
+        logger.warning(
+            "[mkdocs-exporter.pdf] Failed to load a resource of '%s': %s",
+            document.id,
+            request,
+        )
+    for message in [
+        *diagnostics.errors,
+        *diagnostics.late_errors,
+        *diagnostics.console,
+        *diagnostics.external_failed_requests,
+    ]:
+        logger.debug("[mkdocs-exporter.pdf] '%s': %s", document.id, message)
 
 
 def _path(url: str) -> str:
