@@ -8,7 +8,11 @@ theme:
   name: material
   font: false
   palette:
-    primary: indigo
+    primary: custom
+    accent: custom
+
+extra_css:
+  - assets/field-guide.css
 
 nav:
   - index.md

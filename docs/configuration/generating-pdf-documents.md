@@ -148,12 +148,7 @@ The page numbers are filled from a first print of the document, which is then pr
 
 Cover pages are added at the beginning (`front`) and at the end (`back`) of documents. They are [Jinja](https://jinja.palletsprojects.com/) templates rendering HTML, with styles of their own:
 
-<div class="previews" markdown>
-
-[![A front cover](../assets/images/examples/field-guide-5.webp)](../assets/images/examples/field-guide-5.webp)
-[![A back cover](../assets/images/examples/field-guide-6.webp)](../assets/images/examples/field-guide-6.webp)
-
-</div>
+{{ previews("field-guide:5", "field-guide:6") }}
 
 === "`mkdocs.yml`"
 
@@ -181,16 +176,16 @@ Templates have access to:
 
 | Variable | Value | For instance |
 |---|---|---|
-| `page` | The page | {% raw %}`{{ page.title }}`, `{{ page.url }}`, `{{ page.parent.title }}` (its section), `{{ page.is_homepage }}`{% endraw %} |
+| `page` | The page | {% raw %}`{{ page.title }}`, `{{ page.url }}`, `{{ page.parent.title }}` (its section), `{{ page.is_homepage }}`, `page.toc` (its headings){% endraw %} |
 | `page.meta` | The page's metadata (front matter) | {% raw %}`{{ page.meta.description }}`{% endraw %} |
 | `config` | The MkDocs configuration | {% raw %}`{{ config.site_name }}`, `{{ config.site_author }}`{% endraw %} |
 | `extra` | The `extra` section of the configuration | {% raw %}`{{ extra.version }}`{% endraw %} |
 
 The page's metadata are also available as variables (e.g. {% raw %}`{{ description }}`{% endraw %}).
-When the [macros](https://github.com/fralau/mkdocs_macros_plugin) plugin is enabled, templates are rendered with its environment: its variables, macros and filters are available too.
+When the [macros](https://github.com/fralau/mkdocs_macros_plugin) plugin is enabled, templates are rendered with its environment: its variables (such as `navigation`, every page of the website), macros and filters are available too.
 
 - `<style data-teleport="head">` moves styles to the document's head: `@page :first` rules style the page of the front cover (e.g. without margins, with a background), and named pages the page of the back cover.
-- Paths starting with `/` (like `/assets/contours.svg`) are resolved from the root of the website.
+- Paths starting with `/` (like `/assets/images/logo.png`) are resolved from the root of the website.
 - Headers and footers are not printed on cover pages, except on named pages of your own (set `content: none` on their margin boxes there).
 - Decorations drawn in the background of the cover's page stay in place, whatever the space the theme leaves above the content: prefer them to elements as tall as the page, which may overflow onto a blank page.
 

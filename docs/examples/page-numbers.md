@@ -2,11 +2,7 @@
 
 Number pages, and repeat the website's name and the current section at the top of each page.
 
-<div class="previews" markdown>
-
-[![A page with a header and a footer](../assets/images/examples/page-numbers-1.webp)](../assets/images/examples/page-numbers-1.webp)
-
-</div>
+{{ previews("page-numbers") }}
 
 === "`mkdocs.yml`"
 

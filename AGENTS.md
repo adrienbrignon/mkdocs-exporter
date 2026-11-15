@@ -59,7 +59,7 @@ Before considering a change done, run the linter, the formatter check, the type 
 | `mkdocs_exporter/formats/pdf/buttons/download.py` | Callables referenced from users' `mkdocs.yml` via `!!python/name:` |
 | `tests/unit/`, `tests/integration/` | Unit tests; end-to-end tests building `tests/fixtures/site` (marker `browser`) |
 | `docs/`, `mkdocs.yml`, `resources/`, `macros/`, `overrides/` | This project's own documentation site (it dogfoods the plugin) |
-| `examples/` | Example projects shown by the documentation: `base.yml` and `content/` (the *Field Guide* website) are shared, each folder with a `mkdocs.yml` is a project; `build.py` builds them and renders the previews of `docs/assets/images/examples/` (`make examples`) |
+| `examples/` | Example projects shown by the documentation: `base.yml` and `content/` (the *Field Guide* website) are shared, each folder with a `mkdocs.yml` is a project. `build.py` builds them: `make examples` renders the previews of `docs/assets/images/examples/`, and the documentation's build publishes their documents (`macros/__init__.py`) |
 
 ## How it works
 

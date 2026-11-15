@@ -70,6 +70,9 @@ plugins:
   - redirects:
       redirect_maps:
         'index.md': 'getting-started.md'
+        'samples/diagrams.md': 'examples/content/diagrams.md'
+        'samples/mathematics.md': 'examples/content/mathematics.md'
+        'samples/multimedia.md': 'examples/content/multimedia.md'
   - minify:
       minify_html: true
   - social:

@@ -2,11 +2,7 @@
 
 Generate several combined documents: the whole guide without its home page, and a document for each section of the navigation.
 
-<div class="previews" markdown>
-
-[![The table of contents of the whole guide](../assets/images/examples/documents-1.webp)](../assets/images/examples/documents-1.webp)
-
-</div>
+{{ previews("documents") }}
 
 === "`mkdocs.yml`"
 

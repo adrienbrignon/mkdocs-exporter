@@ -1,40 +1,42 @@
 <style data-teleport="head">
   @page :first {
     margin: 0;
-    background: #0b1038 url("/assets/cover.svg") bottom / cover;
+    background: #002fa7;
   }
 
   .cover {
     break-after: page;
-    padding: 4cm 2.5cm 0;
+    padding: 3cm 2.5cm 0;
     color: #fff;
     font-family: "Helvetica Neue", Arial, sans-serif;
 
     .version {
-      display: inline-block;
-      padding: 0.15em 0.9em;
-      border: 1px solid;
-      border-radius: 1em;
-      color: #ffca28;
-      font-size: 9pt;
-      font-weight: 600;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
+      font-size: 11pt;
+      font-weight: 700;
     }
 
     .title {
-      margin-top: 0.6cm;
+      margin-top: 0.4cm;
       font-size: 40pt;
       font-weight: 700;
-      line-height: 1.1;
+      line-height: 1.05;
     }
 
     .description {
       max-width: 12cm;
       margin-top: 0.6cm;
-      color: #c5cae9;
       font-size: 13pt;
       line-height: 1.5;
+    }
+
+    /* The major and minor version, as large as the page allows */
+    .number {
+      margin-top: 4cm;
+      color: #1f4fd1;
+      font-size: 280pt;
+      font-weight: 700;
+      line-height: 0.8;
+      letter-spacing: -0.05em;
     }
   }
 </style>
@@ -42,4 +44,5 @@
   <div class="version">Version {{ extra.version }}</div>
   <div class="title">{{ page.title }}</div>
   <div class="description">{{ page.meta.description }}</div>
+  <div class="number">{{ extra.version.rsplit(".", 1)[0] }}</div>
 </div>

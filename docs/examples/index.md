@@ -1,6 +1,7 @@
 # Examples
 
 Each example is a small project printing the same website, the *Field Guide*: five pages written with Material for MkDocs.
+Click a preview to open its document at that page.
 The files shown are the ones the pictured documents are generated from, and the examples are built by the tests of the plugin, so they keep working.
 
 Their `mkdocs.yml` only shows what they add to the website's settings, shared by every example ([`examples/base.yml`](https://github.com/adrienbrignon/mkdocs-exporter/blob/master/examples/base.yml)).
@@ -9,15 +10,7 @@ Their `mkdocs.yml` only shows what they add to the website's settings, shared by
 
 A complete example: every page gets a document with a cover, a table of contents and headers and footers, and the pages are combined into a single document.
 
-<div class="previews" markdown>
-
-[![The front cover of the combined document](../assets/images/examples/field-guide-1.webp)](../assets/images/examples/field-guide-1.webp)
-[![The table of contents of the combined document](../assets/images/examples/field-guide-2.webp)](../assets/images/examples/field-guide-2.webp)
-[![A page of the combined document](../assets/images/examples/field-guide-3.webp)](../assets/images/examples/field-guide-3.webp)
-
-</div>
-
-[:material-file-pdf-box: Open the combined document](https://github.com/adrienbrignon/mkdocs-exporter/blob/master/examples/field-guide.pdf){ .md-button }
+{{ previews("field-guide:1", "field-guide:2", "field-guide:3") }}
 [:material-github: Browse the project](https://github.com/adrienbrignon/mkdocs-exporter/tree/master/examples/field-guide){ .md-button }
 
 === "`mkdocs.yml`"
@@ -36,22 +29,25 @@ A complete example: every page gets a document with a cover, a table of contents
 
     {{ example("field-guide/covers/back.html.j2") }}
 
-- The front cover of the home page is the cover of the combined document (`covers: limits`): on that page, the template shows the website's name and description (`page.is_homepage`). Other pages show their section (`page.parent`) above their title.
-- The covers are printed on a contour map ([`/assets/contours.svg`](https://github.com/adrienbrignon/mkdocs-exporter/blob/master/examples/content/assets/contours.svg)), the background of their page: `@page :first` for the front cover, and a named page (`page: back-cover`) for the back cover.
-- Headers and footers are left out of cover pages, but a named page of your own needs to leave them out itself (`content: none` for each of them).
+- The front cover is laid out like a manual page, from the page itself: its title (`page.title`), its description (`page.meta.description`), its sections (`page.toc`) and the other pages of its section (`page.parent.children`).
+- The front cover of the home page is the cover of the combined document (`covers: limits`): on that page, the template shows the website's name and description instead (`page.is_homepage`).
+- The back cover is printed on a named page (`page: colophon`), which leaves out the header and the footer itself (`content: none` for each of them): the plugin only leaves them out of its own cover pages.
 
 ## Themes
 
 The same page, printed with the [`material`](https://squidfunk.github.io/mkdocs-material/) and [`readthedocs`](https://www.mkdocs.org/user-guide/choosing-your-theme/#readthedocs) themes:
 
-<div class="previews" markdown>
-
-[![A page printed with the material theme](../assets/images/examples/field-guide-4.webp)](../assets/images/examples/field-guide-4.webp)
-[![A page printed with the readthedocs theme](../assets/images/examples/field-guide-readthedocs-1.webp)](../assets/images/examples/field-guide-readthedocs-1.webp)
-
-</div>
+{{ previews("field-guide:4", "field-guide-readthedocs") }}
 
 Other themes are supported on a best-effort basis: their navigation is hidden by generic rules, which a [stylesheet](../configuration/customizing-documents.md#stylesheets) can complete.
+
+## Content
+
+How diagrams, mathematics and images are printed, with the configuration of this documentation (each page has a PDF document):
+
+- [Diagrams](content/diagrams.md), drawn by [Mermaid](https://mermaid.js.org/);
+- [Mathematics](content/mathematics.md), typeset by [MathJax](https://www.mathjax.org/) and [KaTeX](https://katex.org/);
+- [Multimedia](content/multimedia.md): images, in various formats.
 
 ## Recipes
 
@@ -73,7 +69,7 @@ Other themes are supported on a best-effort basis: their navigation is hidden by
 
     __[A printed book](book.md)__
 
-    Every page combined into a book, with a framed cover, a table of contents, bookmarks and chapters starting on the right.
+    Every page combined into a book, with a cloth-like cover, a table of contents, bookmarks and chapters starting on the right.
 
 -   [![Preview of the landscape pages example](../assets/images/examples/page-layout-2.webp){ .thumbnail }](page-layout.md)
 

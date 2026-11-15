@@ -1,9 +1,6 @@
 <style data-teleport="head">
   /* A page of its own, without the header and the footer */
-  @page back-cover {
-    margin: 0;
-    background: #1a237e url("/assets/contours.svg") center / cover;
-
+  @page colophon {
     @top-left {
       content: none;
     }
@@ -17,42 +14,29 @@
     }
   }
 
-  .back-cover {
-    page: back-cover;
-    padding-top: 11cm;
-    color: #c5cae9;
-    font-family: "Helvetica Neue", Arial, sans-serif;
-    text-align: center;
+  .colophon {
+    page: colophon;
+    padding-top: 18cm;
+    color: #1a1a1a;
+    font-family: "DejaVu Sans Mono", Menlo, Consolas, monospace;
+    font-size: 9pt;
+    line-height: 1.6;
 
-    svg {
-      width: 1.6cm;
-      height: 1.6cm;
-      color: #ffca28;
+    .label {
+      color: #002fa7;
+      font-weight: 700;
     }
 
-    .name {
-      margin-top: 0.5cm;
-      color: #fff;
-      font-size: 16pt;
-      font-weight: 600;
-      letter-spacing: 0.3em;
-      text-transform: uppercase;
-    }
-
-    .description {
-      max-width: 10cm;
-      margin: 0.4cm auto 0;
-      font-size: 11pt;
-      line-height: 1.5;
+    .text {
+      max-width: 13cm;
+      padding-left: 4ch;
     }
   }
 </style>
-<div class="back-cover">
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
-    <circle cx="12" cy="12" r="10.5"/>
-    <path d="M12 3.5 14.2 12 12 20.5 9.8 12Z" fill="currentColor" fill-opacity="0.35"/>
-    <path d="M3.5 12 12 9.8 20.5 12 12 14.2Z"/>
-  </svg>
-  <div class="name">{{ config.site_name }}</div>
-  <div class="description">{{ config.site_description }}</div>
+<div class="colophon">
+  <div class="label">COLOPHON</div>
+  <div class="text">
+    {{ config.site_name }}: {{ config.site_description }}
+    Printed by MkDocs Exporter.
+  </div>
 </div>

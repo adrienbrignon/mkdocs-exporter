@@ -1,67 +1,85 @@
 <style data-teleport="head">
   @page :first {
     margin: 0;
-    background: #1a237e url("/assets/contours.svg") center / cover;
   }
 
-  .cover {
+  .manual {
     break-after: page;
-    padding: 2.5cm 2.5cm 0;
-    color: #fff;
-    font-family: "Helvetica Neue", Arial, sans-serif;
+    padding: 2cm 2cm 0;
+    color: #1a1a1a;
+    font-family: "DejaVu Sans Mono", Menlo, Consolas, monospace;
+    font-size: 9.5pt;
+    line-height: 1.6;
 
-    .brand {
-      font-size: 10pt;
-      font-weight: 600;
-      letter-spacing: 0.3em;
-      text-transform: uppercase;
+    .header {
+      display: flex;
+      justify-content: space-between;
+      padding-bottom: 0.2cm;
+      border-bottom: 1px solid;
+      font-size: 8.5pt;
+    }
 
-      &::before {
+    .name {
+      margin: 5cm 0 1.2cm;
+      font-size: 36pt;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+
+      /* A cursor after the name */
+      &::after {
         content: "";
-        display: block;
-        width: 1.2cm;
-        height: 3px;
-        margin-bottom: 0.4cm;
-        background: #ffca28;
+        display: inline-block;
+        width: 0.5em;
+        height: 0.85em;
+        margin-left: 0.1em;
+        vertical-align: -0.1em;
+        background: #002fa7;
       }
     }
 
-    .heading {
-      margin-top: 8cm;
-    }
-
-    .section {
-      margin-bottom: 0.3cm;
-      color: #ffca28;
-      font-size: 11pt;
-      font-weight: 600;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-    }
-
-    .title {
-      font-size: 44pt;
+    .label {
+      margin-top: 0.6cm;
+      color: #002fa7;
       font-weight: 700;
-      line-height: 1.05;
     }
 
-    .description {
-      max-width: 12cm;
-      margin-top: 0.7cm;
-      color: #c5cae9;
-      font-size: 14pt;
-      line-height: 1.5;
+    .text {
+      padding-left: 4ch;
+    }
+
+    .number {
+      color: #9e9e9e;
     }
   }
 </style>
 {% set home = page.is_homepage %}
-<div class="cover">
-  <div class="brand">{{ config.site_author if home else config.site_name }}</div>
-  <div class="heading">
-    {% if page.parent %}<div class="section">{{ page.parent.title }}</div>{% endif %}
-    <div class="title">{{ config.site_name if home else page.title }}</div>
-    <div class="description">
-      {{ config.site_description if home else page.meta.description }}
-    </div>
+{% set name = (config.site_name if home else page.title) | lower | replace(" ", "-") %}
+{% set toc = page.toc | list %}
+{% set sections = toc[0].children if toc and toc[0].level == 1 else toc %}
+{% set related = (page.parent.children | rejectattr("url", "equalto", page.url) | list) if page.parent else [] %}
+<div class="manual">
+  <div class="header">
+    <span>{{ config.site_name | upper }}</span>
+    <span>{{ page.parent.title if page.parent else config.site_author }}</span>
+    <span>{{ config.site_name | upper }}</span>
   </div>
+  <div class="name">{{ name }}</div>
+  <div class="label">NAME</div>
+  <div class="text">{{ name }} - {{ config.site_name if home else page.title }}</div>
+  <div class="label">DESCRIPTION</div>
+  <div class="text">{{ config.site_description if home else page.meta.description }}</div>
+  {% if sections %}
+  <div class="label">SECTIONS</div>
+  <div class="text">
+    {% for section in sections %}
+    <div><span class="number">{{ "%02d" | format(loop.index) }}</span> {{ section.title }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% if related %}
+  <div class="label">SEE ALSO</div>
+  <div class="text">
+    {% for other in related %}{{ other.title | lower | replace(" ", "-") }}{{ ", " if not loop.last }}{% endfor %}
+  </div>
+  {% endif %}
 </div>

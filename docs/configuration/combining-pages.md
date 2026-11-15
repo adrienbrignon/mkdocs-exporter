@@ -109,11 +109,7 @@ For instance, a table of contents laid out as a table:
 
     {{ example("toc-template/pdf.css") }}
 
-<div class="previews" markdown>
-
-[![A table of contents laid out as a table](../assets/images/examples/toc-template-1.webp)](../assets/images/examples/toc-template-1.webp)
-
-</div>
+{{ previews("toc-template") }}
 
 ## Starting pages on the right
 

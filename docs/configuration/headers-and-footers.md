@@ -51,11 +51,7 @@ They are printed in the margins of pages, so make sure your stylesheet leaves en
       right: "Page {page} of {pages}"
     ```
 
-    <div class="previews" markdown>
-
-    [![A page with the website's name, its section and page numbers](../assets/images/examples/page-numbers-1.webp)](../assets/images/examples/page-numbers-1.webp)
-
-    </div>
+    {{ previews("page-numbers", indent=4) }}
 
 === "Book"
 

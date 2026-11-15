@@ -78,7 +78,8 @@ def test_field_guide(example: Callable[[str], Site]) -> None:
     writing = squeeze(site.pdf("guide/writing/index.pdf").pages_text[0])
 
     assert "Anexampleofdocuments" in squeeze(combined.pages_text[0])
-    assert "FIELDGUIDEGUIDEWritingpages" in writing
+    assert "FIELDGUIDEGuideFIELDGUIDEwriting-pages" in writing
+    assert "SECTIONS01Textandlists" in writing
     assert "Table of contents" in combined.pages_text[1]
     assert [item.title for item in combined.outline] == [
         "Welcome",
@@ -104,7 +105,7 @@ def test_cover_pages(example: Callable[[str], Site]) -> None:
     document = example("cover-pages").pdf("guide/writing/index.pdf")
     cover, contents = document.pages_text[:2]
 
-    assert "VERSION2.4.0WritingpagesText,lists,code,admonitions" in squeeze(cover)
+    assert "Version2.4.0WritingpagesText,lists,code,admonitions" in squeeze(cover)
     assert "Contents" in contents
     assert "Text and lists" in contents
 

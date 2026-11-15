@@ -2,11 +2,7 @@
 
 Number headings, print the address of links, mark every page as a draft, and keep content for the website or for documents only.
 
-<div class="previews" markdown>
-
-[![A page with numbered headings, link addresses and a watermark](../assets/images/examples/print-styles-1.webp)](../assets/images/examples/print-styles-1.webp)
-
-</div>
+{{ previews("print-styles") }}
 
 === "`mkdocs.yml`"
 

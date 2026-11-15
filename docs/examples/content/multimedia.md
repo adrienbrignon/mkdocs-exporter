@@ -8,7 +8,7 @@ Duis faucibus ante non lorem sollicitudin, vel dictum neque interdum. Nunc vel u
 
 ### JPEG
 
-<img class="md-image" src="../../assets/images/samples/01.jpg" width="410" align="left">
+<img class="md-image" src="../../../assets/images/samples/01.jpg" width="410" align="left">
 <div>Photo by <a href="https://unsplash.com/@henry_be">Henry Be</a> on <a href="https://unsplash.com/photos/library-shelf-near-black-wooden-ladder-lc7xcWebECc">Unsplash</a>.</div>
 
 Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla et euismod nulla. Curabitur feugiat, tortor non consequat finibus, justo purus auctor massa, nec semper lorem quam in massa.
@@ -23,7 +23,7 @@ Curabitur efficitur interdum massa id porttitor. Nunc tincidunt sem metus, at vu
 
 ### WebP
 
-<img class="md-image" src="../../assets/images/samples/02.webp" width="300" align="right">
+<img class="md-image" src="../../../assets/images/samples/02.webp" width="300" align="right">
 <div>Photo by <a href="https://developers.google.com/speed/webp/gallery1#credits1">Kjetil Birkeland Moe</a>.</div>
 
 In hac habitasse platea dictumst. Nullam porttitor a leo sit amet dictum. Ut a diam a turpis cursus iaculis. Sed tempus nisl quis hendrerit finibus. Duis vel mattis turpis. Suspendisse commodo, ante id luctus vestibulum, sem nunc mattis neque, at rutrum justo metus nec risus. Phasellus tincidunt tempor lacus vel dictum. Vivamus ac rutrum magna. Sed sit amet fermentum turpis. Donec molestie augue felis, sed blandit nisl vehicula at.

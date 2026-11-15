@@ -1,13 +1,14 @@
-:root {
-  --width: 21cm;
-  --margin: 1.20cm;
-  --height: 29.7cm;
-  --offset: calc(var(--margin) * 2);
-}
-
 @page {
   size: A4;
   margin: 1.20cm;
+
+  @top-center {
+    color: #7f7f7f;
+  }
+
+  @bottom-center {
+    color: #7f7f7f;
+  }
 }
 
 hr:has(+ div.md-source-file), .md-source-file {
@@ -16,47 +17,6 @@ hr:has(+ div.md-source-file), .md-source-file {
 
 summary::after {
   display: none;
-}
-
-.front-cover {
-  height: calc(var(--height) - var(--offset));
-  page-break-after: always;
-  border: 1px solid #fff;
-  position: relative;
-
-  img {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    image-rendering: optimizeQuality;
-  }
-
-  > section {
-    color: #fff;
-    padding: 0.635cm;
-    max-width: 10.25cm;
-    word-wrap: break-word;
-    margin-top: calc(var(--height) / 2 - var(--offset) - 2cm);
-    font-size: 13pt;
-
-    > .title {
-      font-size: 26pt;
-      font-weight: 500;
-      line-height: 1.1;
-      color: #fff;
-    }
-  }
-}
-
-@page {
-  @top-center {
-    color: #7f7f7f;
-  }
-
-  @bottom-center {
-    color: #7f7f7f;
-  }
 }
 
 body {

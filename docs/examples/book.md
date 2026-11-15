@@ -1,15 +1,8 @@
 # A printed book
 
-Combine every page into a book of 6 × 9 inches, a common size of printed books: a framed cover, a table of contents and bookmarks, chapters starting on right-hand pages, and wider inner margins for binding.
+Combine every page into a book of 6 × 9 inches, a common size of printed books: a cloth-like cover, a table of contents and bookmarks, chapters starting on right-hand pages, and wider inner margins for binding.
 
-<div class="previews" markdown>
-
-[![The cover](../assets/images/examples/book-1.webp)](../assets/images/examples/book-1.webp)
-[![The table of contents](../assets/images/examples/book-2.webp)](../assets/images/examples/book-2.webp)
-[![A blank left-hand page](../assets/images/examples/book-3.webp)](../assets/images/examples/book-3.webp)
-[![A chapter starting on a right-hand page](../assets/images/examples/book-4.webp)](../assets/images/examples/book-4.webp)
-
-</div>
+{{ previews("book") }}
 
 === "`mkdocs.yml`"
 
@@ -29,6 +22,6 @@ Combine every page into a book of 6 × 9 inches, a common size of printed books:
 - `start: odd` starts every chapter on a right-hand page, inserting blank pages (without headers nor footers) when needed.
 - `{page_title}` shows the title of the chapter, and `{page}` numbers the pages of the whole book.
 - `@page :right` and `@page :left` mirror the margins of right-hand and left-hand pages.
-- The frame of the cover is the background of its page ([`/assets/frame.svg`](https://github.com/adrienbrignon/mkdocs-exporter/blob/master/examples/content/assets/frame.svg), stretched to the page), so it doesn't depend on the space the theme leaves above the content.
+- The cover is a page without margins and of a single color (`@page :first`), whose type is set in Palatino or a close serif font.
 
 [:material-github: Browse the files of this example](https://github.com/adrienbrignon/mkdocs-exporter/tree/master/examples/book)

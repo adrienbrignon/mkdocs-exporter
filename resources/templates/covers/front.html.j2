@@ -1,80 +1,142 @@
 <style data-teleport="head">
-  .front-cover {
-    height: calc(var(--height) - var(--offset));
-    page-break-after: always;
-    border: 1px solid #fff;
-    position: relative;
-
-    img {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      image-rendering: optimizeQuality;
-    }
-
-    .logo {
-      position: absolute;
-      top: calc(2cm);
-      fill: white;
-      left: 50%;
-      transform: translateX(-50%);
-
-      > div {
-        width: 3cm;
-        text-align: center;
-        height: 3cm;
-      }
-    }
-
-    section {
-      color: #fff;
-      padding: 0.635cm;
-      max-width: 10.25cm;
-      word-wrap: break-word;
-      margin-top: calc(var(--height) / 2 - var(--offset) - 2cm);
-      font-size: 13pt;
-
-      > .title {
-        font-size: 32pt;
-        font-weight: 500;
-        line-height: 1.1;
-        margin-top: 1em;
-        color: #fff;
-      }
-
-      > .version {
-        line-height: 1;
-        font-size: 10pt;
-        font-family: monospace;
-      }
-    }
+  @page :first {
+    margin: 0;
   }
 
-  @page :first {
-    background: var(--md-primary-fg-color);
+  .manual {
+    position: relative;
+    height: 27.6cm;
+    box-sizing: border-box;
+    padding: 2cm;
+    break-after: page;
+    color: #1a1a1a;
+    font-family: "Roboto Mono", monospace;
+    font-size: 10pt;
+    line-height: 1.6;
 
-    @top-center {
-      content: none;
+    .header,
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      font-size: 8.5pt;
     }
 
-    @bottom-center {
-      content: none;
+    .header {
+      padding-bottom: 0.2cm;
+      border-bottom: 1px solid;
+    }
+
+    .footer {
+      position: absolute;
+      right: 2cm;
+      bottom: 0;
+      left: 2cm;
+      padding-top: 0.2cm;
+      border-top: 1px solid;
+    }
+
+    .name {
+      margin: 4cm 0 1.2cm;
+      font-size: 40pt;
+      font-weight: 500;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+
+      &::after {
+        content: "";
+        display: inline-block;
+        width: 0.5em;
+        height: 0.85em;
+        margin-left: 0.1em;
+        vertical-align: -0.1em;
+        background: var(--md-primary-fg-color);
+      }
+    }
+
+    .label {
+      margin-top: 0.6cm;
+      color: var(--md-primary-fg-color);
+      font-weight: 700;
+    }
+
+    .text {
+      padding-left: 4ch;
+    }
+
+    .number {
+      color: #9e9e9e;
+    }
+
+    .ruler {
+      display: flex;
+      gap: 2px;
+      align-items: flex-end;
+      height: 0.6cm;
+      margin-top: 0.4cm;
+
+      span {
+        flex: 1;
+        height: 40%;
+        background: #d6d6d6;
+      }
+
+      .current {
+        height: 100%;
+        background: var(--md-primary-fg-color);
+      }
+    }
+
+    .position {
+      margin-top: 0.15cm;
+      font-size: 8.5pt;
+      text-align: right;
     }
   }
 </style>
-<div class="front-cover">
-  <img src="/assets/images/background.png">
-  <div class="logo">
-    <div>
-      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <path d="m23 19-3-3v2h-4v2h4v2l3-3m-10 0c0-.3 0-.7.1-1H6v-2h7.8c.5-.8 1.1-1.5 1.9-2H6v-2h12v1.1c.3-.1.7-.1 1-.1s.7 0 1 .1V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h7.8c-.5-.9-.8-1.9-.8-3m0-15.5L18.5 9H13V3.5Z"></path>
-      </svg>
-    </div>
+{% set name = page.title | lower | replace(" ", "-") %}
+{% set toc = page.toc | list %}
+{% set sections = toc[0].children if toc and toc[0].level == 1 else toc %}
+{% set pages = navigation.pages if navigation else [] %}
+{% set description = page.content.split("<p>")[1].split("</p>")[0] | striptags if "<p>" in page.content else "" %}
+{% set related = (page.parent.children | selectattr("is_page") | rejectattr("url", "equalto", page.url) | list) if page.parent else [] %}
+<div class="manual">
+  <div class="header">
+    <span>MKDOCS-EXPORTER(7)</span>
+    <span>{{ page.parent.title if page.parent else config.site_name }}</span>
+    <span>MKDOCS-EXPORTER(7)</span>
   </div>
-  <section>
-    <div class="brand">{{ config.site_name }}</div>
-    <div class="version">{{ version }}</div>
-    <div class="title">{{ page.title }}</div>
-  </section>
+  {% if pages %}
+  <div class="ruler">
+    {% for other in pages %}<span{% if other.url == page.url %} class="current"{% endif %}></span>{% endfor %}
+  </div>
+  {% for other in pages %}{% if other.url == page.url %}
+  <div class="position">{{ "%02d" | format(loop.index) }} / {{ "%02d" | format(pages | length) }}</div>
+  {% endif %}{% endfor %}
+  {% endif %}
+  <div class="name">{{ name }}</div>
+  <div class="label">NAME</div>
+  <div class="text">{{ name }} - {{ page.title }}</div>
+  {% if description %}
+  <div class="label">DESCRIPTION</div>
+  <div class="text">{{ description }}</div>
+  {% endif %}
+  {% if sections %}
+  <div class="label">SECTIONS</div>
+  <div class="text">
+    {% for section in sections[:10] %}
+    <div><span class="number">{{ "%02d" | format(loop.index) }}</span> {{ section.title }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% if related %}
+  <div class="label">SEE ALSO</div>
+  <div class="text">
+    {% for other in related %}{{ other.title | lower | replace(" ", "-") }}{{ ", " if not loop.last }}{% endfor %}
+  </div>
+  {% endif %}
+  <div class="footer">
+    <span>{{ version }}</span>
+    <span>{{ config.site_name }}</span>
+    <span>{{ config.site_url | replace("https://", "") | trim("/") }}</span>
+  </div>
 </div>

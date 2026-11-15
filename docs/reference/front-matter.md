@@ -25,6 +25,5 @@ covers:
 | `description` | The subject of the document (`site_description` by default) | [Document information](../configuration/generating-pdf-documents.md#document-information) |
 | `keywords`, `tags` | The keywords of the document | [Document information](../configuration/generating-pdf-documents.md#document-information) |
 | `buttons` | Buttons added to the page, besides those of `buttons` | [Adding buttons to a specific page](../configuration/adding-buttons-to-pages.md#adding-buttons-to-a-specific-page) |
-| `pdf-icon` | The icon of the download button, when its `icon` is `mkdocs_exporter.formats.pdf.buttons.download.icon` | [Adding a download button](../configuration/adding-buttons-to-pages.md#adding-a-download-button) |
 
 Cover templates also receive every key of the front matter, as variables and in `page.meta` (e.g. `page.meta.description`).

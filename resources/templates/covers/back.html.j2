@@ -1,32 +1,6 @@
 <style data-teleport="head">
-  .back-cover {
-    page: last;
-    position: relative;
-    height: calc(var(--height) - var(--offset));
-  }
-
-  .back-cover img {
-    top: 0;
-    left: 0;
-    position: absolute;
-  }
-
-  .back-cover section {
-    .title {
-      color: #fff;
-      position: absolute;
-      top: 50%;
-      left: 0;
-      vertical-align: middle;
-      font-size: 24pt;
-      text-align: center;
-      width: 100%;
-    }
-  }
-
-  @page last {
-    background: var(--md-primary-fg-color);
-
+  /* A page of its own, without the header and the footer */
+  @page colophon {
     @top-center {
       content: none;
     }
@@ -35,9 +9,30 @@
       content: none;
     }
   }
+
+  .colophon {
+    page: colophon;
+    padding-top: 20cm;
+    color: #1a1a1a;
+    font-family: "Roboto Mono", monospace;
+    font-size: 9pt;
+    line-height: 1.6;
+
+    .label {
+      color: var(--md-primary-fg-color);
+      font-weight: 700;
+    }
+
+    .text {
+      max-width: 14cm;
+      padding-left: 4ch;
+    }
+  }
 </style>
-<div class="back-cover">
-  <section>
-    <div class="title">{{ config.site_name }}</div>
-  </section>
+<div class="colophon">
+  <div class="label">COLOPHON</div>
+  <div class="text">
+    This document is a page of {{ config.site_url }}, printed by
+    MkDocs Exporter {{ version }} with Chromium.
+  </div>
 </div>

@@ -61,12 +61,7 @@ Documents are laid out by Chromium, which supports page sizes (they can differ f
     </div>
     ```
 
-<div class="previews" markdown>
-
-[![A portrait page](../assets/images/examples/page-layout-1.webp)](../assets/images/examples/page-layout-1.webp)
-[![A table on a landscape page](../assets/images/examples/page-layout-2.webp)](../assets/images/examples/page-layout-2.webp)
-
-</div>
+{{ previews("page-layout") }}
 
 The elements start on a new page of their kind, and are laid out with its width (see [Paper size and landscape pages](../examples/page-layout.md)).
 

@@ -2,12 +2,7 @@
 
 Print documents on US Letter paper, and print wide tables on landscape pages.
 
-<div class="previews" markdown>
-
-[![A portrait page](../assets/images/examples/page-layout-1.webp)](../assets/images/examples/page-layout-1.webp)
-[![A table on a landscape page](../assets/images/examples/page-layout-2.webp)](../assets/images/examples/page-layout-2.webp)
-
-</div>
+{{ previews("page-layout") }}
 
 === "`mkdocs.yml`"
 
