@@ -23,8 +23,10 @@ from mkdocs_exporter.core.books.assembly import (
 )
 from mkdocs_exporter.core.books.layout import (
     POINTS_PER_PIXEL,
+    CoverMode,
     Measure,
     Plan,
+    StartMode,
     kept_covers,
     page_names,
     plan,
@@ -62,10 +64,10 @@ class Book:
     documents: Sequence[Document]
     """The pages, in order."""
 
-    covers: str = "all"
+    covers: CoverMode = "all"
     """The cover pages kept (see `kept_covers`)."""
 
-    start: str = "any"
+    start: StartMode = "any"
     """`odd` to start every page on an odd (right-hand) page, adding blank pages."""
 
     metadata: Mapping[str, object] = field(default_factory=dict)

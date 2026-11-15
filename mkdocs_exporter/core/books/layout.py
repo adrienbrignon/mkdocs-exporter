@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator, Mapping
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Literal, get_args
 
 from mkdocs_exporter.core import margins
 from mkdocs_exporter.core.books.styles import (
@@ -14,18 +14,24 @@ from mkdocs_exporter.core.books.styles import (
 from mkdocs_exporter.core.css import PageMargin
 from mkdocs_exporter.core.document import Heading, Position
 
-COVER_MODES = ("all", "none", "limits", "book", "front", "back")
-"""How cover pages are handled when aggregating documents."""
+CoverMode = Literal["all", "none", "limits", "book", "front", "back"]
+"""Which cover pages of its pages a book keeps (see `kept_covers`)."""
 
-START_MODES = ("any", "odd")
-"""On which pages documents start in an aggregated document."""
+StartMode = Literal["any", "odd"]
+"""On which pages the pages of a book start (`odd`: blank pages are inserted)."""
+
+COVER_MODES: tuple[CoverMode, ...] = get_args(CoverMode)
+"""The cover modes, in order."""
+
+START_MODES: tuple[StartMode, ...] = get_args(StartMode)
+"""The start modes, in order."""
 
 POINTS_PER_PIXEL = 0.75
 """PDF points (1/72 in) per CSS pixel (1/96 in)."""
 
 
-def kept_covers(mode: str, index: int, count: int) -> set[str]:
-    """The covers kept for the document at `index` among `count` aggregated documents.
+def kept_covers(mode: CoverMode, index: int, count: int) -> set[str]:
+    """The covers kept for the page at `index` among the `count` pages of a book.
 
     - `all`: every cover;
     - `none`: no cover;
@@ -180,7 +186,7 @@ class Plan:
     """The number of pages of the book."""
 
 
-def plan(measure: Measure, start: str = "any") -> Plan:
+def plan(measure: Measure, start: StartMode = "any") -> Plan:
     """Plans the blank pages of a book (`start: odd`).
 
     Parts start on a new page of their own: their length doesn't depend on where they
