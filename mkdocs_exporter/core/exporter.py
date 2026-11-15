@@ -12,7 +12,9 @@ from mkdocs_exporter.core.document import Document, Layout, Site
 from mkdocs_exporter.core.renderer import Context, Outcome, Renderer, RenderOptions
 from mkdocs_exporter.core.server import Server
 from mkdocs_exporter.core.themes import Theme
-from mkdocs_exporter.logging import logger
+from mkdocs_exporter.logging import Logger
+
+logger = Logger("pdf")
 
 
 @dataclass
@@ -70,7 +72,7 @@ class Exporter:
 
                 if renderer.reused:
                     logger.info(
-                        "[mkdocs-exporter.pdf] Reused %d of %d documents (unchanged)",
+                        "Reused %d of %d documents (unchanged)",
                         renderer.reused,
                         len(documents),
                     )

@@ -28,7 +28,10 @@ from mkdocs_exporter.core.themes import Theme, get_theme
 from mkdocs_exporter.covers import CoverRenderer
 from mkdocs_exporter.formats.pdf.config import BookConfig
 from mkdocs_exporter.helpers import resolve
-from mkdocs_exporter.logging import logger
+from mkdocs_exporter.logging import Logger
+
+logger = Logger()
+pdf_logger = Logger("pdf")
 
 MARKERS = ("mkdocs-exporter-only", "data-decompose", "data-teleport")
 """What the website's pages are processed for, besides buttons (see `_decorate_page`)."""
@@ -104,8 +107,8 @@ class Plugin(BasePlugin[Config]):
         self.pdf = options.enabled and (self.command != "serve" or options.serve)
 
         if options.aggregator.enabled:
-            logger.warning(
-                "[mkdocs-exporter.pdf] 'formats.pdf.aggregator' is deprecated, list "
+            pdf_logger.warning(
+                "'formats.pdf.aggregator' is deprecated, list "
                 "combined documents in 'formats.pdf.books' instead"
             )
 
@@ -118,13 +121,13 @@ class Plugin(BasePlugin[Config]):
             )
         if type(self.theme) is Theme:
             logger.info(
-                "[mkdocs-exporter] The '%s' theme has no dedicated support, "
+                "The '%s' theme has no dedicated support, "
                 "generic adjustments will be used",
                 theme.name,
             )
         if options.enabled and not self.pdf:
-            logger.info(
-                "[mkdocs-exporter.pdf] PDF documents are not generated while serving "
+            pdf_logger.info(
+                "PDF documents are not generated while serving "
                 "(enable 'formats.pdf.serve' to change this)"
             )
 
@@ -225,7 +228,7 @@ class Plugin(BasePlugin[Config]):
         if html.select('[data-decompose="true"]') and not self.decomposed:
             self.decomposed = True
             logger.warning(
-                "[mkdocs-exporter] 'data-decompose=\"true\"' is deprecated, give "
+                "'data-decompose=\"true\"' is deprecated, give "
                 "elements meant for documents only the 'mkdocs-exporter-only' class"
             )
 
@@ -245,8 +248,8 @@ class Plugin(BasePlugin[Config]):
             return
         if not self.exports:
             if self.config.formats.pdf.explicit:
-                logger.warning(
-                    "[mkdocs-exporter.pdf] No page has been rendered: in explicit mode, "
+                pdf_logger.warning(
+                    "No page has been rendered: in explicit mode, "
                     "pages must enable PDF generation with 'pdf: true' in their metadata"
                 )
             return

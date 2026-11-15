@@ -25,7 +25,9 @@ from mkdocs_exporter.core.preparation import Prepared, Preparer, toc_entries
 from mkdocs_exporter.core.server import Server
 from mkdocs_exporter.core.themes import Theme
 from mkdocs_exporter.core.toc import TocOptions
-from mkdocs_exporter.logging import logger
+from mkdocs_exporter.logging import Logger
+
+logger = Logger("pdf")
 
 
 def default_concurrency() -> int:
@@ -152,12 +154,12 @@ class Renderer:
         key = self._key(document) if self.cache else ""
 
         if self.cache and (result := self.cache.get(key, self._fresh)):
-            logger.debug("[mkdocs-exporter.pdf] Reusing '%s'", document.id)
+            logger.debug("Reusing '%s'", document.id)
             self.reused += 1
 
             return result, None
 
-        logger.info("[mkdocs-exporter.pdf] Rendering '%s'...", document.id)
+        logger.info("Rendering '%s'...", document.id)
 
         # A few milliseconds of CPU: a thread would mostly wait for the GIL (measured
         # about 5 times slower with 4 documents rendered concurrently).
@@ -354,10 +356,10 @@ def report(document: Document, result: PrintResult) -> None:
     diagnostics = result.diagnostics
 
     for error in diagnostics.hook_errors:
-        logger.warning("[mkdocs-exporter.pdf] Error in '%s': %s", document.id, error)
+        logger.warning("Error in '%s': %s", document.id, error)
     for request in diagnostics.failed_requests:
         logger.warning(
-            "[mkdocs-exporter.pdf] Failed to load a resource of '%s': %s",
+            "Failed to load a resource of '%s': %s",
             document.id,
             request,
         )
@@ -367,7 +369,7 @@ def report(document: Document, result: PrintResult) -> None:
         *diagnostics.console,
         *diagnostics.external_failed_requests,
     ]:
-        logger.debug("[mkdocs-exporter.pdf] '%s': %s", document.id, message)
+        logger.debug("'%s': %s", document.id, message)
 
 
 def _path(url: str) -> str:

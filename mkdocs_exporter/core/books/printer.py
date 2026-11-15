@@ -48,7 +48,9 @@ from mkdocs_exporter.core.preparation import Prepared
 from mkdocs_exporter.core.renderer import Context, Outcome, report
 from mkdocs_exporter.core.server import RESERVED
 from mkdocs_exporter.core.toc import TocOptions
-from mkdocs_exporter.logging import logger
+from mkdocs_exporter.logging import Logger
+
+logger = Logger("pdf")
 
 ATTEMPTS = 3
 """How many times a book may be patched and printed again."""
@@ -134,7 +136,7 @@ class BookPrinter:
         if not documents:
             return []
 
-        logger.info("[mkdocs-exporter.pdf] Combining pages into '%s'...", self.output)
+        logger.info("Combining pages into '%s'...", self.output)
 
         assembly = self._assemble(documents)
         document = Document(
@@ -257,7 +259,7 @@ class BookPrinter:
         try:
             patch, _ = self._patch(Measure.parse(printed.measure))
         except ValueError as error:
-            logger.warning("[mkdocs-exporter.pdf] %s ('%s')", error, self.output)
+            logger.warning("%s ('%s')", error, self.output)
             return None
 
         self.attempts += 1
@@ -267,7 +269,7 @@ class BookPrinter:
         if self.attempts >= ATTEMPTS:
             # The document is printed once more, without being checked.
             logger.warning(
-                "[mkdocs-exporter.pdf] The page numbering of '%s' did not stabilize, "
+                "The page numbering of '%s' did not stabilize, "
                 "page numbers may be inaccurate",
                 self.output,
             )
@@ -311,7 +313,7 @@ class BookPrinter:
         try:
             measure = Measure.parse(result.measure)
         except ValueError as error:
-            logger.warning("[mkdocs-exporter.pdf] %s ('%s')", error, self.output)
+            logger.warning("%s ('%s')", error, self.output)
             measure = Measure(pages=0)
 
         writer = PdfWriter(clone_from=PdfReader(io.BytesIO(result.pdf)))
@@ -327,7 +329,7 @@ class BookPrinter:
 
         if not measured:
             logger.warning(
-                "[mkdocs-exporter.pdf] The layout of '%s' could not be fully measured "
+                "The layout of '%s' could not be fully measured "
                 "(e.g. by Chromium older than 138): page numbers and bookmarks may be "
                 "inaccurate",
                 self.output,

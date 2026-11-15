@@ -15,7 +15,9 @@ from typing import Any
 
 from mkdocs_exporter.core.browser import Diagnostics, PrintResult
 from mkdocs_exporter.core.document import Heading, Layout, Position
-from mkdocs_exporter.logging import logger
+from mkdocs_exporter.logging import Logger
+
+logger = Logger("pdf")
 
 FORMAT = 1
 """The version of the cache's format (entries of other versions are ignored)."""
@@ -120,9 +122,7 @@ class Cache:
                 json.dumps(entry, ensure_ascii=False).encode("utf-8"),
             )
         except OSError as error:
-            logger.warning(
-                "[mkdocs-exporter.pdf] Failed to write to the cache: %s", error
-            )
+            logger.warning("Failed to write to the cache: %s", error)
             return
 
         self.used.add(key)

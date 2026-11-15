@@ -8,7 +8,9 @@ from tinycss2 import ast
 from tinycss2.ast import Node
 from tinycss2.serializer import serialize_string_value, serialize_url
 
-from mkdocs_exporter.logging import logger
+from mkdocs_exporter.logging import Logger
+
+logger = Logger("pdf")
 
 UNSCOPABLE = frozenset(
     {
@@ -370,7 +372,7 @@ def _stylesheet(css: str | list[Node]) -> list[Node]:
     nodes = tinycss2.parse_stylesheet(css, skip_comments=False, skip_whitespace=False)
 
     if any(node.type == "error" for node in nodes):
-        logger.debug("[mkdocs-exporter.pdf] Invalid CSS left as it is: %.80r", css)
+        logger.debug("Invalid CSS left as it is: %.80r", css)
 
         raise InvalidStylesheet(css)
 

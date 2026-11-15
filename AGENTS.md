@@ -161,7 +161,8 @@ Design decisions backed by measurements (don't revert them without measuring aga
 - Python `>=3.11`, PEP 8 enforced by `ruff format` (88 columns), imports sorted by ruff.
 - Type hints on all new code; keep `mypy` clean.
 - Docstrings on public classes and functions; no comments at the top of files (module docstrings, headers).
-- Log through `mkdocs_exporter.logging.logger`; prefix messages with `[mkdocs-exporter.<area>]`.
+- Log through a module-level `logger = Logger("<area>")` (`mkdocs_exporter.logging`), which prefixes
+  messages with `[mkdocs-exporter.<area>]`; `PluginError` messages carry the prefix themselves.
 - Keep the core free of `mkdocs` imports: it is meant to be driven by other engines (a standalone
   command for Zensical and MkDocs 2.0 is planned).
 - Do not use `asyncio.get_event_loop()` / `asyncio.set_event_loop()`: the plugin runs inside other tools'

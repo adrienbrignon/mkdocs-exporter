@@ -23,7 +23,10 @@ from playwright.async_api import Error as PlaywrightError
 from playwright.async_api import TimeoutError as PlaywrightTimeoutError
 
 from mkdocs_exporter.core.document import Layout
-from mkdocs_exporter.logging import logger
+from mkdocs_exporter.logging import Logger
+
+logger = Logger("pdf")
+console_logger = Logger("pdf.browser")
 
 READY = """() => window.__MKDOCS_EXPORTER_READY__.then((state) => ({
   state,
@@ -215,7 +218,7 @@ class Browser:
         if self._playwright is not None:
             await self.close()
 
-        logger.info("[mkdocs-exporter.pdf] Launching browser...")
+        logger.info("Launching browser...")
 
         self._playwright = await async_playwright().start()
 
@@ -400,9 +403,7 @@ class _Watch:
 
     def _console(self, message: ConsoleMessage) -> None:
         if self.debug:
-            logger.info(
-                "[mkdocs-exporter.pdf.browser] (%s) %s", message.type, message.text
-            )
+            console_logger.info("(%s) %s", message.type, message.text)
         if message.type == "error":
             self.diagnostics.console.append(message.text)
 

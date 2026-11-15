@@ -11,7 +11,9 @@ from urllib.parse import urljoin, urlsplit, urlunsplit
 from bs4 import BeautifulSoup, Tag
 
 from mkdocs_exporter.core.document import Heading
-from mkdocs_exporter.logging import logger
+from mkdocs_exporter.logging import Logger
+
+logger = Logger()
 
 COVERS = ("mkdocs-exporter-front-cover", "mkdocs-exporter-back-cover")
 """The classes of cover pages."""
@@ -98,8 +100,7 @@ class HtmlDocument:
 
             if destination is None:
                 logger.warning(
-                    "[mkdocs-exporter] Failed to teleport <%s> element: "
-                    "destination '%s' not found",
+                    "Failed to teleport <%s> element: destination '%s' not found",
                     element.name,
                     selector,
                 )
