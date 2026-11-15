@@ -7,21 +7,21 @@ import dataclasses
 import importlib.resources
 import json
 import re
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from urllib.parse import urlsplit
 
 from bs4 import Tag
 
 from mkdocs_exporter.core import margins
-from mkdocs_exporter.core.browser import Browser, PrintResult, RenderError
+from mkdocs_exporter.core.browser import Browser, Printed, PrintResult, RenderError
 from mkdocs_exporter.core.cache import Assets, Cache, digest, environment, fingerprint
 from mkdocs_exporter.core.document import Document, Heading, Layout, Site
 from mkdocs_exporter.core.html import HtmlDocument, resolve_link
 from mkdocs_exporter.core.pdf import (
     RELATIVE_LINKS_BASE,
+    fix_uri,
     read_layout,
-    relative_url,
     rewrite_links,
     set_metadata,
 )
@@ -69,32 +69,6 @@ class RenderOptions:
 
 
 @dataclass
-class Pass:
-    """Parameters of a rendering pass."""
-
-    covers: Iterable[str] | None = None
-    """The cover pages to keep (`None` to keep them all)."""
-
-    page: int | None = None
-    """The number of the document's first page (aggregated documents)."""
-
-    pages: int | None = None
-    """The total number of pages (aggregated documents)."""
-
-    name: str = "default"
-    """A name, unique for each pass."""
-
-    directory: str | None = None
-    """The directory relative links are resolved from (defaults to the document's)."""
-
-    relativize: bool = True
-    """Should links be made relative when the website has no URL?"""
-
-    toc: str | None = None
-    """The HTML of a table of contents, inserted after the front cover."""
-
-
-@dataclass
 class Outcome:
     """The outcome of rendering a document."""
 
@@ -135,39 +109,22 @@ class Renderer:
             theme.print_stylesheet(),
         ]
 
-    def prepare(
-        self, document: Document, render_pass: Pass | None = None
-    ) -> tuple[str, list[tuple[int, str, str]]]:
-        """Returns the HTML to print for a document, and its headings.
+    def prepare_content(
+        self, html: HtmlDocument, content: Tag, document: Document, covers: set[str]
+    ) -> None:
+        """Prepares a page's content for printing (also as part of a combined document).
 
-        Headings are returned as (level, identifier, title), outside of covers and tables
-        of contents. Hidden links to each of them make the browser create named
-        destinations, which tell where headings land (and let PDF readers link to them).
+        Inserts the title (when asked to) and cover pages, opens `<details>` and removes
+        what must not be printed (permalinks, the theme's `removed` elements).
         """
-
-        render_pass = render_pass or Pass()
-        html = HtmlDocument(document.html)
-        hidden = [*self.theme.hidden, *self.options.hidden]
-        base = self.options.links or RELATIVE_LINKS_BASE
-
-        kept = set(document.covers)
-
-        if render_pass.covers is not None:
-            kept &= set(render_pass.covers)
-
-        content = self.theme.content_element(html)
 
         if self.options.title and document.title and content.find("h1") is None:
             heading = html.soup.new_tag("h1", attrs={"class": "mkdocs-exporter-title"})
             heading.string = document.title
             content.insert(0, heading)
-        if render_pass.toc is not None:
-            content.insert(
-                0, html.fragment(render_pass.toc, **{"class": "mkdocs-exporter-toc"})
-            )
 
         for location in COVER_LOCATIONS:
-            if location in kept:
+            if location in covers and location in document.covers:
                 cover = html.fragment(
                     document.covers[location],
                     **{"class": f"mkdocs-exporter-{location}-cover"},
@@ -180,6 +137,22 @@ class Renderer:
 
         html.set_attribute("details:not([open])", "open", "")
         html.remove([".headerlink", *self.theme.removed])
+
+    def prepare(self, document: Document) -> tuple[str, list[tuple[int, str, str]]]:
+        """Returns the HTML to print for a document, and its headings.
+
+        Headings are returned as (level, identifier, title), outside of covers. Hidden
+        links to each of them make the browser create named destinations, which tell
+        where headings land (and let PDF readers link to them).
+        """
+
+        html = HtmlDocument(document.html)
+        hidden = [*self.theme.hidden, *self.options.hidden]
+        base = self.options.links or RELATIVE_LINKS_BASE
+        kept = set(document.covers)
+        content = self.theme.content_element(html)
+
+        self.prepare_content(html, content, document, kept)
 
         headings = _headings(content)
 
@@ -199,8 +172,6 @@ class Renderer:
                 self.options.margins,
                 {**self.options.variables, "page_title": document.title},
                 front_cover="front" in kept,
-                first_page=render_pass.page,
-                pages=render_pass.pages,
             ),
             *self.options.stylesheets,
         ]
@@ -235,14 +206,11 @@ class Renderer:
 
         return str(html), headings
 
-    async def render(
-        self, document: Document, render_pass: Pass | None = None
-    ) -> PrintResult:
+    async def render(self, document: Document) -> PrintResult:
         """Renders a document to PDF."""
 
-        render_pass = render_pass or Pass()
-        cache = self.cache if render_pass.name == "default" else None
-        key = self._key(document, render_pass) if cache else ""
+        cache = self.cache
+        key = self._key(document) if cache else ""
 
         if cache and (result := cache.get(key, self._fresh)):
             logger.debug("[mkdocs-exporter.pdf] Reusing '%s'", document.id)
@@ -254,8 +222,8 @@ class Renderer:
 
         # A few milliseconds of CPU: a thread would mostly wait for the GIL (measured
         # about 5 times slower with 4 documents rendered concurrently).
-        html, headings = self.prepare(document, render_pass)
-        path = f"{document.url}?mkdocs-exporter={render_pass.name}"
+        html, headings = self.prepare(document)
+        path = f"{document.url}?mkdocs-exporter=default"
         url = self.server.publish(path, html)
         refine = None
 
@@ -264,9 +232,9 @@ class Renderer:
             # out where headings land, then print again with the section of every page.
             sections = [(i, title) for level, i, title in headings if level <= 2]
 
-            async def refine(pdf: bytes) -> str | None:
-                titles = margins.running_heads(sections, read_layout(pdf))
-                css = margins.sections(titles, first_page=render_pass.page or 1)
+            async def refine(printed: Printed) -> str | None:
+                titles = margins.running_heads(sections, read_layout(printed.pdf))
+                css = margins.sections(titles)
 
                 return (
                     "(() => { const style = document.createElement('style');"
@@ -275,9 +243,7 @@ class Renderer:
                 )
 
         try:
-            result = await self.browser.print(
-                url, tagged=render_pass.name == "default", refine=refine
-            )
+            result = await self.browser.print(url, refine=refine)
         finally:
             self.server.unpublish(path)
 
@@ -291,17 +257,15 @@ class Renderer:
                 if i in layout.anchors
             ],
         )
-        result.pdf = self._rewrite_links(result.pdf, document, render_pass)
-
-        if render_pass.name == "default":
-            result.pdf = set_metadata(
-                result.pdf,
-                {
-                    "creator": "MkDocs Exporter",
-                    "title": document.title,
-                    **document.metadata,
-                },
-            )
+        result.pdf = self._rewrite_links(result.pdf, document)
+        result.pdf = set_metadata(
+            result.pdf,
+            {
+                "creator": "MkDocs Exporter",
+                "title": document.title,
+                **document.metadata,
+            },
+        )
 
         diagnostics = result.diagnostics
 
@@ -315,7 +279,7 @@ class Renderer:
 
         return result
 
-    def _key(self, document: Document, render_pass: Pass) -> str:
+    def _key(self, document: Document) -> str:
         """Identifies a document's inputs (besides the resources it loads)."""
 
         options = dataclasses.asdict(self.options)
@@ -331,7 +295,6 @@ class Renderer:
             self.site.prefix,
             options,
             dataclasses.asdict(document),
-            dataclasses.asdict(render_pass),
         )
 
     def _asset(self, url: str) -> str | None:
@@ -350,66 +313,47 @@ class Renderer:
 
         return all(self._asset(url) == value for url, value in assets.items())
 
-    def _rewrite_links(
-        self, pdf: bytes, document: Document, render_pass: Pass
-    ) -> bytes:
+    def _rewrite_links(self, pdf: bytes, document: Document) -> bytes:
         """Fixes links to the local server and makes links relative when needed."""
 
         origin = self.server.origin
-        base = self.options.links or RELATIVE_LINKS_BASE
-        relativize = self.options.links is None and render_pass.relativize
-        directory = (
-            document.directory
-            if render_pass.directory is None
-            else render_pass.directory
-        )
+        relativize = self.options.links is None
 
         if origin.encode() not in pdf and not (
             relativize and RELATIVE_LINKS_BASE.encode() in pdf
         ):
             return pdf
 
-        def rewrite(uri: str) -> str | None:
-            if uri.startswith(origin):
-                # A link created by a script after the page's links were resolved.
-                uri = (
-                    resolve_link(uri[len(origin) :], "", self.site.prefix, base) or uri
-                )
-            if relativize and uri.startswith(RELATIVE_LINKS_BASE):
-                return relative_url(uri[len(RELATIVE_LINKS_BASE) :], directory)
+        return rewrite_links(
+            pdf,
+            lambda uri: fix_uri(
+                uri,
+                origin,
+                self.site.prefix,
+                self.options.links or RELATIVE_LINKS_BASE,
+                document.directory if relativize else None,
+            ),
+        )
 
-            return uri
-
-        return rewrite_links(pdf, rewrite)
-
-    async def render_all(
-        self, documents: Sequence[Document], passes: Sequence[Pass] | None = None
-    ) -> list[Outcome]:
+    async def render_all(self, documents: Sequence[Document]) -> list[Outcome]:
         """Renders documents concurrently; a failing document doesn't stop the others."""
 
         semaphore = asyncio.Semaphore(max(1, self.options.concurrency))
 
-        async def render(document: Document, render_pass: Pass | None) -> Outcome:
+        async def render(document: Document) -> Outcome:
             async with semaphore:
                 try:
-                    result = await self.render(document, render_pass)
+                    result = await self.render(document)
                 except RenderError as error:
                     return Outcome(document=document, error=error)
 
-                self._report(document, result)
+                self.report(document, result)
 
                 return Outcome(document=document, result=result)
 
-        return list(
-            await asyncio.gather(
-                *(
-                    render(document, passes[index] if passes else None)
-                    for index, document in enumerate(documents)
-                )
-            )
-        )
+        return list(await asyncio.gather(*(render(d) for d in documents)))
 
-    def _report(self, document: Document, result: PrintResult) -> None:
+    def report(self, document: Document, result: PrintResult) -> None:
         """Logs what looked suspicious while rendering a document."""
 
         diagnostics = result.diagnostics
@@ -436,11 +380,7 @@ class Renderer:
 def _headings(content: Tag) -> list[tuple[int, str, str]]:
     """The headings of a page's content: (level, identifier, title)."""
 
-    excluded = (
-        "mkdocs-exporter-front-cover",
-        "mkdocs-exporter-back-cover",
-        "mkdocs-exporter-toc",
-    )
+    excluded = ("mkdocs-exporter-front-cover", "mkdocs-exporter-back-cover")
     headings = []
 
     for element in content.find_all(HEADING):

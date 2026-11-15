@@ -96,11 +96,7 @@ class Exporter:
 
                 for index, aggregation in enumerate(aggregations):
                     report.failures += await aggregate(
-                        renderer,
-                        aggregation,
-                        report.layouts,
-                        self.site,
-                        name=f"aggregate-{index}",
+                        renderer, aggregation, name=f"aggregate-{index}"
                     )
 
         return report

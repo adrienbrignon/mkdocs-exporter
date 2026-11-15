@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 
 from mkdocs_exporter.core.document import Layout
 
@@ -19,6 +19,29 @@ BOXES = {
     },
 }
 """The page margin boxes of each position of headers and footers."""
+
+ALL_BOXES = (
+    "top-left-corner",
+    "top-left",
+    "top-center",
+    "top-right",
+    "top-right-corner",
+    "right-top",
+    "right-middle",
+    "right-bottom",
+    "bottom-right-corner",
+    "bottom-right",
+    "bottom-center",
+    "bottom-left",
+    "bottom-left-corner",
+    "left-bottom",
+    "left-middle",
+    "left-top",
+)
+"""Every page margin box."""
+
+STYLE = "font-family: sans-serif; font-size: 9pt; color: #555; white-space: pre;"
+"""The style of the margin boxes of headers and footers."""
 
 SECTIONS = "mkdocs-exporter-section"
 """The counter style printing the current section of each page (see `sections`)."""
@@ -55,13 +78,12 @@ def css_string(text: str) -> str:
     return f'"{escaped}"'
 
 
-def content(template: str, values: Mapping[str, str], pages: int | None = None) -> str:
+def content(template: str, values: Mapping[str, str]) -> str:
     """The value of the `content` property of a margin box.
 
     Args:
         template: The text, with placeholders.
         values: The values of placeholders (`site_name`, `page_title`).
-        pages: The total number of pages, when it differs from the document's own.
     """
 
     validate(template)
@@ -78,7 +100,7 @@ def content(template: str, values: Mapping[str, str], pages: int | None = None) 
         if name == "page":
             parts.append("counter(page)")
         elif name == "pages":
-            parts.append("counter(pages)" if pages is None else css_string(str(pages)))
+            parts.append("counter(pages)")
         elif name == "section":
             parts.append(f"counter(page, {SECTIONS})")
         else:
@@ -96,8 +118,6 @@ def stylesheet(
     templates: Mapping[str, Mapping[str, str | None]],
     values: Mapping[str, str],
     front_cover: bool = False,
-    first_page: int | None = None,
-    pages: int | None = None,
 ) -> str:
     """The stylesheet rendering headers and footers.
 
@@ -109,8 +129,6 @@ def stylesheet(
             `center`, `right`).
         values: The values of placeholders (`site_name`, `page_title`).
         front_cover: Does the document start with a front cover?
-        first_page: The number of the first page (when part of a larger document).
-        pages: The total number of pages (when part of a larger document).
     """
 
     boxes = {
@@ -119,38 +137,85 @@ def stylesheet(
         for position, template in positions.items()
         if template is not None
     }
-    first = [f"  counter-set: page {first_page};"] if first_page is not None else []
 
     if not boxes:
-        return f"@page :first {{\n{first[0]}\n}}\n" if first else ""
+        return ""
 
-    style = "font-family: sans-serif; font-size: 9pt; color: #555; white-space: pre;"
     rules = "\n".join(
-        f"  @{box} {{ content: {content(template, values, pages)}; {style} }}"
+        f"  @{box} {{ content: {content(template, values)}; {STYLE} }}"
         for box, template in boxes.items()
     )
-    empty = [f"  @{box} {{ content: none; }}" for box in boxes]
-    first += empty if front_cover else []
+    empty = "\n".join(f"  @{box} {{ content: none; }}" for box in boxes)
 
     return (
         f'@counter-style {SECTIONS}-none {{ system: cyclic; symbols: ""; }}\n'
         + sections([])
         + f"@page {{\n{rules}\n}}\n"
         ".mkdocs-exporter-back-cover { page: mkdocs-exporter-cover; }\n"
-        "@page mkdocs-exporter-cover {\n"
-        + "\n".join(empty)
-        + "\n}\n"
-        + ("@page :first {\n" + "\n".join(first) + "\n}\n" if first else "")
+        f"@page mkdocs-exporter-cover {{\n{empty}\n}}\n"
+        + (f"@page :first {{\n{empty}\n}}\n" if front_cover else "")
     )
 
 
-def sections(titles: Sequence[str], first_page: int = 1) -> str:
+def book_stylesheet(
+    templates: Mapping[str, Mapping[str, str | None]],
+    values: Mapping[str, str],
+    titles: Mapping[str, str],
+    hidden: Iterable[str],
+    blank: str,
+) -> str:
+    """The stylesheet rendering the headers and footers of a book (combined documents).
+
+    Args:
+        templates: Templates by location and position (see `stylesheet`).
+        values: The values of placeholders (`site_name`).
+        titles: The `{page_title}` of named pages (e.g. the content of each part).
+        hidden: Named pages without headers nor footers (covers).
+        blank: The named page of blank pages, where every margin box is emptied (even
+            those of other stylesheets).
+    """
+
+    boxes = {
+        BOXES[location][position]: template
+        for location, positions in templates.items()
+        for position, template in positions.items()
+        if template is not None
+    }
+    titled = {
+        box: template for box, template in boxes.items() if "{page_title}" in template
+    }
+
+    def page(selector: str, title: str, only: Mapping[str, str]) -> str:
+        rules = "\n".join(
+            f"  @{box} {{ content: "
+            f"{content(template, {**values, 'page_title': title})}; {STYLE} }}"
+            for box, template in only.items()
+        )
+
+        return f"@page {selector} {{\n{rules}\n}}\n" if rules else ""
+
+    empty = "\n".join(f"  @{box} {{ content: none; }}" for box in boxes)
+    css = [
+        f'@counter-style {SECTIONS}-none {{ system: cyclic; symbols: ""; }}\n',
+        sections([]),
+        page("", "", boxes),
+        *(page(name, title, titled) for name, title in titles.items()),
+        *(f"@page {name} {{\n{empty}\n}}\n" for name in hidden if empty),
+        f"@page {blank} {{\n"
+        + "\n".join(f"  @{box} {{ content: none !important; }}" for box in ALL_BOXES)
+        + "\n}\n",
+    ]
+
+    return "".join(css)
+
+
+def sections(titles: Sequence[str]) -> str:
     """The counter style printing the section of each page (by page number)."""
 
     symbols = " ".join(css_string(title) for title in titles) or '""'
 
     return (
-        f"@counter-style {SECTIONS} {{ system: fixed {first_page}; "
+        f"@counter-style {SECTIONS} {{ system: fixed 1; "
         f"symbols: {symbols}; fallback: {SECTIONS}-none; }}\n"
     )
 
@@ -183,3 +248,82 @@ def running_heads(headings: Sequence[tuple[str, str]], layout: Layout) -> list[s
         current = last.get(page, current)
 
     return result
+
+
+UNITS = {
+    "px": 1.0,
+    "cm": 96 / 2.54,
+    "mm": 96 / 25.4,
+    "q": 96 / 101.6,
+    "in": 96.0,
+    "pt": 96 / 72,
+    "pc": 16.0,
+}
+"""CSS pixels per unit (absolute units)."""
+
+
+def to_pixels(length: str) -> float | None:
+    """Converts a CSS length to pixels (`None` for relative lengths and keywords)."""
+
+    match = re.fullmatch(r"\s*(-?[\d.]+)\s*([a-zA-Z]*)\s*", length)
+
+    if match is None:
+        return None
+
+    unit = match.group(2).lower() or "px"
+
+    return float(match.group(1)) * UNITS[unit] if unit in UNITS else None
+
+
+def top_margin(
+    rules: Sequence[Mapping[str, str]], name: str | None, first: bool, right: bool
+) -> float:
+    """The top margin (in pixels) of a page, from the `@page` rules setting one.
+
+    Rules apply by specificity (page name, then `:first`, then `:left` / `:right`), then
+    in order, as defined by CSS Paged Media.
+
+    Args:
+        rules: The `@page` rules (`selector`, `marginTop`), in order.
+        name: The name of the page.
+        first: Is it the document's first page?
+        right: Is it a right page?
+    """
+
+    best: tuple[tuple[int, int, int], int] | None = None
+    margin = 0.0
+
+    for order, rule in enumerate(rules):
+        value = to_pixels(str(rule.get("marginTop", "")))
+
+        if value is None:
+            continue
+
+        for selector in str(rule.get("selector", "")).split(","):
+            match = re.fullmatch(r"\s*([A-Za-z_][\w-]*)?((?::[\w-]+)*)\s*", selector)
+
+            if match is None:
+                continue
+
+            page, pseudos = match.group(1), re.findall(r":([\w-]+)", match.group(2))
+
+            if (
+                (page and page != name)
+                or ("first" in pseudos and not first)
+                or "blank" in pseudos
+                or ("left" in pseudos and right)
+                or ("right" in pseudos and not right)
+            ):
+                continue
+
+            specificity = (
+                int(bool(page)),
+                pseudos.count("first"),
+                pseudos.count("left") + pseudos.count("right"),
+            )
+
+            if best is None or (specificity, order) >= best:
+                best = (specificity, order)
+                margin = value
+
+    return margin

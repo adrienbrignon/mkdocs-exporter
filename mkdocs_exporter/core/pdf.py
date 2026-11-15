@@ -11,6 +11,7 @@ from pypdf import PdfReader, PdfWriter
 from pypdf.generic import DictionaryObject, NameObject, TextStringObject
 
 from mkdocs_exporter.core.document import Layout, Position
+from mkdocs_exporter.core.html import resolve_link
 
 RELATIVE_LINKS_BASE = "https://mkdocs-exporter.invalid/"
 """A placeholder base URL for links that must end up relative to the PDF document."""
@@ -33,6 +34,24 @@ def relative_url(target: str, directory: str) -> str:
     return (
         relative + (f"?{query}" if query else "") + (f"#{fragment}" if fragment else "")
     )
+
+
+def fix_uri(
+    uri: str, origin: str, prefix: str, base: str, directory: str | None
+) -> str | None:
+    """Fixes the URI of a link of a printed document.
+
+    Links to the local server (created by scripts after the page's links were resolved)
+    lead to the website at `base`; links to `RELATIVE_LINKS_BASE` become relative to
+    `directory` (the document's, when the website has no URL).
+    """
+
+    if uri.startswith(origin):
+        uri = resolve_link(uri[len(origin) :] or "/", "", prefix, base) or uri
+    if directory is not None and uri.startswith(RELATIVE_LINKS_BASE):
+        return relative_url(uri[len(RELATIVE_LINKS_BASE) :], directory)
+
+    return uri
 
 
 def link_actions(writer: PdfWriter) -> list[tuple[int, DictionaryObject, str]]:

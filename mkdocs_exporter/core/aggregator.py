@@ -1,41 +1,45 @@
-"""Combines documents into a single PDF document (a "book")."""
+"""Combines documents into a single PDF document (a "book").
+
+The documents are assembled into a single HTML document (see `mkdocs_exporter.core.book`)
+printed once by the browser. What browsers can't print natively is computed from a first
+print (a draft: only its first page is printed, the whole document is laid out), measured
+by `book.js`: page numbers of the table of contents, blank pages making documents start
+on odd pages, running heads (`{section}`). The document is patched and printed again;
+bookmarks are then added from the final print's measurement.
+"""
 
 from __future__ import annotations
 
 import importlib.resources
 import io
+import json
 import posixpath
 import re
-from collections.abc import Iterator, Mapping, Sequence
-from dataclasses import dataclass, field, replace
-from typing import TYPE_CHECKING, cast
+from collections.abc import Callable, Iterator, Mapping, Sequence
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Any, cast
 
 from jinja2 import Environment
-from pypdf import PdfWriter
+from pypdf import PdfReader, PdfWriter
 from pypdf.generic import (
     ArrayObject,
     DictionaryObject,
     Fit,
     FloatObject,
-    IndirectObject,
     NameObject,
     NullObject,
     TextStringObject,
 )
 
-from mkdocs_exporter.core.document import Document, Heading, Layout, Position, Site
-from mkdocs_exporter.core.pdf import (
-    RELATIVE_LINKS_BASE,
-    info,
-    link_actions,
-    relative_url,
-)
+from mkdocs_exporter.core import book, margins
+from mkdocs_exporter.core.browser import RenderError
+from mkdocs_exporter.core.document import Document
+from mkdocs_exporter.core.html import HtmlDocument
+from mkdocs_exporter.core.pdf import RELATIVE_LINKS_BASE, fix_uri, info, link_actions
+from mkdocs_exporter.core.server import RESERVED
 from mkdocs_exporter.logging import logger
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
-    from mkdocs_exporter.core.browser import PrintResult
     from mkdocs_exporter.core.renderer import Outcome, Renderer
 
 COVER_MODES = ("all", "none", "limits", "book", "front", "back")
@@ -43,6 +47,12 @@ COVER_MODES = ("all", "none", "limits", "book", "front", "back")
 
 START_MODES = ("any", "odd")
 """On which pages documents start in an aggregated document."""
+
+POINTS_PER_PIXEL = 0.75
+"""PDF points (1/72 in) per CSS pixel (1/96 in)."""
+
+ATTEMPTS = 3
+"""How many times a book may be patched and printed again (see `aggregate`)."""
 
 
 def kept_covers(mode: str, index: int, count: int) -> set[str]:
@@ -123,99 +133,6 @@ class Aggregation:
     """The table of contents, inserted after the first document's front cover."""
 
 
-@dataclass
-class Part:
-    """A document within the aggregated document."""
-
-    document: Document
-    covers: set[str]
-    """The covers kept."""
-
-    first_page: int
-    """The number of its first page in the aggregated document."""
-
-    pages: int
-    """Its (expected) number of pages in the aggregated document."""
-
-    layout: Layout
-    """Its (expected) layout in the aggregated document."""
-
-    blank_before: bool = False
-    """Is it preceded by a blank page?"""
-
-    def start(self) -> Position:
-        """Where its content starts: its first heading, or its first page."""
-
-        headings = self.layout.headings
-
-        return headings[0].position if headings else Position(page=0)
-
-
-def _number(parts: list[Part], start: str) -> list[Part]:
-    """Numbers the pages of the parts (inserting blank pages if needed)."""
-
-    page = 1
-
-    for part in parts:
-        part.blank_before = start == "odd" and page % 2 == 0
-        part.first_page = page + part.blank_before
-        page = part.first_page + part.pages
-
-    return parts
-
-
-def plan(
-    documents: Sequence[Document],
-    layouts: Mapping[str, Layout],
-    mode: str,
-    start: str = "any",
-) -> list[Part]:
-    """Plans the aggregated document from the layout of each rendered document.
-
-    Page counts are estimates (removing covers changes them): the aggregated document is
-    numbered again once its parts have been rendered.
-    """
-
-    parts = []
-
-    for index, document in enumerate(documents):
-        layout = layouts[document.id]
-        covers = kept_covers(mode, index, len(documents)) & set(document.covers)
-        pages = layout.pages
-
-        parts.append(
-            Part(
-                document=document,
-                covers=covers,
-                first_page=0,
-                pages=pages,
-                layout=layout,
-            )
-        )
-
-    return _number(parts, start)
-
-
-def renumber(
-    parts: Sequence[Part], layouts: Sequence[Layout], start: str = "any"
-) -> list[Part]:
-    """Plans the aggregated document again from the actual layout of each part."""
-
-    return _number(
-        [
-            replace(part, pages=layout.pages, layout=layout)
-            for part, layout in zip(parts, layouts, strict=True)
-        ],
-        start,
-    )
-
-
-def total_pages(parts: Sequence[Part]) -> int:
-    """The number of pages of the aggregated document."""
-
-    return parts[-1].first_page + parts[-1].pages - 1 if parts else 0
-
-
 def metadata(values: Mapping[str, object]) -> dict[str, str]:
     """Normalizes document information keys (`title` → `/Title`)."""
 
@@ -230,43 +147,202 @@ def flat_nav(documents: Sequence[Document]) -> list[NavNode]:
     ]
 
 
-def _nested(
-    headings: Sequence[Heading], depth: int
-) -> Iterator[tuple[int, Heading, int]]:
-    """Headings up to a level: (index, heading, index of the parent heading or -1)."""
-
-    stack: list[tuple[int, int]] = []
-
-    for index, heading in enumerate(headings):
-        if heading.level > depth:
-            continue
-
-        while stack and stack[-1][0] >= heading.level:
-            stack.pop()
-
-        yield index, heading, stack[-1][1] if stack else -1
-        stack.append((heading.level, index))
+# --- Measurements ----------------------------------------------------------------------
 
 
-def _sub_headings(part: Part) -> list[Heading]:
-    """The headings of a part, without its title."""
+@dataclass(frozen=True)
+class Position:
+    """A position in a printed book."""
 
-    headings = part.layout.headings
+    page: int
+    """The index of the page (0-based)."""
 
-    return list(headings[1:] if headings and headings[0].level == 1 else headings)
+    top: float = 0.0
+    """The distance from the top of the page area (without margin), in CSS pixels."""
 
 
-def _first(node: NavNode, parts: Mapping[str, Part]) -> Part | None:
-    """The first part of a navigation entry."""
+@dataclass
+class MeasuredHeading:
+    """A heading, as printed."""
 
-    if node.document is not None:
-        return parts.get(node.document)
+    level: int
+    title: str
+    id: str | None
+    position: Position
 
-    for child in node.children:
-        if (part := _first(child, parts)) is not None:
-            return part
 
-    return None
+@dataclass
+class MeasuredPart:
+    """A part, as printed: its pages (0-based, inclusive) and its headings."""
+
+    id: str
+    first: int
+    last: int
+    front: tuple[int, int] | None = None
+    """The pages of its front cover."""
+
+    back: tuple[int, int] | None = None
+    """The pages of its back cover."""
+
+    headings: list[MeasuredHeading] = field(default_factory=list)
+
+    @property
+    def pages(self) -> int:
+        """Its number of pages."""
+
+        return self.last - self.first + 1
+
+
+def _span(value: Any) -> tuple[int, int] | None:
+    return (int(value[0]), int(value[1])) if value else None
+
+
+@dataclass
+class Measure:
+    """The layout of a printed book, as measured by `book.js`."""
+
+    pages: int
+    parts: list[MeasuredPart] = field(default_factory=list)
+    toc: tuple[int, int] | None = None
+    """The pages of the table of contents."""
+
+    blanks: list[int] = field(default_factory=list)
+    """The blank pages."""
+
+    rules: list[dict[str, str]] = field(default_factory=list)
+    """The `@page` rules setting a top margin (`selector`, `marginTop`), in order."""
+
+    width: float = 0.0
+    """The width of the layout (wider than pages when the browser shrinks them)."""
+
+    @classmethod
+    def parse(cls, data: Mapping[str, Any] | None) -> Measure:
+        """Reads the measurement of `book.js`."""
+
+        if not data or "error" in data:
+            raise ValueError(
+                f"The book could not be measured: {(data or {}).get('error')}"
+            )
+
+        return cls(
+            pages=int(data["pages"]),
+            parts=[
+                MeasuredPart(
+                    id=str(part["id"]),
+                    first=int(part["span"][0]),
+                    last=int(part["span"][1]),
+                    front=_span(part.get("front")),
+                    back=_span(part.get("back")),
+                    headings=[
+                        MeasuredHeading(
+                            level=int(heading["level"]),
+                            title=str(heading["title"]),
+                            id=heading.get("id"),
+                            position=Position(
+                                int(heading["page"]), float(heading["top"])
+                            ),
+                        )
+                        for heading in part["headings"]
+                    ],
+                )
+                for part in data["parts"]
+                if part.get("span")
+            ],
+            toc=_span(data.get("toc")),
+            blanks=[int(blank[0]) for blank in data.get("blanks") or []],
+            rules=list(data.get("pageRules") or []),
+            width=float(data.get("width") or 0),
+        )
+
+    def content(self, part: MeasuredPart) -> range:
+        """The pages of a part's content (without covers nor table of contents)."""
+
+        first = part.front[1] + 1 if part.front else part.first
+        last = part.back[0] - 1 if part.back else part.last
+
+        if self.toc and part.first <= self.toc[0] <= part.last:
+            first = max(first, self.toc[1] + 1)
+
+        return range(first, max(first, last + 1))
+
+    def anchors(self) -> dict[str, Position]:
+        """The position of headings, and of the content of each part (by identifier)."""
+
+        positions: dict[str, Position] = {}
+
+        for part in self.parts:
+            pages = self.content(part)
+            positions[part.id] = Position(min(pages.start, part.last))
+
+            for heading in part.headings:
+                if heading.id:
+                    positions.setdefault(heading.id, heading.position)
+
+        return positions
+
+
+@dataclass
+class Plan:
+    """Blank pages making parts start on odd pages."""
+
+    blanks: list[str] = field(default_factory=list)
+    """The parts preceded by a blank page."""
+
+    shifts: dict[str, int] = field(default_factory=dict)
+    """How many pages each part moves, compared with the measured print."""
+
+    pages: int = 0
+    """The number of pages of the book."""
+
+
+def plan(measure: Measure, start: str = "any") -> Plan:
+    """Plans the blank pages of a book (`start: odd`).
+
+    Parts start on a new page of their own: their length doesn't depend on where they
+    start, so the measured lengths (blank pages left out) are final.
+    """
+
+    result = Plan()
+    page = 1
+
+    for part in measure.parts:
+        blank = start == "odd" and page % 2 == 0
+
+        if blank:
+            result.blanks.append(part.id)
+
+        first = page + blank
+        result.shifts[part.id] = first - 1 - part.first
+        page = first + part.pages
+
+    result.pages = page - 1
+
+    return result
+
+
+def running_heads(measure: Measure, plan: Plan) -> list[str]:
+    """The `{section}` of each page: its first `h1`/`h2`, or the last one of the part's
+    previous pages (nothing on covers, the table of contents and blank pages)."""
+
+    sections = [""] * plan.pages
+
+    for part in measure.parts:
+        shift = plan.shifts.get(part.id, 0)
+        headings = [heading for heading in part.headings if heading.level <= 2]
+        current = ""
+
+        for page in measure.content(part):
+            found = [h.title for h in headings if h.position.page == page]
+
+            if 0 <= page + shift < len(sections):
+                sections[page + shift] = found[0] if found else current
+
+            current = found[-1] if found else current
+
+    return sections
+
+
+# --- Table of contents and bookmarks ---------------------------------------------------
 
 
 @dataclass
@@ -279,29 +355,73 @@ class TocEntry:
     children: list[TocEntry] = field(default_factory=list)
 
 
+def _nested(
+    headings: Sequence[tuple[int, str, str]], depth: int
+) -> Iterator[tuple[int, tuple[int, str, str], int]]:
+    """Headings up to a level: (index, heading, index of the parent heading or -1)."""
+
+    stack: list[tuple[int, int]] = []
+
+    for index, heading in enumerate(headings):
+        if heading[0] > depth:
+            continue
+
+        while stack and stack[-1][0] >= heading[0]:
+            stack.pop()
+
+        yield index, heading, stack[-1][1] if stack else -1
+        stack.append((heading[0], index))
+
+
+def _sub_headings(part: book.Part) -> list[tuple[int, str, str]]:
+    """The headings of a part, without its title."""
+
+    headings = part.headings
+
+    return list(headings[1:] if headings and headings[0][0] == 1 else headings)
+
+
+def _first(node: NavNode, parts: Mapping[str, book.Part]) -> book.Part | None:
+    """The first part of a navigation entry."""
+
+    if node.document is not None:
+        return parts.get(node.document)
+
+    for child in node.children:
+        if (part := _first(child, parts)) is not None:
+            return part
+
+    return None
+
+
 def toc_entries(
-    nav: Sequence[NavNode], parts: Sequence[Part], depth: int, prefix: str
+    nav: Sequence[NavNode],
+    parts: Mapping[str, book.Part],
+    page: Callable[[str], int | None],
+    depth: int,
 ) -> list[TocEntry]:
-    """The entries of the table of contents (`prefix` is the website's path)."""
+    """The entries of the table of contents.
 
-    by_id = {part.document.id: part for part in parts}
-
-    def href(part: Part, anchor: str | None = None) -> str:
-        return prefix + part.document.url + (f"#{anchor}" if anchor else "")
+    Args:
+        nav: The navigation.
+        parts: The parts, by document identifier.
+        page: The page number of an identifier (of a heading or a part).
+        depth: The depth of the entries.
+    """
 
     def entries(nodes: Sequence[NavNode]) -> list[TocEntry]:
         result = []
 
         for node in nodes:
-            part = _first(node, by_id)
+            part = _first(node, parts)
 
             if part is None:
                 continue
 
             entry = TocEntry(
                 title=node.title or part.document.title,
-                page=part.first_page + part.start().page,
-                href=href(part),
+                page=page(part.anchor) or 0,
+                href="#" + part.anchor,
             )
 
             if node.document is None:
@@ -309,12 +429,10 @@ def toc_entries(
             else:
                 created: dict[int, TocEntry] = {}
 
-                for index, heading, parent in _nested(_sub_headings(part), depth):
-                    child = TocEntry(
-                        title=heading.title,
-                        page=part.first_page + heading.position.page,
-                        href=href(part, heading.id),
-                    )
+                for index, (_, id, title), parent in _nested(
+                    _sub_headings(part), depth
+                ):
+                    child = TocEntry(title=title, page=page(id) or 0, href="#" + id)
                     created[index] = child
                     siblings = (
                         created[parent].children if parent >= 0 else entry.children
@@ -346,307 +464,116 @@ def render_toc(options: TocOptions, entries: Sequence[TocEntry]) -> str:
     )
 
 
-class Book:
-    """Writes an aggregated document."""
+def outline(
+    writer: PdfWriter,
+    nav: Sequence[NavNode],
+    parts: Mapping[str, book.Part],
+    destination: Callable[[str], tuple[int, float] | None],
+    depth: int,
+) -> None:
+    """Adds bookmarks: sections, parts and their headings.
 
-    def __init__(
-        self, parts: Sequence[Part], pdfs: Sequence[bytes], language: str | None = None
-    ) -> None:
-        self.parts = list(parts)
-        self.writer = PdfWriter()
-        self.starts: dict[str, int] = {}
-
-        if language:
-            self.writer.root_object[NameObject("/Lang")] = TextStringObject(language)
-
-        for part, pdf in zip(self.parts, pdfs, strict=True):
-            if part.blank_before and len(self.writer.pages):
-                box = self.writer.pages[-1].mediabox
-                self.writer.add_blank_page(
-                    width=float(box.width), height=float(box.height)
-                )
-
-            self.starts[part.document.id] = len(self.writer.pages)
-            self.writer.append(io.BytesIO(pdf), import_outline=False)
-
-    def locate(self, part: Part, position: Position) -> tuple[int, Fit]:
-        """The page index and destination fit of a position within a part."""
-
-        index = min(
-            self.starts[part.document.id] + position.page, len(self.writer.pages) - 1
-        )
-        height = float(self.writer.pages[index].mediabox.height)
-        top = max(0.0, height - position.top)
-
-        return index, Fit.xyz(left=0, top=top)
-
-    def _destination(self, part: Part, position: Position) -> ArrayObject:
-        """An explicit destination (page and position) within a part."""
-
-        index, fit = self.locate(part, position)
-
-        return ArrayObject(
-            [
-                self.writer.pages[index].indirect_reference,
-                NameObject("/XYZ"),
-                FloatObject(0),
-                FloatObject(fit.fit_args[1]),
-                NullObject(),
-            ]
-        )
-
-    def anchor(self) -> None:
-        """Resolves the links to named destinations within each part.
-
-        Chromium names destinations after the identifiers of elements: once documents are
-        merged, names repeated across documents (e.g. footnotes) would all point to the
-        first document. They are replaced by explicit destinations in their own part.
-        """
-
-        bounds = sorted(
-            (start, part)
-            for part in self.parts
-            for start in [self.starts[part.document.id]]
-        )
-
-        for index, page in enumerate(self.writer.pages):
-            part = next((p for start, p in reversed(bounds) if start <= index), None)
-
-            if part is None:
-                continue
-
-            for reference in page.get("/Annots") or []:
-                annotation = reference.get_object()
-                action = annotation.get("/A")
-                action = action.get_object() if action is not None else None
-                name = annotation.get("/Dest")
-
-                if name is None and action is not None and action.get("/S") == "/GoTo":
-                    name = action.get("/D")
-                if not isinstance(name, str):
-                    continue
-
-                position = part.layout.anchors.get(str(name).lstrip("/"))
-
-                if position is None:
-                    continue
-
-                destination = self._destination(part, position)
-
-                if "/Dest" in annotation:
-                    annotation[NameObject("/Dest")] = destination
-                else:
-                    action[NameObject("/D")] = destination
-
-    def link(self, base: str, relative_to: str | None) -> None:
-        """Turns links to aggregated documents into links within the document.
-
-        Links to other pages of the website are made relative to the document's
-        directory when `relative_to` is set.
-        """
-
-        parts = {part.document.url: part for part in self.parts}
-
-        for _, annotation, uri in link_actions(self.writer):
-            if not uri.startswith(base):
-                continue
-
-            target = uri[len(base) :]
-            path, _, fragment = target.partition("#")
-            part = parts.get(path.partition("?")[0])
-
-            if part is not None:
-                position = part.layout.anchors.get(fragment) if fragment else None
-                destination = self._destination(part, position or part.start())
-                annotation[NameObject("/A")] = DictionaryObject(
-                    {
-                        NameObject("/S"): NameObject("/GoTo"),
-                        NameObject("/D"): destination,
-                    }
-                )
-            elif relative_to is not None:
-                action = cast(DictionaryObject, annotation["/A"].get_object())
-                action[NameObject("/URI")] = TextStringObject(
-                    relative_url(target, relative_to)
-                )
-
-    def outline(self, nav: Sequence[NavNode], depth: int) -> None:
-        """Adds bookmarks: sections, documents and their headings."""
-
-        if depth < 1:
-            return
-
-        parts = {part.document.id: part for part in self.parts}
-
-        def add(nodes: Sequence[NavNode], parent: IndirectObject | None) -> None:
-            for node in nodes:
-                part = _first(node, parts)
-
-                if part is None:
-                    continue
-
-                index, fit = self.locate(part, part.start())
-                item = self.writer.add_outline_item(
-                    title=node.title or part.document.title,
-                    page_number=index,
-                    parent=parent,
-                    fit=fit,
-                )
-
-                if node.document is None:
-                    add(node.children, item)
-                    continue
-
-                items: dict[int, IndirectObject] = {}
-
-                for index, heading, parent_index in _nested(_sub_headings(part), depth):
-                    page, heading_fit = self.locate(part, heading.position)
-                    items[index] = self.writer.add_outline_item(
-                        title=heading.title,
-                        page_number=page,
-                        parent=items[parent_index] if parent_index >= 0 else item,
-                        fit=heading_fit,
-                        is_open=False,
-                    )
-
-        add(nav, None)
-
-    def write(self, output: Path, info: Mapping[str, object]) -> None:
-        """Writes the document."""
-
-        self.writer.add_metadata({"/Producer": "MkDocs Exporter", **metadata(info)})
-
-        # Documents embed the same fonts and images: keep a single copy of them.
-        self.writer.compress_identical_objects()
-        output.parent.mkdir(parents=True, exist_ok=True)
-
-        with output.open("wb") as file:
-            self.writer.write(file)
-
-
-async def aggregate(
-    renderer: Renderer,
-    aggregation: Aggregation,
-    layouts: Mapping[str, Layout],
-    site: Site,
-    name: str = "aggregate",
-) -> list[Outcome]:
-    """Renders the documents of an aggregation again and combines them.
-
-    Page counts are predicted from the documents rendered with all their covers. When
-    removing covers changes the layout (e.g. content reflowing onto a cover's page), or
-    when the table of contents changes, the documents are numbered from their actual
-    layout and rendered again.
-
-    Returns:
-        The documents that could not be rendered (the aggregation is then not written).
+    Args:
+        writer: The document.
+        nav: The navigation.
+        parts: The parts, by document identifier.
+        destination: The page index and top (in points) of an identifier.
+        depth: The depth of bookmarks.
     """
 
-    from mkdocs_exporter.core.renderer import Pass
+    if depth < 1:
+        return
 
-    documents = [
-        document for document in aggregation.documents if document.id in layouts
-    ]
-    output = aggregation.output.lstrip("/")
-    directory = posixpath.dirname(output)
-    nav = aggregation.nav if aggregation.nav is not None else flat_nav(documents)
+    def add(nodes: Sequence[NavNode], parent: Any) -> None:
+        for node in nodes:
+            part = _first(node, parts)
+            target = destination(part.anchor) if part is not None else None
 
-    if not documents:
-        return []
+            if part is None or target is None:
+                continue
 
-    logger.info("[mkdocs-exporter.pdf] Aggregating pages to '%s'...", output)
-
-    parts = plan(documents, layouts, aggregation.covers, aggregation.start)
-    toc = _toc(aggregation, nav, parts, site)
-    results: dict[str, Outcome] = {}
-    rendered: dict[str, Pass] = {}
-
-    def passes() -> dict[str, Pass]:
-        total = total_pages(parts)
-
-        return {
-            part.document.id: Pass(
-                covers=part.covers,
-                page=part.first_page,
-                pages=total,
-                name=name,
-                directory=directory,
-                relativize=False,
-                toc=toc if index == 0 else None,
+            item = writer.add_outline_item(
+                title=node.title or part.document.title,
+                page_number=target[0],
+                parent=parent,
+                fit=Fit.xyz(left=0, top=target[1]),
             )
-            for index, part in enumerate(parts)
-        }
 
-    async def render(pending: Sequence[Document], parameters: dict[str, Pass]) -> bool:
-        """Renders documents, returning whether they all succeeded."""
+            if node.document is None:
+                add(node.children, item)
+                continue
 
-        outcomes = await renderer.render_all(
-            pending, [parameters[document.id] for document in pending]
-        )
+            items: dict[int, Any] = {}
 
-        for outcome in outcomes:
-            results[outcome.document.id] = outcome
-            rendered[outcome.document.id] = parameters[outcome.document.id]
+            for index, (_, id, title), parent_index in _nested(
+                _sub_headings(part), depth
+            ):
+                if (position := destination(id)) is None:
+                    continue
 
-        return all(outcome.error is None for outcome in outcomes)
+                items[index] = writer.add_outline_item(
+                    title=title,
+                    page_number=position[0],
+                    parent=items.get(parent_index, item),
+                    fit=Fit.xyz(left=0, top=position[1]),
+                    is_open=False,
+                )
 
-    if toc is not None and len(documents) > 1:
-        # The length of the table of contents shifts every following page: measure it
-        # first, so that the other documents are numbered right from the start.
-        if not await render(documents[:1], passes()):
-            return _failures(results)
+    add(nav, None)
 
-        layout = _layout(results[documents[0].id])
-        parts = renumber(
-            parts, [layout, *(part.layout for part in parts[1:])], aggregation.start
-        )
-        toc = _toc(aggregation, nav, parts, site)
 
-    attempts = 4 if aggregation.toc is not None else 3
+def lower_destinations(writer: PdfWriter, margins: Sequence[float]) -> None:
+    """Lowers named destinations by the top margin (in points) of their page.
 
-    for attempt in range(attempts):
-        # Only documents whose numbering (or table of contents) changed are rendered.
-        parameters = passes()
-        pending = [d for d in documents if rendered.get(d.id) != parameters[d.id]]
+    Chromium positions destinations as if pages had no top margin: links would show the
+    lines above their target.
+    """
 
-        if not await render(pending, parameters):
-            return _failures(results)
+    pages = {
+        getattr(page.indirect_reference, "idnum", None): index
+        for index, page in enumerate(writer.pages)
+    }
 
-        actual = renumber(
-            parts, [_layout(results[d.id]) for d in documents], aggregation.start
-        )
-        updated = _toc(aggregation, nav, actual, site)
-        stable = [p.pages for p in actual] == [
-            p.pages for p in parts
-        ] and updated == toc
-        parts = actual
-        toc = updated
+    def lower(destination: Any) -> None:
+        destination = destination.get_object()
 
-        if stable:
-            break
-        if attempt == attempts - 1:
-            logger.warning(
-                "[mkdocs-exporter.pdf] The page numbering of '%s' did not stabilize, "
-                "page numbers may be inaccurate",
-                output,
-            )
-            break
+        if isinstance(destination, DictionaryObject):
+            destination = destination.get("/D")
+            destination = destination.get_object() if destination is not None else None
+        if (
+            not isinstance(destination, ArrayObject)
+            or len(destination) < 4
+            or destination[1] != "/XYZ"
+            or isinstance(destination[3], NullObject)
+        ):
+            return
 
-        logger.debug("[mkdocs-exporter.pdf] Page numbering of '%s' changed", output)
+        index = pages.get(getattr(destination[0], "idnum", None))
 
-    book = Book(
-        parts,
-        [_result(results[d.id]).pdf for d in documents],
-        language=_language(documents[0].html),
-    )
-    base = renderer.options.links or RELATIVE_LINKS_BASE
+        if index is not None and index < len(margins):
+            destination[3] = FloatObject(float(destination[3]) - margins[index])
 
-    book.anchor()
-    book.link(base, directory if renderer.options.links is None else None)
-    book.outline(nav, aggregation.outline)
-    book.write(site.directory / output, aggregation.metadata)
+    def walk(node: Any) -> None:
+        node = node.get_object()
 
-    return []
+        for kid in node.get("/Kids", []):
+            walk(kid)
+
+        values = node.get("/Names", [])
+
+        for index in range(1, len(values), 2):
+            lower(values[index])
+
+    root: Any = writer.root_object
+
+    if "/Dests" in root:
+        for value in root["/Dests"].get_object().values():
+            lower(value)
+    if "/Names" in root and "/Dests" in root["/Names"].get_object():
+        walk(root["/Names"].get_object()["/Dests"])
+
+
+# --- Aggregation -----------------------------------------------------------------------
 
 
 def _language(html: str) -> str | None:
@@ -657,40 +584,269 @@ def _language(html: str) -> str | None:
     return match.group(1) if match else None
 
 
-def _result(outcome: Outcome) -> PrintResult:
-    """The result of a successful rendering."""
+async def aggregate(
+    renderer: Renderer, aggregation: Aggregation, name: str = "aggregate"
+) -> list[Outcome]:
+    """Prints the documents of an aggregation as a single document.
 
-    if outcome.result is None:  # pragma: no cover - failures are handled beforehand
-        raise RuntimeError(f"'{outcome.document.id}' was not rendered")
+    Returns:
+        The failure, if any (the aggregated document is then not written).
+    """
 
-    return outcome.result
+    from mkdocs_exporter.core.renderer import Outcome
+
+    documents = list(aggregation.documents)
+
+    if not documents:
+        return []
+
+    site, theme, options = renderer.site, renderer.theme, renderer.options
+    output = aggregation.output.lstrip("/")
+    directory = posixpath.dirname(output)
+    nav = aggregation.nav if aggregation.nav is not None else flat_nav(documents)
+    document = Document(id=output, url=documents[0].url, path=output, title=output)
+
+    logger.info("[mkdocs-exporter.pdf] Aggregating pages to '%s'...", output)
+
+    parts = []
+
+    for index, page in enumerate(documents):
+        html = HtmlDocument(page.html)
+        parts.append(
+            book.Part(
+                index=index,
+                document=page,
+                covers=kept_covers(aggregation.covers, index, len(documents))
+                & set(page.covers),
+                html=html,
+                content=theme.content_element(html),
+            )
+        )
+
+    settings = book.BookOptions(
+        content=theme.content,
+        prefix=site.prefix,
+        links=options.links or RELATIVE_LINKS_BASE,
+        removed=theme.removed,
+        hidden=[*theme.hidden, *options.hidden],
+        head=[
+            f"<script>window.__MKDOCS_EXPORTER__ = "
+            f"{json.dumps({'delay': options.delay})};</script>",
+            f'<script src="{RESERVED}pdf.js"></script>',
+            f'<script src="{RESERVED}book.js"></script>',
+            *(
+                [f"<script>{script}</script>"]
+                if (script := theme.print_script())
+                else []
+            ),
+        ],
+        scripts=options.scripts,
+        margins=options.margins,
+        variables=options.variables,
+        base_stylesheets=renderer.base_stylesheets,
+        stylesheets=options.stylesheets,
+        toc_title=aggregation.toc.title if aggregation.toc else "",
+    )
+
+    book.prepare(
+        parts,
+        settings,
+        lambda part: renderer.prepare_content(
+            part.html, part.content, part.document, part.covers
+        ),
+    )
+
+    by_document = {part.document.id: part for part in parts}
+    toc = aggregation.toc
+
+    def render(page: Callable[[str], int | None]) -> str | None:
+        if toc is None:
+            return None
+
+        return render_toc(toc, toc_entries(nav, by_document, page, toc.depth))
+
+    assembled = book.assemble(parts, settings, render(lambda _: 0))
+    sections = margins.uses(options.margins, "section")
+    applied: dict[str, Any] = {}
+    attempts = 0
+
+    def patch(measure: Measure) -> tuple[dict[str, Any], Plan]:
+        """What the document needs from a measured print."""
+
+        blank_plan = plan(measure, aggregation.start)
+        anchors = measure.anchors()
+        starts = sorted((p.first, p.id) for p in measure.parts)
+
+        def number(id: str) -> int | None:
+            position = anchors.get(id)
+
+            if position is None:
+                return None
+
+            part = next(
+                (p for first, p in reversed(starts) if first <= position.page), None
+            )
+
+            return position.page + blank_plan.shifts.get(part or "", 0) + 1
+
+        result: dict[str, Any] = {"blanks": blank_plan.blanks}
+
+        if sections:
+            result["css"] = margins.sections(running_heads(measure, blank_plan))
+        if (contents := render(number)) is not None:
+            result["toc"] = contents
+
+        return result, blank_plan
+
+    async def refine(printed: Any) -> str | None:
+        nonlocal attempts, applied
+
+        computed, _ = patch(Measure.parse(printed.measure))
+        attempts += 1
+
+        if computed == applied and not printed.draft:
+            return None
+        if attempts > ATTEMPTS:
+            logger.warning(
+                "[mkdocs-exporter.pdf] The page numbering of '%s' did not stabilize, "
+                "page numbers may be inaccurate",
+                output,
+            )
+
+        applied = computed
+
+        return f"window.__MKDOCS_EXPORTER_BOOK__.apply({json.dumps(computed)})"
+
+    needs_patch = toc is not None or aggregation.start == "odd" or sections
+    path = f"{documents[0].url}?mkdocs-exporter={name}"
+    url = renderer.server.publish(path, assembled.html)
+
+    try:
+        result = await renderer.browser.print(
+            url,
+            outline=False,
+            tagged=False,
+            refine=refine if needs_patch else None,
+            draft=True,
+            attempts=ATTEMPTS,
+            measure=True,
+        )
+    except RenderError as error:
+        return [Outcome(document=document, error=error)]
+    finally:
+        renderer.server.unpublish(path)
+
+    renderer.report(document, result)
+
+    try:
+        measure = Measure.parse(result.measure)
+    except ValueError as error:
+        logger.warning("[mkdocs-exporter.pdf] %s ('%s')", error, output)
+        measure = Measure(pages=0)
+
+    pdf = finish(
+        result.pdf,
+        measure,
+        assembled,
+        nav,
+        by_document,
+        aggregation,
+        lambda uri: fix_uri(
+            uri,
+            renderer.server.origin,
+            site.prefix,
+            options.links or RELATIVE_LINKS_BASE,
+            directory if options.links is None else None,
+        ),
+        _language(documents[0].html),
+    )
+    target = site.directory / output
+
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(pdf)
+
+    return []
 
 
-def _layout(outcome: Outcome) -> Layout:
-    """The layout of a successfully rendered document."""
+def page_names(measure: Measure, names: book.PageNames) -> list[str | None]:
+    """The named page of each page of a printed book."""
 
-    layout = _result(outcome).layout
+    result: list[str | None] = [None] * measure.pages
 
-    if layout is None:  # pragma: no cover - layouts are always read by the renderer
-        raise RuntimeError(f"The layout of '{outcome.document.id}' is unknown")
+    def mark(pages: Iterator[int] | range, name: str | None) -> None:
+        for page in pages:
+            if 0 <= page < len(result):
+                result[page] = name
 
-    return layout
+    for part in measure.parts:
+        mark(range(part.first, part.last + 1), names.content.get(part.id))
+
+        if part.front:
+            mark(range(part.front[0], part.front[1] + 1), names.front.get(part.id))
+        if part.back:
+            mark(range(part.back[0], part.back[1] + 1), book.BACK_COVER_PAGE)
+
+    if measure.toc:
+        mark(range(measure.toc[0], measure.toc[1] + 1), book.TOC_PAGE)
+
+    mark(iter(measure.blanks), book.BLANK_PAGE)
+
+    return result
 
 
-def _failures(results: Mapping[str, Outcome]) -> list[Outcome]:
-    """The documents that could not be rendered."""
+def finish(
+    pdf: bytes,
+    measure: Measure,
+    assembled: book.Book,
+    nav: Sequence[NavNode],
+    parts: Mapping[str, book.Part],
+    aggregation: Aggregation,
+    rewrite: Callable[[str], str | None],
+    language: str | None,
+) -> bytes:
+    """Post-processes a printed book: links, destinations, bookmarks, information."""
 
-    return [outcome for outcome in results.values() if outcome.error is not None]
+    writer = PdfWriter(clone_from=PdfReader(io.BytesIO(pdf)))
+    heights = [float(page.mediabox.height) for page in writer.pages]
+    names = page_names(measure, assembled.pages)
+    tops = [
+        margins.top_margin(measure.rules, name, first=index == 0, right=index % 2 == 0)
+        * POINTS_PER_PIXEL
+        for index, name in enumerate(names)
+    ]
+    anchors = measure.anchors() if len(heights) == measure.pages else {}
 
+    def destination(id: str) -> tuple[int, float] | None:
+        position = anchors.get(id)
 
-def _toc(
-    aggregation: Aggregation, nav: Sequence[NavNode], parts: Sequence[Part], site: Site
-) -> str | None:
-    """Renders the table of contents of an aggregation, if any."""
+        if position is None:
+            return None
 
-    if aggregation.toc is None:
-        return None
+        top = heights[position.page] - tops[position.page]
 
-    entries = toc_entries(nav, parts, aggregation.toc.depth, site.prefix)
+        return position.page, max(0.0, top - position.top * POINTS_PER_PIXEL)
 
-    return render_toc(aggregation.toc, entries)
+    for _, annotation, uri in link_actions(writer):
+        target = rewrite(uri)
+
+        if target is not None and target != uri:
+            action = cast(DictionaryObject, annotation["/A"].get_object())
+            action[NameObject("/URI")] = TextStringObject(target)
+
+    if len(tops) == len(heights):
+        lower_destinations(writer, tops)
+
+    outline(writer, nav, parts, destination, aggregation.outline)
+
+    if language:
+        writer.root_object[NameObject("/Lang")] = TextStringObject(language)
+
+    writer.add_metadata(
+        {"/Producer": "MkDocs Exporter", **metadata(aggregation.metadata)}
+    )
+
+    output = io.BytesIO()
+
+    writer.write(output)
+
+    return output.getvalue()

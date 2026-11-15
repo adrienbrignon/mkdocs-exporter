@@ -102,9 +102,30 @@ class PrintResult:
     resources: set[str] = field(default_factory=set)
     """The URLs requested to the page's origin (besides the page itself)."""
 
+    measure: Any = None
+    """What the page measured while it was last printed, if anything (see `Printed`)."""
 
-Refine = Callable[[bytes], Awaitable[str | None]]
-"""Computes, from a first print, a script to run in the page before printing it again."""
+
+@dataclass
+class Printed:
+    """A print of a page, given to `Refine`."""
+
+    pdf: bytes
+    """The printed document (only its first page for a draft, see `Browser.print`)."""
+
+    measure: Any = None
+    """What the page measured while being printed (`window.__MKDOCS_EXPORTER_LAYOUT__`)."""
+
+    draft: bool = False
+    """Was it a draft (only the first page printed)?"""
+
+
+Refine = Callable[[Printed], Awaitable[str | None]]
+"""Computes, from a print, a script adjusting the page before printing it again (or
+`None` when the print is final)."""
+
+MEASURE = "() => window.__MKDOCS_EXPORTER_LAYOUT__ || null"
+"""Reads what the page measured while it was printed (see `book.js`)."""
 
 
 class RenderError(Exception):
@@ -227,12 +248,28 @@ class Browser:
         outline: bool = True,
         tagged: bool = True,
         refine: Refine | None = None,
+        draft: bool = False,
+        attempts: int = 1,
+        measure: bool = False,
     ) -> PrintResult:
         """Opens a page, waits for it to be ready and prints it to PDF.
 
-        When `refine` is given, it receives the printed document and may return a script
-        adjusting the page (e.g. from the position of its elements), which is then
-        printed again.
+        When `refine` is given, it receives each print and may return a script adjusting
+        the page (e.g. from the position of its elements), which is then printed again,
+        up to `attempts` times.
+
+        Args:
+            url: The URL of the page.
+            outline: Should the browser generate bookmarks (from headings)?
+            tagged: Should the document be tagged (accessibility)?
+            refine: Adjusts the page from a print (see above).
+            draft: Is the first print only meant to be measured? Only its first page is
+                then printed: the whole document is still laid out (and measured) for
+                about a quarter of the cost of a full print. Requires `refine`, which
+                can't then read the document of that print.
+            attempts: How many times the page may be adjusted and printed again.
+            measure: Should what the page measures while printed be read (it always is
+                with `refine`)?
         """
 
         if self._context is None:
@@ -288,22 +325,29 @@ class Browser:
             if state["state"] == "error":
                 raise RenderError(f"Rendering failed: {state['reason']}", diagnostics)
 
-            pdf = await page.pdf(
-                prefer_css_page_size=True,
-                print_background=True,
-                outline=outline,
-                tagged=tagged,
-            )
-
-            if refine is not None and (script := await refine(pdf)):
-                await page.evaluate(script)
-
-                pdf = await page.pdf(
+            async def pdf(draft: bool = False) -> Printed:
+                data = await page.pdf(
                     prefer_css_page_size=True,
                     print_background=True,
-                    outline=outline,
-                    tagged=tagged,
+                    outline=outline and not draft,
+                    tagged=tagged and not draft,
+                    page_ranges="1" if draft else "",
                 )
+                measured = await page.evaluate(MEASURE) if refine or measure else None
+
+                return Printed(pdf=data, measure=measured, draft=draft)
+
+            printed = await pdf(draft=draft and refine is not None)
+
+            for _ in range(attempts if refine is not None else 0):
+                script = await refine(printed)  # type: ignore[misc]
+
+                if script is None and not printed.draft:
+                    break
+                if script:
+                    await page.evaluate(script)
+
+                printed = await pdf()
 
             if logger.isEnabledFor(logging.DEBUG):
                 # Only logged at the debug level.
@@ -322,7 +366,12 @@ class Browser:
 
         resources.discard(url)
 
-        return PrintResult(pdf=pdf, diagnostics=diagnostics, resources=resources)
+        return PrintResult(
+            pdf=printed.pdf,
+            diagnostics=diagnostics,
+            resources=resources,
+            measure=printed.measure,
+        )
 
     @staticmethod
     async def _collect_errors(page: Any, diagnostics: Diagnostics) -> None:
