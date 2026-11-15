@@ -638,7 +638,7 @@ async def aggregate(
                 document=page,
                 covers=covers,
                 html=html,
-                content=theme.content_element(html),
+                content=book.part_element(html, theme.content_element(html)),
             )
         )
 

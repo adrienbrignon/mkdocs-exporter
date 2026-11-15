@@ -774,6 +774,28 @@ def reuse(index: int, document: Document, covers: set[str], prepared: Prepared) 
     return part
 
 
+def part_element(html: HtmlDocument, content: Tag) -> Tag:
+    """The element of a part: the page's content element.
+
+    When the theme has none (the content being the whole `<body>`), the body's content is
+    moved to a `<div>`, but its scripts: they are merged like other pages' scripts (see
+    `page_resources`), instead of running again with each part.
+    """
+
+    if content.name != "body":
+        return content
+
+    element = html.soup.new_tag("div")
+
+    for child in list(content.contents):
+        if not (isinstance(child, Tag) and child.name == "script"):
+            element.append(child.extract())
+
+    content.insert(0, element)
+
+    return element
+
+
 def within(tag: Tag, ancestor: Tag) -> bool:
     """Is a tag a descendant of another (by identity: `Tag.__eq__` compares markup)?"""
 

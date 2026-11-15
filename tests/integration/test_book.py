@@ -424,3 +424,32 @@ def test_headings_that_are_not_printed_are_left_out(project: Project) -> None:
     assert "HIDDEN-HEADING" not in combined.text
     assert "Shown heading" in toc
     assert "HIDDEN-HEADING" not in str(titles(combined.outline))
+
+
+BARE_THEME = """<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>{{ page.title }}</title></head>
+<body>
+<div>{{ page.content }}</div>
+<script>document.body.insertAdjacentHTML("beforeend", "<p>SCRIPT-RAN</p>")</script>
+</body>
+</html>
+"""
+"""A theme without content element: pages are their whole body."""
+
+
+def test_themes_without_content_element(project: Project) -> None:
+    """Every page's body makes a part of its own, whose scripts run once."""
+
+    project.write("theme/main.html", BARE_THEME)
+
+    site = project.build(
+        exporter=aggregator(covers="none", start="odd"),
+        theme={"name": None, "custom_dir": "theme"},
+    )
+    combined = site.pdf("combined.pdf")
+
+    for text in ["Welcome to the", "Paragraph 1.", "Deep dive", "Plain reference page"]:
+        assert page_of(combined, text) % 2 == 0, f"{text!r} isn't on an odd page"
+
+    assert sum(text.count("SCRIPT-RAN") for text in combined.pages_text) == 1

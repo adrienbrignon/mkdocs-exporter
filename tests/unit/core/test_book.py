@@ -10,6 +10,7 @@ from mkdocs_exporter.core.book import (
     Prepared,
     collect_ids,
     namespace_ids,
+    part_element,
     part_styles,
     resource_url,
     reuse,
@@ -235,3 +236,20 @@ def test_resolved_links_lead_to_parts() -> None:
     )
 
     assert 'href="[b/#x]"' in str(article)
+
+
+def test_part_element_of_themes_without_content_element() -> None:
+    html = HtmlDocument(
+        "<html><body><p>Text</p><script>run()</script><nav>Nav</nav></body></html>"
+    )
+    article = HtmlDocument("<html><body><article><p>Text</p></article></body></html>")
+
+    element = part_element(html, html.body)
+
+    assert element.name == "div"
+    assert str(element) == "<div><p>Text</p><nav>Nav</nav></div>"
+    assert (
+        str(html.body)
+        == "<body><div><p>Text</p><nav>Nav</nav></div><script>run()</script></body>"
+    )
+    assert part_element(article, article.soup.article) is article.soup.article

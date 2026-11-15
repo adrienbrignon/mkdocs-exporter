@@ -160,7 +160,9 @@ class Renderer:
         self.prepare_content(html, content, document, kept)
         html.mark_ancestors(content, ANCESTOR)
 
-        keep = document.id in self.keep
+        # Without content element (the whole body), books parse the page again (see
+        # `book.part_element`).
+        keep = document.id in self.keep and content.name != "body"
         resources = (
             page_resources(html, content, document.url, self.site.prefix)
             if keep
