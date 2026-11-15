@@ -3,12 +3,11 @@
 Books combine pages into single PDF documents. The pages of a book are assembled into a single HTML document, printed once by the browser:
 
 ```mermaid
-graph LR
-    A[Pages] --> B[Combined HTML document]
-    style B fill:#ea2027,color: #fff;
-    B --> C[Draft print]
-    C -- page numbers, blank pages, running heads --> B
-    B --> D[Combined PDF document]
+flowchart LR
+    pages[Pages] --> html[HTML document]
+    html --> draft[Draft print]
+    draft -- page numbers, blank pages, running heads --> final[Final print]
+    final -- bookmarks --> pdf[PDF document]
 ```
 
 ```yaml

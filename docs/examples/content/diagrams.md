@@ -13,18 +13,37 @@ buttons:
 !!! info "Setting up"
 
     Diagrams are drawn by [Mermaid](https://mermaid.js.org/), like on the website: MkDocs Exporter doesn't draw them, it waits for them before printing.
-    With Material for MkDocs, enable [diagrams](https://squidfunk.github.io/mkdocs-material/reference/diagrams/) with a custom fence, and the theme draws them in documents too:
 
-    ```yaml
-    markdown_extensions:
-      - pymdownx.superfences:
-          custom_fences:
-            - name: mermaid
-              class: mermaid
-              format: !!python/name:pymdownx.superfences.fence_code_format
-    ```
+    === "Material for MkDocs"
 
-    With other themes, load Mermaid with `extra_javascript` and draw the diagrams in a [`render` hook](../../configuration/customizing-documents.md#scripts), awaited before printing.
+        Enable [diagrams](https://squidfunk.github.io/mkdocs-material/reference/diagrams/) with a custom fence: the theme loads Mermaid and draws them, in documents too.
+
+        ```yaml
+        markdown_extensions:
+          - pymdownx.superfences:
+              custom_fences:
+                - name: mermaid
+                  class: mermaid
+                  format: !!python/name:pymdownx.superfences.fence_code_format
+        ```
+
+    === "Other themes"
+
+        Write diagrams in `<div class="mermaid">` elements (`fence_div_format`), and load Mermaid: it draws them when the page loads, before documents are printed.
+
+        ```yaml
+        markdown_extensions:
+          - pymdownx.superfences:
+              custom_fences:
+                - name: mermaid
+                  class: mermaid
+                  format: !!python/name:pymdownx.superfences.fence_div_format
+
+        extra_javascript:
+          - https://unpkg.com/mermaid@11/dist/mermaid.min.js
+        ```
+
+        Diagrams drawn later (e.g. by a script of your own) can be awaited in a [`render` hook](../../configuration/customizing-documents.md#scripts).
 
 ## Mermaid
 

@@ -31,6 +31,8 @@ buttons:
 
         1. The configuration of MathJax, given in Material for MkDocs' guide.
 
+        The guide's script is written for MathJax 3. With MathJax 4 (`https://unpkg.com/mathjax@4/tex-mml-chtml.js`), only call `MathJax.typesetPromise()` when the page changes: clearing MathJax's caches (`clearCache`, `typesetClear`, `texReset`) breaks the layout of formulas, on the website and in documents.
+
     === "KaTeX"
 
         KaTeX typesets formulas while the page loads, before documents are printed.
