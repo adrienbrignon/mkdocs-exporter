@@ -764,8 +764,8 @@ def finish(
 
     if len(heights) != measure.pages:
         logger.warning(
-            "[mkdocs-exporter.pdf] The layout of '%s' could not be measured (Chromium 138"
-            " or later is required): page numbers and bookmarks may be inaccurate",
+            "[mkdocs-exporter.pdf] The layout of '%s' could not be fully measured (e.g."
+            " by Chromium older than 138): page numbers and bookmarks may be inaccurate",
             aggregation.output,
         )
 
