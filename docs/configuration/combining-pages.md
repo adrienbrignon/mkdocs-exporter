@@ -45,12 +45,26 @@ Since every page is part of the same HTML document:
 
 The `covers` option tells which cover pages are kept:
 
-- `all` (*default*): every cover page;
-- `none`: no cover page;
-- `limits`: the front cover of the first page and the back cover of the last page;
-- `book`: the front cover of every page and the back cover of the last page;
-- `front`: every front cover page;
-- `back`: every back cover page.
+| Value | Cover pages kept | For instance |
+|---|---|---|
+| `all` (*default*) | Every cover page | Pages printed one after another, each with its own covers |
+| `none` | No cover page | Appendices, or documents opening with their table of contents |
+| `limits` | The front cover of the first page and the back cover of the last page | A book, whose cover is the home page's |
+| `book` | The front cover of every page and the back cover of the last page | Chapters opening with a title page |
+| `front` | Every front cover page | Chapters opening with a title page, without a back cover |
+| `back` | Every back cover page | Pages each ending with a summary page |
+
+```yaml
+aggregator:
+  enabled: true
+  covers: limits
+```
+
+A cover template can tell the home page apart, to give the combined document a cover of its own (see [The Field Guide](../examples/index.md#the-field-guide) example):
+
+```html
+<div class="title">{% raw %}{{ config.site_name if page.is_homepage else page.title }}{% endraw %}</div>
+```
 
 ## Bookmarks and links
 
@@ -79,7 +93,27 @@ aggregator:
     depth: 2 # Pages and their second-level headings
 ```
 
-Its appearance can be changed with CSS (`.mkdocs-exporter-toc` and the classes of the default [template](https://github.com/adrienbrignon/mkdocs-exporter/blob/master/mkdocs_exporter/core/resources/toc.html)), or replaced with a Jinja template of your own (`toc.template`), receiving `title` and `entries` (each entry has a `title`, a `page` number, an `href` and `children`).
+Its appearance can be changed with CSS (`.mkdocs-exporter-toc` and the classes of the default [template](https://github.com/adrienbrignon/mkdocs-exporter/blob/master/mkdocs_exporter/core/resources/toc.html)), or replaced with a Jinja template of your own (`toc.template`, relative to `mkdocs.yml`).
+Templates receive the `title` and the `entries` of the table of contents, each entry having a `title`, a `page` number, an `href` and `children`: navigation sections, then pages, then their headings.
+For instance, a table of contents laid out as a table:
+
+=== "`mkdocs.yml`"
+
+    {{ example("toc-template/mkdocs.yml") }}
+
+=== "`toc.html.j2`"
+
+    {{ example("toc-template/toc.html.j2") }}
+
+=== "`pdf.css`"
+
+    {{ example("toc-template/pdf.css") }}
+
+<div class="previews" markdown>
+
+[![A table of contents laid out as a table](../assets/images/examples/toc-template-1.webp)](../assets/images/examples/toc-template-1.webp)
+
+</div>
 
 ## Starting pages on the right
 
@@ -112,3 +146,8 @@ plugins:
 ```
 
 Every option of `aggregator` is available for each of them.
+
+!!! example "Examples"
+
+    - [A printed book](../examples/book.md): a cover, a table of contents, bookmarks and chapters starting on the right.
+    - [One document per section](../examples/documents.md): several combined documents, selected with patterns.

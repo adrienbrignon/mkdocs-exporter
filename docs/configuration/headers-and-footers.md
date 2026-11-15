@@ -32,6 +32,47 @@ In combined documents, pages are numbered across the whole document.
 Headers and footers are not printed on cover pages; when they are configured, the back cover starts a new page.
 They are printed in the margins of pages, so make sure your stylesheet leaves enough room (the default margins do).
 
+### Common layouts
+
+=== "Page numbers"
+
+    ```yaml
+    footer:
+      center: "{page} / {pages}"
+    ```
+
+=== "Website and section"
+
+    ```yaml
+    header:
+      left: "{site_name}"
+      right: "{section}"
+    footer:
+      right: "Page {page} of {pages}"
+    ```
+
+    <div class="previews" markdown>
+
+    [![A page with the website's name, its section and page numbers](../assets/images/examples/page-numbers-1.webp)](../assets/images/examples/page-numbers-1.webp)
+
+    </div>
+
+=== "Book"
+
+    ```yaml
+    header:
+      center: "{page_title}"
+    footer:
+      center: "{page}"
+    ```
+
+    In a [combined document](combining-pages.md), `{page_title}` is the title of the current page (the chapter), and `{page}` counts the pages of the whole document.
+
+!!! example "Examples"
+
+    - [Page numbers](../examples/page-numbers.md): styled headers and footers, with the current section.
+    - [A printed book](../examples/book.md): chapter titles and page numbers in a combined document.
+
 ## Using CSS
 
 Headers and footers are generated as [page margin boxes](https://www.w3.org/TR/css-page-3/#margin-boxes): they can be styled, or written entirely, in your own [stylesheet](customizing-documents.md#stylesheets). For instance:

@@ -40,6 +40,38 @@ Stylesheets are plain CSS: nesting is supported, Sass isn't (see the [migration 
 
 Documents are laid out by Chromium, which supports page sizes (they can differ from a page to another), margins, [margin boxes](https://www.w3.org/TR/css-page-3/#margin-boxes) with page counters, named pages (`page: ...`), `@page :first` and page breaks. Running headers are available through [headers and footers](headers-and-footers.md); for other features of the [CSS Generated Content for Paged Media](https://www.w3.org/TR/css-gcpm-3/) module, see [Using Paged.js](#using-paged-js).
 
+### Page size and orientation
+
+`size` sets the size of pages: a keyword (`A4`, `A5`, `letter`, `legal`...) optionally followed by an orientation, or a width and a height (`6in 9in`).
+[Named pages](https://developer.mozilla.org/en-US/docs/Web/CSS/page) print some elements on pages of another kind, such as wide tables on landscape pages:
+
+=== "`pdf.css`"
+
+    {{ example("page-layout/pdf.css") }}
+
+=== "A page"
+
+    ```markdown
+    <div class="landscape" markdown>
+
+    | Name | Width (mm) | Height (mm) | ... |
+    |---|---|---|---|
+    | A3 | 297 | 420 | ... |
+
+    </div>
+    ```
+
+<div class="previews" markdown>
+
+[![A portrait page](../assets/images/examples/page-layout-1.webp)](../assets/images/examples/page-layout-1.webp)
+[![A table on a landscape page](../assets/images/examples/page-layout-2.webp)](../assets/images/examples/page-layout-2.webp)
+
+</div>
+
+The elements start on a new page of their kind, and are laid out with its width (see [Paper size and landscape pages](../examples/page-layout.md)).
+
+### Page backgrounds
+
 Pages are printed on the background of your website (in print media) unless a `@page` rule sets a background of its own, e.g. a full-bleed cover: the website's background is then left out of every page, so that it doesn't hide them. To print on a color in that case, give it to pages too:
 
 ```css
@@ -86,6 +118,10 @@ This paragraph won't be printed.
 ```
 
 Conversely, elements having a `data-decompose="true"` attribute are removed from the website but kept in PDF documents.
+
+!!! example "Example"
+
+    [Print styles](../examples/print-styles.md): numbered headings, the address of links, a watermark, and content for the website or for documents only.
 
 ## Scripts
 

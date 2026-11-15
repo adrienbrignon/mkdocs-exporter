@@ -146,7 +146,14 @@ The page numbers are filled from a first print of the document, which is then pr
 
 ## Cover pages
 
-Cover pages are added at the beginning (`front`) and at the end (`back`) of documents. They are [Jinja](https://jinja.palletsprojects.com/) templates rendering HTML:
+Cover pages are added at the beginning (`front`) and at the end (`back`) of documents. They are [Jinja](https://jinja.palletsprojects.com/) templates rendering HTML, with styles of their own:
+
+<div class="previews" markdown>
+
+[![A front cover](../assets/images/examples/field-guide-5.webp)](../assets/images/examples/field-guide-5.webp)
+[![A back cover](../assets/images/examples/field-guide-6.webp)](../assets/images/examples/field-guide-6.webp)
+
+</div>
 
 === "`mkdocs.yml`"
 
@@ -155,54 +162,37 @@ Cover pages are added at the beginning (`front`) and at the end (`back`) of docu
       - exporter:
           formats:
             pdf:
-              stylesheets:
-                - resources/stylesheets/pdf.css
               covers:
-                front: resources/templates/covers/front.html.j2
-                back: resources/templates/covers/back.html.j2
+                front: covers/front.html.j2
+                back: covers/back.html.j2
     ```
 
-    > :material-file-code: View the full content of this file [here](https://github.com/adrienbrignon/mkdocs-exporter/blob/master/mkdocs.yml).
+=== "`covers/front.html.j2`"
 
-=== "`resources/templates/covers/front.html.j2`"
+    {{ example("field-guide/covers/front.html.j2") }}
 
-    ```html
-    <div class="front-cover">
-      <img src="/assets/images/background.png">
-      <section>
-        <div class="brand">{% raw %}{{ config.site_name }}{% endraw %}</div>
-        <div class="title">{% raw %}{{ page.title }}{% endraw %}</div>
-      </section>
-    </div>
-    ```
+=== "`covers/back.html.j2`"
 
-    > :material-file-code: View the full content of this file [here](https://github.com/adrienbrignon/mkdocs-exporter/blob/master/resources/templates/covers/front.html.j2).
+    {{ example("field-guide/covers/back.html.j2") }}
 
-=== "`resources/templates/covers/back.html.j2`"
-
-    ```html
-    <div class="back-cover">
-      <section>
-        <div class="title">{% raw %}{{ config.site_name }}{% endraw %}</div>
-      </section>
-    </div>
-    ```
-
-    > :material-file-code: View the full content of this file [here](https://github.com/adrienbrignon/mkdocs-exporter/blob/master/resources/templates/covers/back.html.j2).
+These covers are those of the [Field Guide](../examples/index.md#the-field-guide) example, and the [Cover pages](../examples/cover-pages.md) example shows another one.
 
 Templates have access to:
 
-- `page`: the page (e.g. `{% raw %}{{ page.title }}{% endraw %}`, `{% raw %}{{ page.url }}{% endraw %}`);
-- `config`: the MkDocs configuration (e.g. `{% raw %}{{ config.site_name }}{% endraw %}`);
-- `extra`: the `extra` section of the configuration;
-- the page's metadata (front matter), as variables.
+| Variable | Value | For instance |
+|---|---|---|
+| `page` | The page | {% raw %}`{{ page.title }}`, `{{ page.url }}`, `{{ page.parent.title }}` (its section), `{{ page.is_homepage }}`{% endraw %} |
+| `page.meta` | The page's metadata (front matter) | {% raw %}`{{ page.meta.description }}`{% endraw %} |
+| `config` | The MkDocs configuration | {% raw %}`{{ config.site_name }}`, `{{ config.site_author }}`{% endraw %} |
+| `extra` | The `extra` section of the configuration | {% raw %}`{{ extra.version }}`{% endraw %} |
 
+The page's metadata are also available as variables (e.g. {% raw %}`{{ description }}`{% endraw %}).
 When the [macros](https://github.com/fralau/mkdocs_macros_plugin) plugin is enabled, templates are rendered with its environment: its variables, macros and filters are available too.
 
-Paths starting with `/` (like `/assets/images/background.png`) are resolved from the root of the website.
-Styles can be moved to the document's head with `<style data-teleport="head">`, to style pages with `@page` rules for instance.
-
-If you use the template front cover page, do not forget to copy the [background image](https://raw.githubusercontent.com/adrienbrignon/mkdocs-exporter/master/docs/assets/images/background.png) to `docs/assets/images/background.png` in your project.
+- `<style data-teleport="head">` moves styles to the document's head: `@page :first` rules style the page of the front cover (e.g. without margins, with a background), and named pages the page of the back cover.
+- Paths starting with `/` (like `/assets/contours.svg`) are resolved from the root of the website.
+- Headers and footers are not printed on cover pages, except on named pages of your own (set `content: none` on their margin boxes there).
+- Decorations drawn in the background of the cover's page stay in place, whatever the space the theme leaves above the content: prefer them to elements as tall as the page, which may overflow onto a blank page.
 
 ### Per-page cover pages
 
