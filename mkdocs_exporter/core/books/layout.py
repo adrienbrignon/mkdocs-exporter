@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from mkdocs_exporter.core import margins
-from mkdocs_exporter.core.books.assembly import (
+from mkdocs_exporter.core.books.styles import (
     BACK_COVER_PAGE,
     BLANK_PAGE,
     TOC_PAGE,

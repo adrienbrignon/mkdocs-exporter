@@ -1,25 +1,23 @@
 from bs4 import BeautifulSoup
 
-from mkdocs_exporter.core.books.assembly import (
+from mkdocs_exporter.core.books.assembly import Part, part_element, reuse
+from mkdocs_exporter.core.books.ids import collect_ids, namespace_ids
+from mkdocs_exporter.core.books.styles import (
     FRONT_COVER_PAGE,
     PageNames,
-    PageResources,
-    Part,
-    Prepared,
-    collect_ids,
-    namespace_ids,
-    part_element,
     part_styles,
-    resource_url,
-    reuse,
-    rewrite_urls,
-    site_path,
     structure,
-    teleported,
     translate_page_rules,
 )
+from mkdocs_exporter.core.books.urls import rewrite_urls, site_path
 from mkdocs_exporter.core.document import Document
-from mkdocs_exporter.core.html import HtmlDocument
+from mkdocs_exporter.core.html import (
+    HtmlDocument,
+    PageResources,
+    resource_url,
+    teleported,
+)
+from mkdocs_exporter.core.renderer import Prepared
 
 FRAGMENT = """<article>
 <img src="../img/a.png" srcset="../img/a.png 1x, ../img/a@2x.png 2x">

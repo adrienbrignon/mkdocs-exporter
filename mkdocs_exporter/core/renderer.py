@@ -12,11 +12,17 @@ from urllib.parse import urlsplit
 from bs4 import Tag
 
 from mkdocs_exporter.core import margins, toc
-from mkdocs_exporter.core.books.assembly import Prepared, page_resources, teleported
 from mkdocs_exporter.core.browser import Browser, Printed, PrintResult, RenderError
 from mkdocs_exporter.core.cache import Assets, Cache, digest, environment, fingerprint
 from mkdocs_exporter.core.document import Document, Heading, Layout, Site
-from mkdocs_exporter.core.html import ANCESTOR, HtmlDocument, resolve_link
+from mkdocs_exporter.core.html import (
+    ANCESTOR,
+    HtmlDocument,
+    PageResources,
+    page_resources,
+    resolve_link,
+    teleported,
+)
 from mkdocs_exporter.core.html import headings as find_headings
 from mkdocs_exporter.core.margins import Margins
 from mkdocs_exporter.core.pdf import (
@@ -92,6 +98,22 @@ class Outcome:
     result: PrintResult | None = None
     error: RenderError | None = None
     warnings: list[str] = field(default_factory=list)
+
+
+@dataclass
+class Prepared:
+    """A page's content prepared for its own document, reused as a part of books.
+
+    It spares books another parse of the page: the content is detached from the page's
+    document once that document is printed, links resolved (see `rewrite_urls`'s
+    `base`) and every cover inserted.
+    """
+
+    content: Tag
+    resources: PageResources
+    teleported: list[tuple[str, str, Tag]] = field(default_factory=list)
+    """The elements the content teleports: (origin, destination, element), the origin
+    being the location of the cover holding the element (`front`, `back`) or `content`."""
 
 
 class Renderer:

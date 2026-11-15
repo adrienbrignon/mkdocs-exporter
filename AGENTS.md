@@ -40,14 +40,16 @@ Before considering a change done, run the linter, the formatter check, the type 
 |---|---|
 | `mkdocs_exporter/core/` | **Engine-agnostic core** (must never import `mkdocs`, enforced by ruff `TID251`) |
 | `core/document.py` | `Site` and `Document`: the plain data the core works on |
-| `core/html.py` | HTML manipulation (BeautifulSoup + lxml), headings, link resolution |
+| `core/html.py` | HTML manipulation (BeautifulSoup + lxml), headings, link and resource URLs, a page's stylesheets and scripts |
 | `core/css.py` | Stylesheets, parsed with tinycss2: URLs, identifiers, `@page` rules and their cascade, scoping |
 | `core/server.py` | Loopback HTTP server exposing the built site (and in-memory pages) to the browser |
 | `core/browser.py` | Playwright/Chromium: prints a URL to PDF, collects diagnostics |
-| `core/renderer.py` | Prepares a page's print HTML and renders documents concurrently (`Refinement`: second print) |
+| `core/renderer.py` | Prepares a page's print HTML and renders documents concurrently (`Refinement`: second print, `Prepared`: content kept for books) |
 | `core/exporter.py` | Orchestrates an export: server, browser, documents, then books |
 | `core/books/printer.py` | Books (combined documents): `BookPrinter` assembles, prints, patches and finishes them |
-| `core/books/assembly.py` | A book as a single HTML document (parts, URLs, identifiers, styles, named pages) |
+| `core/books/assembly.py` | A book as a single HTML document: its parts, their resources, the shell |
+| `core/books/urls.py`, `ids.py` | Parts' URLs made valid in the book, identifiers prefixed by part |
+| `core/books/styles.py` | Named pages of books, `@page` rules of parts translated, styles scoped to parts |
 | `core/books/layout.py` | The measurement of printed books: kept covers, blank pages, running heads, named pages |
 | `core/books/outline.py` | The navigation of books: table of contents entries, bookmarks, destinations (pypdf) |
 | `core/margins.py` | Headers and footers (`Margins`) compiled to CSS page margin boxes, running heads |
