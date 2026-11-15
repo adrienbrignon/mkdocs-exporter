@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mkdocs-exporter"
-version = "7.0.0"
+version = "7.0.0rc1"
 description = "A highly-configurable plugin for MkDocs that exports your pages to PDF files."
 readme = "README.md"
 license = "MIT"
