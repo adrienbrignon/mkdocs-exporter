@@ -8,7 +8,7 @@ import pytest
 from mkdocs.commands.build import build
 from mkdocs.exceptions import Abort
 
-from tests.conftest import Project, Site, merge
+from tests.conftest import BOOK_BUTTON, Project, Site, merge
 
 pytestmark = pytest.mark.browser
 
@@ -209,7 +209,9 @@ def test_duplicate_navigation_entries(project: Project) -> None:
 def test_pages_outside_the_navigation(project: Project) -> None:
     """Pages outside the navigation get a document but are not in books."""
 
-    site = project.build(nav=["index.md"])
+    site = project.build(exporter={"buttons": [BOOK_BUTTON]}, nav=["index.md"])
 
     assert "reference/index.pdf" in site.pdfs()
     assert "Plain reference page" not in site.pdf("combined.pdf").text
+    assert 'href="combined.pdf"' in site.html("index.html")
+    assert "combined.pdf" not in site.html("reference/index.html")

@@ -6,8 +6,7 @@ from typing import Any
 import pytest
 from mkdocs.exceptions import Abort
 
-from mkdocs_exporter.formats.pdf.buttons import book as book_button
-from tests.conftest import Project, Site, single_book
+from tests.conftest import BOOK_BUTTON, Project, Site, single_book
 from tests.support.pdf import OutlineItem, PdfDocument
 
 pytestmark = pytest.mark.browser
@@ -237,14 +236,7 @@ def test_book_buttons_link_to_the_first_book_of_the_page(project: Project) -> No
                     ],
                 }
             },
-            "buttons": [
-                {
-                    "title": "Download the book",
-                    "icon": "material-book-arrow-down-outline",
-                    "enabled": book_button.enabled,
-                    "attributes": book_button.attributes,
-                }
-            ],
+            "buttons": [BOOK_BUTTON],
         }
     )
     guide = site.html("guide/intro/index.html")
@@ -266,7 +258,7 @@ def test_books_must_have_distinct_outputs(
                     "pdf": {
                         "books": [
                             {"output": "combined.pdf"},
-                            {"output": "combined.pdf"},
+                            {"output": "/combined.pdf"},
                         ]
                     }
                 }

@@ -107,7 +107,7 @@ class Plugin(BasePlugin[Config]):
                 "combined documents in 'formats.pdf.books' instead"
             )
 
-        outputs = [book.output for book in _books(options)]
+        outputs = [_output(book) for book in _books(options)]
 
         if len(outputs) != len(set(outputs)):
             raise PluginError(
@@ -209,7 +209,7 @@ class Plugin(BasePlugin[Config]):
                 "title": str(options.metadata.get("title") or config.site_name),
             }
             for options in _books(self.config.formats.pdf)
-            if _selects(options, page.file.src_uri)
+            if page.file.src_uri in self.order and _selects(options, page.file.src_uri)
             for output in [_output(options)]
         ]
         self.exports[page.file.src_uri] = Export(

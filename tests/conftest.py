@@ -18,7 +18,7 @@ if os.environ.get("MKDOCS_EXPORTER_TEST_PROPERDOCS"):
 from mkdocs.commands.build import build
 from mkdocs.config import load_config
 
-from mkdocs_exporter.formats.pdf.buttons import download
+from mkdocs_exporter.formats.pdf.buttons import book, download
 from tests.support.pdf import PdfDocument
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -43,6 +43,14 @@ DEFAULT_EXPORTER: dict[str, Any] = {
     ],
 }
 """The default options of the plugin used by the fixture project."""
+
+BOOK_BUTTON: dict[str, Any] = {
+    "title": "Download the book",
+    "icon": "material-book-arrow-down-outline",
+    "enabled": book.enabled,
+    "attributes": book.attributes,
+}
+"""A button downloading the book a page is part of."""
 
 
 def single_book(**options: Any) -> dict[str, Any]:
