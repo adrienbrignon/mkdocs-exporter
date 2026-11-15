@@ -85,6 +85,26 @@ plugins:
 When there is no URL at all, links are relative to the PDF document, which works when documents are published alongside the website.
 Links to anchors of the same page, and links to other websites, are left untouched.
 
+### Document information
+
+Documents are given the page's title, an author, a subject and keywords, shown by PDF readers and used by search engines:
+
+| Information | Taken from |
+|---|---|
+| Title | The page's title |
+| Author | The page's `author` metadata, or `site_author` |
+| Subject | The page's `description` metadata, or `site_description` |
+| Keywords | The page's `keywords` or `tags` metadata |
+
+```yaml
+---
+author: Jane Doe
+description: How to configure the plugin.
+tags:
+  - configuration
+---
+```
+
 ## Cover pages
 
 Cover pages are added at the beginning (`front`) and at the end (`back`) of documents. They are [Jinja](https://jinja.palletsprojects.com/) templates rendering HTML:

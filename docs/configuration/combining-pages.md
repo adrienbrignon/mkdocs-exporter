@@ -30,7 +30,7 @@ plugins:
 ```
 
 Pages are combined in the order of the navigation, and numbered across the whole document.
-The document's title and author default to the website's (`site_name` and `site_author`).
+The document's title, author and subject default to the website's (`site_name`, `site_author` and `site_description`).
 
 ## Cover pages
 
