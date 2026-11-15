@@ -85,7 +85,10 @@ jobs:
       - name: Install browser
         run: uv run --no-sync playwright install --with-deps --only-shell chromium
       - name: Run tests
-        run: uv run --no-sync pytest
+        run: uv run --no-sync pytest --cov --cov-report=term
+      - name: Report coverage
+        if: runner.os == 'Linux' && matrix.python == '3.13'
+        run: uv run --no-sync coverage report --format=markdown >> "$GITHUB_STEP_SUMMARY"
 
   minimal:
     name: Test (without Material for MkDocs)

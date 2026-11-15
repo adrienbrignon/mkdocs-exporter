@@ -52,6 +52,7 @@ dev = [
     "mkdocs-material>=9.7",
     "mypy>=2.0",
     "pytest>=9.0",
+    "pytest-cov>=6.0",
     "ruff>=0.17",
 ]
 docs = [
@@ -122,3 +123,13 @@ testpaths = ["tests"]
 addopts = ["-ra", "--strict-markers", "--strict-config"]
 xfail_strict = true
 markers = ["browser: requires Chromium (uv run playwright install chromium)"]
+
+[tool.coverage.run]
+source = ["mkdocs_exporter"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 85
+show_missing = true
+skip_covered = true
+exclude_also = ["if TYPE_CHECKING:", "pragma: no cover"]

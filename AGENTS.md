@@ -24,7 +24,7 @@ third-party plugins, so neither is supported as a plugin host.
 | Lint | `uv run ruff check` |
 | Format | `uv run ruff format` |
 | Type check | `uv run mypy` |
-| Tests | `uv run pytest` (`-m "not browser"` to skip the end-to-end tests) |
+| Tests | `uv run pytest` (`-m "not browser"` to skip the end-to-end tests, `--cov` for coverage) |
 | Tests on ProperDocs | `MKDOCS_EXPORTER_TEST_PROPERDOCS=1 uv run --with properdocs --with properdocs-theme-mkdocs --with properdocs-theme-readthedocs pytest` |
 | Build / serve the documentation | `make build` / `make serve` (`PDF=false` or `PDF_AGGREGATOR=false` to speed things up) |
 | Build distributions | `uv build` |
