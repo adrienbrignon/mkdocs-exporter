@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@v10.3.3
       - name: Install dependencies
         run: uv venv && uv pip install properdocs mkdocs-material mkdocs-exporter
       - name: Install the browser

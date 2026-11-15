@@ -16,7 +16,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
       - name: Set up uv
-        uses: astral-sh/setup-uv@v10
+        uses: astral-sh/setup-uv@v10.3.3
       - name: Check that the tag matches the project version
         run: test "v$(uv version --short)" = "${GITHUB_REF_NAME}"
       - name: Build distributions
@@ -43,7 +43,7 @@ jobs:
           name: dist
           path: dist/
       - name: Set up uv
-        uses: astral-sh/setup-uv@v10
+        uses: astral-sh/setup-uv@v10.3.3
       - name: Publish distributions
         run: uv publish dist/*
 
