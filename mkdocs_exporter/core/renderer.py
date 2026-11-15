@@ -6,6 +6,7 @@ import asyncio
 import dataclasses
 import importlib.resources
 import json
+import os
 import re
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
@@ -59,6 +60,21 @@ PATCH = """(patch) => {
 """Heading elements."""
 
 
+def default_concurrency() -> int:
+    """The number of documents rendered at once by default.
+
+    Rendering mostly waits for the browser: twice the number of CPUs available to the
+    process renders fastest on small machines, and more than 16 brings nothing.
+    """
+
+    if hasattr(os, "sched_getaffinity"):
+        cpus = len(os.sched_getaffinity(0))
+    else:
+        cpus = os.cpu_count() or 1
+
+    return min(2 * cpus, 16)
+
+
 @dataclass
 class RenderOptions:
     """Options of the renderer."""
@@ -75,8 +91,8 @@ class RenderOptions:
     delay: int = 0
     """Extra time (in milliseconds) given to scripts before pagination."""
 
-    concurrency: int = 4
-    """The maximum number of documents rendered at once."""
+    concurrency: int | None = None
+    """The number of documents rendered at once (see `default_concurrency`)."""
 
     hidden: Sequence[str] = (".mkdocs-exporter-ignore", ".headerlink")
     """Selectors of elements that must not appear in documents (besides the theme's)."""
@@ -452,7 +468,7 @@ class Renderer:
     async def render_all(self, documents: Sequence[Document]) -> list[Outcome]:
         """Renders documents concurrently; a failing document doesn't stop the others."""
 
-        semaphore = asyncio.Semaphore(max(1, self.options.concurrency))
+        semaphore = asyncio.Semaphore(self.options.concurrency or default_concurrency())
 
         async def render(document: Document) -> Outcome:
             async with semaphore:

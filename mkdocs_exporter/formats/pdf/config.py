@@ -26,7 +26,7 @@ class Stylesheet(c.File):
 class PositiveInteger(c.Type[int]):
     """A strictly positive integer."""
 
-    def __init__(self, default: int) -> None:
+    def __init__(self, default: int | None = None) -> None:
         super().__init__(int, default=default)
 
     def run_validation(self, value: object) -> int:
@@ -186,8 +186,9 @@ class Config(BaseConfig):
     title = c.Type(bool, default=False)
     """Should the page's title be inserted at the top of documents lacking a `h1`?"""
 
-    concurrency = PositiveInteger(default=4)
-    """The maximum number of concurrent PDF generation tasks."""
+    concurrency = c.Optional(PositiveInteger())
+    """The number of documents rendered at once (twice the number of CPUs, up to 16,
+    by default)."""
 
     stylesheets = c.ListOfItems(Stylesheet(exists=True), default=[])
     """A list of custom stylesheets to apply before rendering documents."""

@@ -61,14 +61,14 @@ The browser is then kept open from one rebuild to the next.
 
 ### Concurrency
 
-Documents are rendered concurrently, 4 at a time by default:
+Documents are rendered concurrently: by default, twice as many at a time as there are CPUs, up to 16 (rendering mostly waits for the browser). The number can be set, e.g. to use less memory:
 
 ```yaml
 plugins:
   - exporter:
       formats:
         pdf:
-          concurrency: 8
+          concurrency: 4
 ```
 
 ### Cache
