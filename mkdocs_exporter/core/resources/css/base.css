@@ -6,6 +6,17 @@ body > * {
   overflow-x: clip !important;
 }
 
+/*
+ * The canvas (the background of the root and body) is painted over pages, hiding the
+ * backgrounds of `@page` rules: its color is given to pages instead (see `pdf.js`).
+ */
+@media print {
+  html,
+  body {
+    background: transparent !important;
+  }
+}
+
 .page-break,
 .page-break-after {
   break-after: page;
