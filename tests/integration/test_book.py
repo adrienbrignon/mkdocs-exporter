@@ -321,15 +321,33 @@ def test_links_without_site_url_are_relative_to_the_document(project: Project) -
 
 
 def test_tabs_of_several_pages_keep_their_content(project: Project) -> None:
-    """Tabs of several pages are printed (their radio groups are namespaced)."""
+    """Radio groups of tabs are namespaced: a tab set doesn't uncheck another's."""
 
     project.write(
         "docs/reference.md",
         '# Reference\n\n=== "One"\n\n    REFERENCE-TAB-ONE\n\n'
         '=== "Two"\n\n    REFERENCE-TAB-TWO\n',
     )
+    project.write(
+        "scripts/checked.js",
+        "const checked = document.querySelectorAll('input[type=radio]:checked');\n"
+        "document.querySelector('article').insertAdjacentHTML(\n"
+        "  'beforeend', `<p>CHECKED=${checked.length}</p>`);\n",
+    )
 
-    combined = project.build(exporter=aggregator(covers="none")).pdf("combined.pdf")
+    site = project.build(
+        exporter={
+            "formats": {
+                "pdf": {
+                    "scripts": ["scripts/checked.js"],
+                    "aggregator": {"covers": "none"},
+                }
+            }
+        }
+    )
+    combined = site.pdf("combined.pdf")
+
+    assert "CHECKED=2" in combined.text
 
     for marker in [
         "Content of the first tab.",
