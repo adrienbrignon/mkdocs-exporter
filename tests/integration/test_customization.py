@@ -137,6 +137,30 @@ def test_elements_can_be_ignored(project: Project) -> None:
     assert "IGNORED-MARKER" in site.html("reference/index.html")
 
 
+def test_elements_can_be_left_out_of_the_website(
+    project: Project, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Elements of the `mkdocs-exporter-only` class (or with the deprecated
+    `data-decompose="true"` attribute) are only in documents."""
+
+    project.write(
+        "docs/reference.md",
+        "# Reference\n\nPlain reference page.\n\n"
+        '<p class="mkdocs-exporter-only">ONLY-MARKER</p>\n'
+        '<p data-decompose="true">DECOMPOSED-MARKER</p>\n',
+    )
+
+    site = project.build()
+    html = site.html("reference/index.html")
+    text = site.pdf("reference/index.pdf").text
+
+    assert "ONLY-MARKER" not in html
+    assert "DECOMPOSED-MARKER" not in html
+    assert "ONLY-MARKER" in text
+    assert "DECOMPOSED-MARKER" in text
+    assert caplog.text.count("'data-decompose=\"true\"' is deprecated") == 1
+
+
 def test_titles_can_be_inserted(project: Project) -> None:
     """Pages without a first-level heading get their title (#53)."""
 

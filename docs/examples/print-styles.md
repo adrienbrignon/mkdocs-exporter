@@ -24,13 +24,13 @@ Number headings, print the address of links, mark every page as a draft, and kee
     </div>
 
     This document was printed from the Field Guide website.
-    { data-decompose="true" }
+    { .mkdocs-exporter-only }
     ```
 
 - [Stylesheets](../configuration/customizing-documents.md#stylesheets) of the plugin only apply to documents: the website keeps its own styles.
 - CSS counters number headings; `counter-reset` restarts the numbering of third-level headings at each second-level heading.
 - `attr(href)` prints the address of links after them. Links to other pages point to the website (`site_url`), so their address is printed too: add `:not([href^="https://field-guide.example.com"])` to the selector to only print the address of other websites. In combined documents, links between pages point within the document, without an address.
 - A `position: fixed` element of the body (a child or a pseudo-element of `body`, here `body::after`) is printed on every page, at the same place. Fixed elements inside the page's content are only printed on its first page.
-- Elements of the `mkdocs-exporter-ignore` class are left out of documents, while elements with a `data-decompose="true"` attribute are left out of the website (here, using the `attr_list` extension).
+- Elements of the `mkdocs-exporter-ignore` class are left out of documents, while those of the `mkdocs-exporter-only` class are left out of the website (here, a paragraph given the class with the `attr_list` extension).
 
 [:material-github: Browse the files of this example](https://github.com/adrienbrignon/mkdocs-exporter/tree/master/examples/print-styles)

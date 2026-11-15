@@ -97,6 +97,7 @@ class Plugin(BasePlugin[Config]):
         self.order = []
         self.nav = []
         self.watched = set()
+        self.decomposed = False
         self.covers = CoverRenderer(config)
         self.pdf = options.enabled and (self.command != "serve" or options.serve)
 
@@ -227,10 +228,9 @@ class Plugin(BasePlugin[Config]):
             if resolve(button.get("enabled", True), page=page)
         ]
 
-        if (
-            not buttons
-            and "data-decompose" not in output
-            and "data-teleport" not in output
+        if not buttons and not any(
+            marker in output
+            for marker in ("mkdocs-exporter-only", "data-decompose", "data-teleport")
         ):
             return output
 
@@ -248,7 +248,14 @@ class Plugin(BasePlugin[Config]):
                 html, str(options["title"]), str(options["icon"]), attributes
             )
 
-        html.remove('[data-decompose="true"]')
+        if html.select('[data-decompose="true"]') and not self.decomposed:
+            self.decomposed = True
+            logger.warning(
+                "[mkdocs-exporter] 'data-decompose=\"true\"' is deprecated, give "
+                "elements meant for documents only the 'mkdocs-exporter-only' class"
+            )
+
+        html.remove([".mkdocs-exporter-only", '[data-decompose="true"]'])
         html.teleport()
 
         return str(html)

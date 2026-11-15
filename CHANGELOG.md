@@ -21,7 +21,8 @@ Read the [migration guide](https://adrienbrignon.github.io/mkdocs-exporter/migra
 - Unchanged documents are reused from a cache (`formats.pdf.cache`).
 - `formats.pdf.serve` to generate documents while serving (the browser is kept open between rebuilds).
 - `formats.pdf.browser.channel` and `formats.pdf.browser.delay` options (#81).
-- `mkdocs-exporter-ignore`, `page-break`, `page-break-before` and `avoid-page-break` classes (#33, #63).
+- `mkdocs-exporter-ignore` and `mkdocs-exporter-only` classes, for content of the website or of documents only (#33).
+- `page-break`, `page-break-before` and `avoid-page-break` classes (#63).
 - `MkDocsExporter.before` and `MkDocsExporter.after` hooks.
 - Support for ProperDocs and for themes without dedicated support (#68).
 
@@ -56,6 +57,7 @@ Read the [migration guide](https://adrienbrignon.github.io/mkdocs-exporter/migra
 ### Deprecated
 
 - `formats.pdf.aggregator`, replaced by `formats.pdf.books` (a list of combined documents).
+- `data-decompose="true"`, replaced by the `mkdocs-exporter-only` class.
 
 ### Removed
 

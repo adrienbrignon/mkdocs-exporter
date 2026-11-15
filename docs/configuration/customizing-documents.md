@@ -102,6 +102,7 @@ These classes are available in PDF documents:
 | `page-break-before` | Starts a new page before the element |
 | `avoid-page-break` | Keeps the element on a single page when possible |
 | `mkdocs-exporter-ignore` | Removes the element from PDF documents |
+| `mkdocs-exporter-only` | Removes the element from the website (it is only in PDF documents) |
 
 For instance, with the `attr_list` and `md_in_html` extensions:
 
@@ -110,9 +111,10 @@ For instance, with the `attr_list` and `md_in_html` extensions:
 
 This paragraph won't be printed.
 { .mkdocs-exporter-ignore }
-```
 
-Conversely, elements having a `data-decompose="true"` attribute are removed from the website but kept in PDF documents.
+This paragraph is only printed.
+{ .mkdocs-exporter-only }
+```
 
 !!! example "Example"
 
