@@ -25,9 +25,11 @@ buttons:
               generic: true
 
         extra_javascript:
-          - assets/scripts/mathjax.js # MathJax's configuration (see the guide)
+          - assets/scripts/mathjax.js # (1)!
           - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
         ```
+
+        1. The configuration of MathJax, given in Material for MkDocs' guide.
 
     === "KaTeX"
 
@@ -39,13 +41,15 @@ buttons:
               generic: true
 
         extra_javascript:
-          - assets/scripts/katex.js # Renders formulas (see the guide)
+          - assets/scripts/katex.js # (1)!
           - https://unpkg.com/katex@0/dist/katex.min.js
           - https://unpkg.com/katex@0/dist/contrib/auto-render.min.js
 
         extra_css:
           - https://unpkg.com/katex@0/dist/katex.min.css
         ```
+
+        1. The script typesetting formulas with KaTeX, given in Material for MkDocs' guide.
 
 Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc quis augue massa. Vestibulum suscipit et nisi in imperdiet. Nunc et mattis arcu, feugiat venenatis elit. Praesent hendrerit lacus felis, vel volutpat massa tristique vitae.
 

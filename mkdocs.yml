@@ -25,6 +25,7 @@ theme:
   features:
     - announce.dismiss
     - content.action.edit
+    - content.code.annotate
     - navigation.footer
     - navigation.indexes
     - navigation.instant
