@@ -8,7 +8,7 @@ import re
 
 import pytest
 
-from tests.conftest import Project, Site
+from tests.conftest import Project, Site, single_book
 
 pytestmark = pytest.mark.browser
 
@@ -131,9 +131,7 @@ class TestAggregator:
 def test_aggregator_cover_modes(
     project: Project, covers: str, front: int, back: int
 ) -> None:
-    site = project.build(
-        exporter={"formats": {"pdf": {"aggregator": {"covers": covers}}}}
-    )
+    site = project.build(exporter={"formats": {"pdf": {**single_book(covers=covers)}}})
     combined = site.pdf("combined.pdf")
 
     assert combined.count("FRONT-COVER") == front
@@ -142,7 +140,7 @@ def test_aggregator_cover_modes(
 
 def test_page_numbers_are_continuous_without_covers(project: Project) -> None:
     site = project.build(
-        exporter={"formats": {"pdf": {"aggregator": {"covers": "limits"}}}}
+        exporter={"formats": {"pdf": {**single_book(covers="limits")}}}
     )
     combined = site.pdf("combined.pdf")
 
@@ -152,9 +150,7 @@ def test_page_numbers_are_continuous_without_covers(project: Project) -> None:
 
 def test_aggregator_metadata(project: Project) -> None:
     site = project.build(
-        exporter={
-            "formats": {"pdf": {"aggregator": {"metadata": {"/Title": "Handbook"}}}}
-        }
+        exporter={"formats": {"pdf": {**single_book(metadata={"/Title": "Handbook"})}}}
     )
 
     assert site.pdf("combined.pdf").metadata.get("/Title") == "Handbook"
@@ -260,7 +256,7 @@ def test_removed_covers_on_their_own_page_are_not_counted(project: Project) -> N
             "formats": {
                 "pdf": {
                     "scripts": ["scripts/hidden.js"],
-                    "aggregator": {"covers": "front"},
+                    **single_book(covers="front"),
                 }
             }
         }

@@ -3,7 +3,7 @@ ifeq ($(origin .RECIPEPREFIX), undefined)
 endif
 
 PDF ?= true
-PDF_AGGREGATOR ?= true
+BOOKS ?= true
 
 .RECIPEPREFIX = >
 .PHONY: all install browser lint format typecheck test build serve examples dist clean fclean re
@@ -31,10 +31,10 @@ test:
 > uv run pytest $(ARGS)
 
 build:
->@ MKDOCS_EXPORTER_PDF=$(PDF) MKDOCS_EXPORTER_PDF_AGGREGATOR=$(PDF_AGGREGATOR) uv run mkdocs build $(ARGS)
+>@ MKDOCS_EXPORTER_PDF=$(PDF) MKDOCS_EXPORTER_BOOKS=$(BOOKS) uv run mkdocs build $(ARGS)
 
 serve:
->@ MKDOCS_EXPORTER_PDF=$(PDF) MKDOCS_EXPORTER_PDF_AGGREGATOR=$(PDF_AGGREGATOR) uv run mkdocs serve $(ARGS)
+>@ MKDOCS_EXPORTER_PDF=$(PDF) MKDOCS_EXPORTER_BOOKS=$(BOOKS) uv run mkdocs serve $(ARGS)
 
 examples:
 > uv run python examples/build.py

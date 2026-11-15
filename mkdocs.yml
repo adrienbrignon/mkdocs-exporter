@@ -99,12 +99,12 @@ plugins:
             center: "Page {page} of {pages}"
           browser:
             debug: false
-          aggregator:
-            enabled: !ENV [MKDOCS_EXPORTER_PDF_AGGREGATOR, true]
-            output: documentation.pdf
-            covers: front
-            toc:
-              enabled: true
+          books:
+            - enabled: !ENV [MKDOCS_EXPORTER_BOOKS, true]
+              output: documentation.pdf
+              covers: front
+              toc:
+                enabled: true
       buttons:
         - title: View as PDF
           icon: material-file-move-outline

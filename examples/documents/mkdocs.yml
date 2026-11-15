@@ -6,7 +6,7 @@ plugins:
         pdf:
           footer:
             center: "Page {page} of {pages}"
-          aggregators:
+          books:
             - output: pdf/field-guide.pdf
               exclude:
                 - index.md

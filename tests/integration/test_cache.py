@@ -12,7 +12,7 @@ PAGES = ["index.md", "guide/intro.md", "guide/advanced.md", "reference.md"]
 
 SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><rect width="10" height="10" fill="{color}"/></svg>'
 
-SINGLE = {"formats": {"pdf": {"aggregator": {"enabled": False}}}}
+SINGLE = {"formats": {"pdf": {"books": []}}}
 """Without combined documents (their pages are rendered again, without the cache)."""
 
 

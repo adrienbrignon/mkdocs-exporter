@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from tests.conftest import Project, Site
+from tests.conftest import Project, Site, single_book
 
 pytestmark = pytest.mark.browser
 
@@ -67,7 +67,7 @@ def test_aggregated_documents_are_numbered_continuously(site: Site) -> None:
 
 def test_page_titles_follow_aggregated_documents(project: Project) -> None:
     site = project.build(
-        exporter={"formats": {"pdf": {**MARGINS, "aggregator": {"covers": "none"}}}}
+        exporter={"formats": {"pdf": {**MARGINS, **single_book(covers="none")}}}
     )
     combined = site.pdf("combined.pdf")
     reference = combined.pages_containing("Plain reference page")[0]
@@ -81,7 +81,7 @@ def test_sections_and_titles_follow_aggregated_documents(project: Project) -> No
             "formats": {
                 "pdf": {
                     **MARGINS,
-                    "aggregator": {"covers": "none", "toc": {"enabled": True}},
+                    **single_book(covers="none", toc={"enabled": True}),
                 }
             }
         }

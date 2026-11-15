@@ -124,32 +124,32 @@ class TocConfig(BaseConfig):
     """The title of the table of contents."""
 
     depth = PositiveInteger(default=2)
-    """The deepest level of headings listed (in aggregated documents, 1 lists pages only)."""
+    """The deepest level of headings listed (in books, 1 lists pages only)."""
 
     template = c.Optional(c.File(exists=True))
     """A Jinja template replacing the default one (variables: `title`, `entries`)."""
 
 
-class AggregatorConfig(BaseConfig):
-    """The aggregator's configuration."""
+class BookConfig(BaseConfig):
+    """A book: pages combined into a single document."""
 
     enabled = c.Type(bool, default=True)
-    """Is the aggregator enabled?"""
+    """Is the book generated?"""
 
-    output = c.Type(str, default="combined.pdf")
-    """The aggregated PDF document output file path."""
+    output = c.Type(str, default="book.pdf")
+    """The path of the document, relative to the website's root."""
 
     metadata = c.Type(dict, default={})
-    """Some metadata to append to the PDF document."""
+    """Information about the document (`title`, `author`, `subject`, `keywords`)."""
 
     covers = c.Choice(COVER_MODES, default="all")
-    """The behavior of cover pages."""
+    """The cover pages kept (`all`, `none`, `limits`, `book`, `front` or `back`)."""
 
     include = c.ListOfItems(c.Type(str), default=["*"])
-    """Patterns of the source paths of the pages to aggregate (`*` matches any text)."""
+    """Patterns of the source paths of the pages to combine (`*` matches any text)."""
 
     exclude = c.ListOfItems(c.Type(str), default=[])
-    """Patterns of the source paths of the pages not to aggregate."""
+    """Patterns of the source paths of the pages to leave out."""
 
     start = c.Choice(START_MODES, default="any")
     """`odd` to start every page on an odd (right-hand) page, inserting blank pages."""
@@ -161,11 +161,14 @@ class AggregatorConfig(BaseConfig):
     """The table of contents."""
 
 
-class SingleAggregatorConfig(AggregatorConfig):
-    """The configuration of the main aggregated document."""
+class AggregatorConfig(BookConfig):
+    """A single book (deprecated: use `books`)."""
 
     enabled = c.Type(bool, default=False)
-    """Is the aggregator enabled?"""
+    """Is the book generated?"""
+
+    output = c.Type(str, default="combined.pdf")
+    """The path of the document, relative to the website's root."""
 
 
 class Config(BaseConfig):
@@ -213,8 +216,8 @@ class Config(BaseConfig):
     toc = c.SubConfig(TocConfig)
     """The table of contents of each document (its headings)."""
 
-    aggregator = c.SubConfig(SingleAggregatorConfig)
-    """The aggregated document combining pages (shorthand for a single aggregator)."""
+    books = c.ListOfItems(c.SubConfig(BookConfig), default=[])
+    """Books: pages combined into single documents."""
 
-    aggregators = c.ListOfItems(c.SubConfig(AggregatorConfig), default=[])
-    """Aggregated documents combining pages."""
+    aggregator = c.SubConfig(AggregatorConfig)
+    """A single book (deprecated: use `books`)."""

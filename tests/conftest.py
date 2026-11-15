@@ -32,7 +32,7 @@ DEFAULT_EXPORTER: dict[str, Any] = {
             "stylesheets": ["pdf.css"],
             "covers": {"front": "covers/front.html", "back": "covers/back.html"},
             "browser": {"timeout": 30_000},
-            "aggregator": {"enabled": True, "output": "combined.pdf"},
+            "books": [{"output": "combined.pdf"}],
         },
     },
     "buttons": [
@@ -45,6 +45,12 @@ DEFAULT_EXPORTER: dict[str, Any] = {
     ],
 }
 """The default options of the plugin used by the fixture project."""
+
+
+def single_book(**options: Any) -> dict[str, Any]:
+    """The `books` option, with a single book (`combined.pdf` by default)."""
+
+    return {"books": [{"output": "combined.pdf", **options}]}
 
 
 def merge(base: dict[str, Any], overrides: dict[str, Any]) -> dict[str, Any]:

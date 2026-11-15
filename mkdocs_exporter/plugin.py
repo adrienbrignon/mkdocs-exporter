@@ -101,15 +101,17 @@ class Plugin(BasePlugin[Config]):
         self.covers = CoverRenderer(config)
         self.pdf = options.enabled and (self.command != "serve" or options.serve)
 
-        outputs = [
-            aggregator.output
-            for aggregator in [options.aggregator, *options.aggregators]
-            if aggregator.enabled
-        ]
+        if options.aggregator.enabled:
+            logger.warning(
+                "[mkdocs-exporter.pdf] 'formats.pdf.aggregator' is deprecated, list "
+                "combined documents in 'formats.pdf.books' instead"
+            )
+
+        outputs = [book.output for book in _books(options)]
 
         if len(outputs) != len(set(outputs)):
             raise PluginError(
-                "[mkdocs-exporter.pdf] Several aggregators write to the same file: "
+                "[mkdocs-exporter.pdf] Several books are written to the same file: "
                 + ", ".join(sorted({o for o in outputs if outputs.count(o) > 1}))
             )
         if type(self.theme) is Theme:
@@ -288,11 +290,7 @@ class Plugin(BasePlugin[Config]):
         links = options.url or config.site_url or None
         exports = [self.exports[key] for key in self.order if key in self.exports]
         exports += [e for key, e in self.exports.items() if key not in set(self.order)]
-        aggregations = [
-            self._aggregation(config, aggregator)
-            for aggregator in [options.aggregator, *options.aggregators]
-            if aggregator.enabled
-        ]
+        aggregations = [self._aggregation(config, book) for book in _books(options)]
 
         cache = None
 
@@ -416,6 +414,12 @@ def _metadata(page: Page, config: MkDocsConfig) -> dict[str, str]:
         }.items()
         if value
     }
+
+
+def _books(options: Any) -> list[Any]:
+    """The enabled books (including the deprecated `aggregator`)."""
+
+    return [book for book in [*options.books, options.aggregator] if book.enabled]
 
 
 def _toc(options: Any) -> TocOptions | None:

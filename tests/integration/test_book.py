@@ -8,16 +8,16 @@ from typing import Any
 import pytest
 from mkdocs.exceptions import Abort
 
-from tests.conftest import Project, Site
+from tests.conftest import Project, Site, single_book
 from tests.support.pdf import OutlineItem, PdfDocument
 
 pytestmark = pytest.mark.browser
 
 
-def aggregator(**options: Any) -> dict[str, Any]:
-    """Options of the main aggregator."""
+def with_book(**options: Any) -> dict[str, Any]:
+    """Options of the plugin with a single book (`combined.pdf`)."""
 
-    return {"formats": {"pdf": {"aggregator": options}}}
+    return {"formats": {"pdf": single_book(**options)}}
 
 
 def page_of(document: PdfDocument, text: str) -> int:
@@ -45,7 +45,7 @@ def book(tmp_path_factory: pytest.TempPathFactory) -> Site:
 
     project = Project(tmp_path_factory.mktemp("book") / "project")
 
-    return project.build(exporter=aggregator(covers="none"))
+    return project.build(exporter=with_book(covers="none"))
 
 
 class TestOutline:
@@ -74,7 +74,7 @@ class TestOutline:
         assert advanced.children[1].page == page_of(combined, "Another section")
 
     def test_depth_can_be_limited(self, project: Project) -> None:
-        site = project.build(exporter=aggregator(covers="none", outline=1))
+        site = project.build(exporter=with_book(covers="none", outline=1))
 
         assert titles(site.pdf("combined.pdf").outline) == [
             "Home",
@@ -83,7 +83,7 @@ class TestOutline:
         ]
 
     def test_can_be_disabled(self, project: Project) -> None:
-        site = project.build(exporter=aggregator(covers="none", outline=0))
+        site = project.build(exporter=with_book(covers="none", outline=0))
 
         assert site.pdf("combined.pdf").outline == []
 
@@ -120,7 +120,7 @@ class TestLinks:
             "# Reference\n\nPlain reference page.[^1]\n\n[^1]: REFERENCE-NOTE\n",
         )
 
-        site = project.build(exporter=aggregator(covers="none"))
+        site = project.build(exporter=with_book(covers="none"))
         combined = site.pdf("combined.pdf")
         reference = page_of(combined, "Plain reference page")
         links = [link for link in combined.internal_links if link.page >= reference]
@@ -130,7 +130,7 @@ class TestLinks:
         assert all(link.target_page >= reference for link in links)  # type: ignore[operator]
 
     def test_links_to_other_pages_point_to_the_website(self, project: Project) -> None:
-        site = project.build(exporter=aggregator(covers="none", exclude=["guide/*"]))
+        site = project.build(exporter=with_book(covers="none", exclude=["guide/*"]))
 
         assert (
             "https://example.org/docs/guide/intro/"
@@ -146,9 +146,7 @@ class TestTableOfContents:
     def site(cls, tmp_path_factory: pytest.TempPathFactory) -> Site:
         project = Project(tmp_path_factory.mktemp("toc") / "project")
 
-        return project.build(
-            exporter=aggregator(covers="limits", toc={"enabled": True})
-        )
+        return project.build(exporter=with_book(covers="limits", toc={"enabled": True}))
 
     def test_follows_the_front_cover(self, site: Site) -> None:
         combined = site.pdf("combined.pdf")
@@ -188,7 +186,7 @@ class TestTableOfContents:
 
 
 def test_documents_can_start_on_odd_pages(project: Project) -> None:
-    site = project.build(exporter=aggregator(covers="none", start="odd"))
+    site = project.build(exporter=with_book(covers="none", start="odd"))
     combined = site.pdf("combined.pdf")
 
     for text in ["Welcome to the", "Paragraph 1.", "Deep dive", "Plain reference page"]:
@@ -197,13 +195,12 @@ def test_documents_can_start_on_odd_pages(project: Project) -> None:
     assert any(not text.strip() for text in combined.pages_text)
 
 
-def test_several_aggregated_documents(project: Project) -> None:
+def test_several_books(project: Project) -> None:
     site = project.build(
         exporter={
             "formats": {
                 "pdf": {
-                    "aggregator": {"enabled": False},
-                    "aggregators": [
+                    "books": [
                         {
                             "output": "guide.pdf",
                             "include": ["guide/*"],
@@ -225,15 +222,39 @@ def test_several_aggregated_documents(project: Project) -> None:
     assert "Paragraph 1." not in others.text
 
 
-def test_aggregated_documents_must_have_distinct_outputs(
+def test_books_must_have_distinct_outputs(
     project: Project, caplog: pytest.LogCaptureFixture
 ) -> None:
     with pytest.raises(Abort):
         project.build(
-            exporter={"formats": {"pdf": {"aggregators": [{"output": "combined.pdf"}]}}}
+            exporter={
+                "formats": {
+                    "pdf": {
+                        "books": [
+                            {"output": "combined.pdf"},
+                            {"output": "combined.pdf"},
+                        ]
+                    }
+                }
+            }
         )
 
-    assert "Several aggregators write to the same file: combined.pdf" in caplog.text
+    assert "Several books are written to the same file: combined.pdf" in caplog.text
+
+
+def test_the_deprecated_aggregator_is_a_book(
+    project: Project, caplog: pytest.LogCaptureFixture
+) -> None:
+    site = project.build(
+        exporter={
+            "formats": {
+                "pdf": {"books": [], "aggregator": {"enabled": True, "covers": "none"}}
+            }
+        }
+    )
+
+    assert "Paragraph 1." in site.pdf("combined.pdf").text
+    assert "'formats.pdf.aggregator' is deprecated" in caplog.text
 
 
 def test_bookmarks_show_their_heading(book: Site) -> None:
@@ -257,7 +278,7 @@ def test_bookmarks_show_their_heading(book: Site) -> None:
 
 def test_documents_with_covers_can_start_on_odd_pages(project: Project) -> None:
     site = project.build(
-        exporter=aggregator(covers="front", start="odd", toc={"enabled": True})
+        exporter=with_book(covers="front", start="odd", toc={"enabled": True})
     )
     combined = site.pdf("combined.pdf")
     covers = combined.pages_containing("FRONT-COVER")
@@ -270,7 +291,7 @@ def test_documents_with_covers_can_start_on_odd_pages(project: Project) -> None:
 
 @pytest.mark.parametrize("covers", ["all", "none", "limits", "book", "front", "back"])
 def test_pages_are_numbered_across_documents(project: Project, covers: str) -> None:
-    combined = project.build(exporter=aggregator(covers=covers)).pdf("combined.pdf")
+    combined = project.build(exporter=with_book(covers=covers)).pdf("combined.pdf")
 
     for index, text in enumerate(combined.pages_text):
         assert f"{index + 1} / {combined.page_count}" in text
@@ -281,7 +302,7 @@ def test_every_table_of_contents_entry_leads_to_its_page(
     project: Project, theme: str
 ) -> None:
     site = project.build(
-        exporter=aggregator(covers="all", toc={"enabled": True}),
+        exporter=with_book(covers="all", toc={"enabled": True}),
         theme={"name": theme},
     )
     combined = site.pdf("combined.pdf")
@@ -317,7 +338,7 @@ def test_no_link_points_to_the_local_server(project: Project) -> None:
 
 def test_links_without_site_url_are_relative_to_the_document(project: Project) -> None:
     site = project.build(
-        exporter=aggregator(output="pdf/book.pdf", covers="none", exclude=["guide/*"]),
+        exporter=with_book(output="pdf/book.pdf", covers="none", exclude=["guide/*"]),
         site_url="",
     )
     links = site.pdf("pdf/book.pdf").external_links
@@ -346,7 +367,7 @@ def test_tabs_of_several_pages_keep_their_content(project: Project) -> None:
             "formats": {
                 "pdf": {
                     "scripts": ["scripts/checked.js"],
-                    "aggregator": {"covers": "none"},
+                    **single_book(covers="none"),
                 }
             }
         }
@@ -374,7 +395,7 @@ def test_cover_styles_depending_on_the_page_stay_in_their_part(
         '<div class="front-cover"><h1 class="cover-title">FRONT-COVER</h1></div>\n',
     )
 
-    combined = project.build(exporter=aggregator(covers="front")).pdf("combined.pdf")
+    combined = project.build(exporter=with_book(covers="front")).pdf("combined.pdf")
     covers = combined.pages_containing("FRONT-COVER")
 
     assert [
@@ -391,7 +412,7 @@ def test_first_page_rules_apply_to_every_front_cover(project: Project) -> None:
             "formats": {
                 "pdf": {
                     "stylesheets": ["pdf.css", "first.css"],
-                    "aggregator": {"covers": "front"},
+                    **single_book(covers="front"),
                 }
             }
         }
@@ -409,7 +430,7 @@ def test_wide_content_does_not_shrink_other_documents(project: Project) -> None:
         "docs/reference.md", '# Reference\n\n<div style="width: 3000px">Wide.</div>\n'
     )
 
-    site = project.build(exporter=aggregator(covers="none"))
+    site = project.build(exporter=with_book(covers="none"))
 
     assert site.pdf("combined.pdf").font_size("Introduction") == site.pdf(
         "guide/intro/index.pdf"
@@ -423,7 +444,7 @@ def test_headings_that_are_not_printed_are_left_out(project: Project) -> None:
         "## HIDDEN-HEADING { .mkdocs-exporter-ignore }\n\n## Shown heading\n",
     )
 
-    site = project.build(exporter=aggregator(covers="none", toc={"enabled": True}))
+    site = project.build(exporter=with_book(covers="none", toc={"enabled": True}))
     combined = site.pdf("combined.pdf")
     toc = combined.pages_text[page_of(combined, "Table of contents")]
 
@@ -450,7 +471,7 @@ def test_themes_without_content_element(project: Project) -> None:
     project.write("theme/main.html", BARE_THEME)
 
     site = project.build(
-        exporter=aggregator(covers="none", start="odd"),
+        exporter=with_book(covers="none", start="odd"),
         theme={"name": None, "custom_dir": "theme"},
     )
     combined = site.pdf("combined.pdf")

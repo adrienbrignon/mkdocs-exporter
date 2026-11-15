@@ -17,9 +17,8 @@ plugins:
           toc:
             enabled: true
             depth: 3
-          aggregator:
-            enabled: true
-            output: field-guide.pdf
-            covers: limits
-            toc:
-              enabled: true
+          books:
+            - output: field-guide.pdf
+              covers: limits
+              toc:
+                enabled: true

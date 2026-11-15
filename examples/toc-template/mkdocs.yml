@@ -6,10 +6,9 @@ plugins:
         pdf:
           stylesheets:
             - pdf.css
-          aggregator:
-            enabled: true
-            output: field-guide.pdf
-            toc:
-              enabled: true
-              title: Contents
-              template: toc.html.j2
+          books:
+            - output: field-guide.pdf
+              toc:
+                enabled: true
+                title: Contents
+                template: toc.html.j2

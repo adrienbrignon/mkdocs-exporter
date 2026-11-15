@@ -74,12 +74,11 @@ plugins:
             back: resources/templates/covers/back.html.j2
           footer:
             right: "Page {page} of {pages}"
-          aggregator:
-            enabled: true
-            output: documentation.pdf
-            covers: front
-            toc:
-              enabled: true
+          books:
+            - output: documentation.pdf
+              covers: front
+              toc:
+                enabled: true
 ```
 
 Check out the [examples](https://adrienbrignon.github.io/mkdocs-exporter/examples/): documents generated from a small website (with cover pages, tables of contents, headers and footers...), with their configuration ([`examples/`](examples)).

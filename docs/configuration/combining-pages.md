@@ -1,6 +1,6 @@
 # Combining pages
 
-The aggregator combines pages into a single PDF document. The pages are assembled into a single HTML document, printed once by the browser:
+Books combine pages into single PDF documents. The pages of a book are assembled into a single HTML document, printed once by the browser:
 
 ```mermaid
 graph LR
@@ -16,13 +16,12 @@ plugins:
   - exporter:
       formats:
         pdf:
-          aggregator:
-            enabled: true
-            output: documentation.pdf
-            covers: limits
-            metadata:
-              title: Documentation
-              author: Jane Doe
+          books:
+            - output: documentation.pdf
+              covers: limits
+              metadata:
+                title: Documentation
+                author: Jane Doe
 ```
 
 Pages are combined in the order of the navigation, and numbered across the whole document: `{page}` and `{pages}` in [headers and footers](headers-and-footers.md), as well as `counter(page)` and `counter(pages)` in your own stylesheets, count the pages of the combined document.
@@ -55,9 +54,9 @@ The `covers` option tells which cover pages are kept:
 | `back` | Every back cover page | Pages each ending with a summary page |
 
 ```yaml
-aggregator:
-  enabled: true
-  covers: limits
+books:
+  - output: documentation.pdf
+    covers: limits
 ```
 
 A cover template can tell the home page apart, to give the combined document a cover of its own (see [The Field Guide](../examples/index.md#the-field-guide) example):
@@ -72,9 +71,9 @@ The combined document has bookmarks following the navigation: sections, pages an
 Their depth can be changed, or set to `0` to disable them:
 
 ```yaml
-aggregator:
-  enabled: true
-  outline: 2
+books:
+  - output: documentation.pdf
+    outline: 2
 ```
 
 Links between pages of the combined document point within the document, to the linked heading when there is one.
@@ -85,12 +84,12 @@ Other links point to the website (`site_url` or `formats.pdf.url`), or are relat
 A table of contents can be inserted after the first front cover:
 
 ```yaml
-aggregator:
-  enabled: true
-  toc:
-    enabled: true
-    title: Contents
-    depth: 2 # Pages and their second-level headings
+books:
+  - output: documentation.pdf
+    toc:
+      enabled: true
+      title: Contents
+      depth: 2 # Pages and their second-level headings
 ```
 
 Its appearance can be changed with CSS (`.mkdocs-exporter-toc` and the classes of the default [template](https://github.com/adrienbrignon/mkdocs-exporter/blob/master/mkdocs_exporter/core/resources/toc.html)), or replaced with a Jinja template of your own (`toc.template`, relative to `mkdocs.yml`).
@@ -116,21 +115,21 @@ For instance, a table of contents laid out as a table:
 For printed books, pages can start on odd (right-hand) pages, blank pages (without headers nor footers) being inserted when needed:
 
 ```yaml
-aggregator:
-  enabled: true
-  start: odd
+books:
+  - output: documentation.pdf
+    start: odd
 ```
 
 ## Several documents
 
-`aggregators` defines several combined documents. Patterns select the pages they contain, matched against the path of pages' source files (`*` matches any text, including `/`):
+`books` lists as many documents as needed. Patterns select the pages they contain, matched against the path of pages' source files (`*` matches any text, including `/`):
 
 ```yaml
 plugins:
   - exporter:
       formats:
         pdf:
-          aggregators:
+          books:
             - output: pdf/user-guide.pdf
               include:
                 - user-guide/*
@@ -141,7 +140,7 @@ plugins:
                 - reference/internal/*
 ```
 
-Every option of `aggregator` is available for each of them.
+Every option is available for each of them.
 
 !!! example "Examples"
 

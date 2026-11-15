@@ -7,7 +7,7 @@ Guidance for AI coding agents (and humans) working on this repository.
 *MkDocs Exporter* is an MkDocs plugin (entry point `exporter`) that exports documentation pages to PDF.
 Each page is printed by a headless Chromium driven by [Playwright](https://playwright.dev/python/),
 using the browser's own CSS Paged Media support (page sizes, margin boxes, page counters, named pages).
-Pages can also be combined into a single PDF document (aggregator, with
+Pages can also be combined into books, single PDF documents (with
 [pypdf](https://pypdf.readthedocs.io/) for bookmarks and links). Paged.js is not bundled anymore: users
 can load it through `formats.pdf.scripts` (documented recipe).
 
@@ -26,7 +26,7 @@ third-party plugins, so neither is supported as a plugin host.
 | Type check | `uv run mypy` |
 | Tests | `uv run pytest` (`-m "not browser"` to skip the end-to-end tests; `--cov` for coverage, which fails under 85 % without them) |
 | Tests on ProperDocs | `MKDOCS_EXPORTER_TEST_PROPERDOCS=1 uv run --with properdocs --with properdocs-theme-mkdocs --with properdocs-theme-readthedocs pytest` |
-| Build / serve the documentation | `make build` / `make serve` (`PDF=false` or `PDF_AGGREGATOR=false` to speed things up) |
+| Build / serve the documentation | `make build` / `make serve` (`PDF=false` or `BOOKS=false` to speed things up) |
 | Build the examples (documents and previews) | `make examples` (needs `pdftoppm`, from Poppler) |
 | Build distributions | `uv build` |
 

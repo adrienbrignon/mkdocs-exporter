@@ -24,7 +24,7 @@ Generate several combined documents: the whole guide without its home page, and 
     └── ...
     ```
 
-- [`aggregators`](../configuration/combining-pages.md#several-documents) lists combined documents, each with the options of `aggregator` (covers, table of contents, bookmarks...).
+- [`books`](../configuration/combining-pages.md#several-documents) lists combined documents, each with its own options (covers, table of contents, bookmarks...).
 - `include` and `exclude` select pages by the path of their source file, relative to the `docs` directory: `*` matches any text, including `/`. Pages are in the order of the navigation.
 - Each document is numbered on its own: `{pages}` counts the pages of the document.
 - `metadata` sets the information shown by PDF readers, the title being the website's name by default.

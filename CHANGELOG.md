@@ -13,7 +13,7 @@ Read the [migration guide](https://adrienbrignon.github.io/mkdocs-exporter/migra
 - Links between pages of combined documents point within the document (#52).
 - Combined documents can have a table of contents with page numbers (`toc`) (#46).
 - Documents of pages can start with a table of contents of their headings (`formats.pdf.toc`) (#24).
-- Several combined documents can be generated, selecting pages with patterns (`aggregators`, `include`, `exclude`) (#31).
+- Several combined documents can be generated, selecting pages with patterns (`books`, `include`, `exclude`) (#31).
 - Pages of combined documents can start on odd pages (`start: odd`) (#67).
 - Headers and footers with placeholders (`header`, `footer`) (#84).
 - Cover pages are Jinja templates, with or without the macros plugin (#50).
@@ -48,9 +48,13 @@ Read the [migration guide](https://adrienbrignon.github.io/mkdocs-exporter/migra
 - Pages listed twice in the navigation, or skipped by dirty rebuilds, no longer break combined documents (#48, #51).
 - Stylesheets excluded from the build are no longer rewritten (#85).
 - `mailto:` and other non-HTTP links are preserved.
-- `aggregator.metadata` is honored.
+- The `metadata` of combined documents is honored.
 - Scripts are injected even when no stylesheet is configured.
 - The back cover is no longer broken when a page doesn't end with a blank line (#82).
+
+### Deprecated
+
+- `formats.pdf.aggregator`, replaced by `formats.pdf.books` (a list of combined documents).
 
 ### Removed
 
