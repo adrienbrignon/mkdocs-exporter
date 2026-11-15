@@ -2,9 +2,7 @@ from __future__ import annotations
 
 import os
 import posixpath
-from collections.abc import Iterator, Sequence
 from dataclasses import dataclass
-from fnmatch import fnmatchcase
 from pathlib import Path
 from typing import Any, Literal
 
@@ -13,24 +11,27 @@ from mkdocs.exceptions import PluginError
 from mkdocs.livereload import LiveReloadServer
 from mkdocs.plugins import BasePlugin, CombinedEvent, event_priority
 from mkdocs.structure.files import Files
-from mkdocs.structure.nav import Navigation, Section
+from mkdocs.structure.nav import Navigation
 from mkdocs.structure.pages import Page
 
+from mkdocs_exporter import adapter
 from mkdocs_exporter.config import Config
 from mkdocs_exporter.core.books import Book, NavNode
-from mkdocs_exporter.core.browser import Browser
+from mkdocs_exporter.core.browser import Browser, relaunch
 from mkdocs_exporter.core.cache import Cache
 from mkdocs_exporter.core.document import Document, Site
 from mkdocs_exporter.core.exporter import Exporter
 from mkdocs_exporter.core.html import HtmlDocument
-from mkdocs_exporter.core.margins import Margins
-from mkdocs_exporter.core.renderer import Outcome, RenderOptions
+from mkdocs_exporter.core.renderer import Outcome
 from mkdocs_exporter.core.runner import Loop, run
 from mkdocs_exporter.core.themes import Theme, get_theme
-from mkdocs_exporter.core.toc import TocOptions
 from mkdocs_exporter.covers import CoverRenderer
+from mkdocs_exporter.formats.pdf.config import BookConfig
 from mkdocs_exporter.helpers import resolve
 from mkdocs_exporter.logging import logger
+
+MARKERS = ("mkdocs-exporter-only", "data-decompose", "data-teleport")
+"""What the website's pages are processed for, besides buttons (see `_decorate_page`)."""
 
 
 @dataclass
@@ -53,6 +54,7 @@ class Plugin(BasePlugin[Config]):
         self.order: list[str] = []
         self.nav: list[NavNode] = []
         self.watched: set[str] = set()
+        self.decomposed = False
         self.covers: CoverRenderer
         self.loop: Loop | None = None
         self.browser: Browser | None = None
@@ -107,7 +109,7 @@ class Plugin(BasePlugin[Config]):
                 "combined documents in 'formats.pdf.books' instead"
             )
 
-        outputs = [_output(book) for book in _books(options)]
+        outputs = [adapter.output(book) for book in adapter.books(options)]
 
         if len(outputs) != len(set(outputs)):
             raise PluginError(
@@ -141,32 +143,12 @@ class Plugin(BasePlugin[Config]):
 
     @event_priority(-100)
     def on_nav(self, nav: Navigation, *, config: MkDocsConfig, files: Files) -> None:
-        """Records the order of the pages in the navigation."""
+        """Records the navigation: its sections and the order of pages."""
 
-        def walk(items: Sequence[Any]) -> list[NavNode]:
-            nodes: list[NavNode] = []
-
-            for item in items:
-                if isinstance(item, Page) and item.file is not None:
-                    nodes.append(
-                        NavNode(title=item.title or "", document=item.file.src_uri)
-                    )
-                elif isinstance(item, Section):
-                    nodes.append(
-                        NavNode(title=item.title, children=walk(item.children))
-                    )
-
-            return nodes
-
-        def documents(nodes: Sequence[NavNode]) -> Iterator[str]:
-            for node in nodes:
-                if node.document is not None:
-                    yield node.document
-
-                yield from documents(node.children)
-
-        self.nav = walk(nav.items)
-        self.order = list(dict.fromkeys(documents(self.nav)))
+        self.nav = adapter.navigation(nav.items)
+        self.order = list(
+            dict.fromkeys(key for node in self.nav for key in node.documents())
+        )
 
     @event_priority(100)
     def on_pre_page(self, page: Page, *, config: MkDocsConfig, files: Files) -> None:
@@ -202,28 +184,16 @@ class Plugin(BasePlugin[Config]):
 
         self.watched.update(templates.values())
         formats["pdf"]["covers"] = list(covers)
-        formats["pdf"]["books"] = [
-            {
-                "path": os.path.join(config.site_dir, *output.split("/")),
-                "url": output,
-                "title": str(options.metadata.get("title") or config.site_name),
-            }
-            for options in _books(self.config.formats.pdf)
-            if page.file.src_uri in self.order and _selects(options, page.file.src_uri)
-            for output in [_output(options)]
-        ]
+        formats["pdf"]["books"] = self._books_of(page, config)
         self.exports[page.file.src_uri] = Export(
             page=page,
-            document=Document(
-                id=page.file.src_uri,
-                url=page.url,
-                path=formats["pdf"]["url"],
-                title=page.title or "",
-                html=output,
-                meta=dict(page.meta),
-                covers=covers,
-                metadata=_metadata(page, config),
-                toc=self._page_toc(page),
+            document=adapter.document(
+                page,
+                output,
+                formats["pdf"]["url"],
+                covers,
+                self.config.formats.pdf,
+                config,
             ),
         )
 
@@ -233,30 +203,22 @@ class Plugin(BasePlugin[Config]):
     def _decorate_page(self, output: str, *, page: Page, config: MkDocsConfig) -> str:
         """Adds buttons to the page and removes what is meant for documents only."""
 
-        buttons = [
-            button
-            for button in [*self.config.buttons, *page.meta.get("buttons", [])]
-            if resolve(button.get("enabled", True), page=page)
-        ]
+        buttons = self._buttons(page)
 
-        if not buttons and not any(
-            marker in output
-            for marker in ("mkdocs-exporter-only", "data-decompose", "data-teleport")
-        ):
+        if not buttons and not any(marker in output for marker in MARKERS):
             return output
 
         html = HtmlDocument(output)
 
         for button in buttons:
-            options = resolve(dict(button), page=page)
             attributes = {
                 str(key): str(value)
-                for key, value in (options.get("attributes") or {}).items()
+                for key, value in (button.get("attributes") or {}).items()
                 if value is not None
             }
 
             self.theme.button(
-                html, str(options["title"]), str(options["icon"]), attributes
+                html, str(button["title"]), str(button["icon"]), attributes
             )
 
         if html.select('[data-decompose="true"]') and not self.decomposed:
@@ -304,11 +266,10 @@ class Plugin(BasePlugin[Config]):
 
         options = self.config.formats.pdf
         site = Site(directory=Path(config.site_dir), url=config.site_url or None)
-        links = options.url or config.site_url or None
+        listed = set(self.order)
         exports = [self.exports[key] for key in self.order if key in self.exports]
-        exports += [e for key, e in self.exports.items() if key not in set(self.order)]
-        books = [self._book(config, book) for book in _books(options)]
-
+        exports += [e for key, e in self.exports.items() if key not in listed]
+        books = [self._book(book, config) for book in adapter.books(options)]
         cache = None
 
         if options.cache.enabled:
@@ -319,18 +280,7 @@ class Plugin(BasePlugin[Config]):
             site,
             self.theme,
             await self._browser(),
-            RenderOptions(
-                stylesheets=[_read(path) for path in options.stylesheets],
-                scripts=[_read(path) for path in options.scripts],
-                links=links if links is None or links.endswith("/") else links + "/",
-                delay=options.browser.delay,
-                concurrency=options.concurrency,
-                title=options.title,
-                margins=Margins.of(
-                    {"header": dict(options.header), "footer": dict(options.footer)}
-                ),
-                variables={"site_name": config.site_name},
-            ),
+            adapter.render_options(options, config),
             cache,
         )
         report = await exporter.export([e.document for e in exports], books)
@@ -349,129 +299,60 @@ class Plugin(BasePlugin[Config]):
     async def _browser(self) -> Browser:
         """The browser printing documents (kept open while serving)."""
 
-        options = self.config.formats.pdf.browser
-        browser = Browser(
-            headless=options.headless,
-            timeout=options.timeout,
-            args=options.args,
-            channel=options.channel,
-            debug=options.debug,
-        )
+        browser = adapter.browser(self.config.formats.pdf.browser)
 
         if self.loop is None:
             return browser
 
-        kept = self.browser
+        self.browser = await relaunch(self.browser, browser)
 
-        if kept is not None and kept.running and kept.options == browser.options:
-            kept.timeout, kept.debug = browser.timeout, browser.debug
+        return self.browser
 
-            # Pages are served by a new server: forget what was cached for the last one.
-            await kept.renew()
+    def _book(self, options: BookConfig, config: MkDocsConfig) -> Book:
+        """A book, of the documents of the pages it includes (in navigation order)."""
 
-            return kept
-        if kept is not None:
-            await kept.close()
+        documents = [
+            self.exports[key].document
+            for key in self.order
+            if key in self.exports and adapter.includes(options, key)
+        ]
 
-        self.browser = await browser.launch()
+        return adapter.book(options, config, documents, self.nav)
 
-        return browser
+    def _books_of(self, page: Page, config: MkDocsConfig) -> list[dict[str, str]]:
+        """The books including a page (see `mkdocs_exporter.page.Page`).
 
-    def _book(self, config: MkDocsConfig, options: Any) -> Book:
-        """Describes a book."""
+        Pages outside the navigation are not part of books.
+        """
 
-        return Book(
-            output=_output(options),
-            documents=[
-                self.exports[key].document
-                for key in self.order
-                if key in self.exports and _selects(options, key)
-            ],
-            covers=options.covers,
-            start=options.start,
-            metadata={
-                "title": config.site_name,
-                "author": config.site_author,
-                "subject": config.site_description,
-                **options.metadata,
-            },
-            nav=self.nav,
-            outline=options.outline,
-            toc=_toc(options.toc),
-        )
+        books: list[dict[str, str]] = []
 
-    def _page_toc(self, page: Page) -> TocOptions | None:
-        """The table of contents of a page's document (`toc` of its front matter, or
-        `formats.pdf.toc`)."""
+        if page.file.src_uri not in self.order:
+            return books
 
-        options = self.config.formats.pdf.toc
+        for options in adapter.books(self.config.formats.pdf):
+            if adapter.includes(options, page.file.src_uri):
+                url = adapter.output(options)
+                books.append(
+                    {
+                        "path": os.path.join(config.site_dir, *url.split("/")),
+                        "url": url,
+                        "title": adapter.title(options, config),
+                    }
+                )
 
-        return _toc_options(options) if page.meta.get("toc", options.enabled) else None
+        return books
+
+    def _buttons(self, page: Page) -> list[dict[str, Any]]:
+        """The enabled buttons of a page, their callables called with the page."""
+
+        return [
+            resolve(dict(button), page=page)
+            for button in [*self.config.buttons, *page.meta.get("buttons", [])]
+            if resolve(button.get("enabled", True), page=page)
+        ]
 
     def _exported(self, page: Page) -> bool:
         """Should a PDF document be generated for the page?"""
 
         return bool(page.meta.get("pdf", not self.config.formats.pdf.explicit))
-
-
-def _metadata(page: Page, config: MkDocsConfig) -> dict[str, str]:
-    """The document information of a page's PDF document."""
-
-    keywords = page.meta.get("keywords") or page.meta.get("tags") or []
-
-    if isinstance(keywords, str):
-        keywords = [keywords]
-
-    return {
-        key: str(value)
-        for key, value in {
-            "title": page.title,
-            "author": page.meta.get("author") or config.site_author,
-            "subject": page.meta.get("description") or config.site_description,
-            "keywords": ", ".join(str(keyword) for keyword in keywords),
-        }.items()
-        if value
-    }
-
-
-def _books(options: Any) -> list[Any]:
-    """The enabled books (including the deprecated `aggregator`)."""
-
-    return [book for book in [*options.books, options.aggregator] if book.enabled]
-
-
-def _selects(book: Any, key: str) -> bool:
-    """Does a book include a page (by source path)?"""
-
-    return any(fnmatchcase(key, pattern) for pattern in book.include) and not any(
-        fnmatchcase(key, pattern) for pattern in book.exclude
-    )
-
-
-def _output(book: Any) -> str:
-    """The location of a book, relative to the website's root."""
-
-    return book.output.replace(os.sep, "/").lstrip("/")
-
-
-def _toc(options: Any) -> TocOptions | None:
-    """The options of a table of contents (`None` when it is disabled)."""
-
-    return _toc_options(options) if options.enabled else None
-
-
-def _toc_options(options: Any) -> TocOptions:
-    """The options of a table of contents (enabled or not)."""
-
-    return TocOptions(
-        title=options.title,
-        depth=options.depth,
-        template=_read(options.template) if options.template else None,
-    )
-
-
-def _read(path: str) -> str:
-    """Reads a text file."""
-
-    with open(path, encoding="utf-8") as file:
-        return file.read()

@@ -58,7 +58,8 @@ Before considering a change done, run the linter, the formatter check, the type 
 | `core/resources/` | `pdf.js` (gets pages ready, reports readiness), `book.js` (measures combined documents), theme scripts, print CSS, TOC template |
 | `core/runner.py` | Runs coroutines on an event loop owned by the exporter (`Loop`: kept across `serve` rebuilds) |
 | `core/cache.py` | Cache of printed documents (`.cache/plugin/exporter`), checked against the resources they loaded |
-| `mkdocs_exporter/plugin.py` | The MkDocs plugin (`exporter`): adapts MkDocs pages and navigation to core data |
+| `mkdocs_exporter/plugin.py` | The MkDocs plugin (`exporter`): its events, the state of a build |
+| `mkdocs_exporter/adapter.py` | MkDocs configuration, pages and navigation turned into core data (options, documents, books) |
 | `mkdocs_exporter/covers.py` | Renders cover templates with Jinja (through mkdocs-macros when enabled) |
 | `mkdocs_exporter/config.py`, `formats/pdf/config.py` | Configuration schema (MkDocs `config_options`) |
 | `mkdocs_exporter/formats/pdf/buttons/` | Button callables (`download`, `book`) referenced from users' `mkdocs.yml` via `!!python/name:` |

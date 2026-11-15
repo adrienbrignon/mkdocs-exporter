@@ -350,6 +350,26 @@ class Browser:
             raise RenderError(f"Rendering failed: {state['reason']}", diagnostics)
 
 
+async def relaunch(kept: Browser | None, browser: Browser) -> Browser:
+    """The browser of a new build, reusing the one kept from the previous build.
+
+    The kept browser is reused when it's still running and launched with the same
+    options: it gets the other options of the new browser and starts afresh (see
+    `Browser.renew`). Otherwise, it's closed and the new browser is launched.
+    """
+
+    if kept is not None and kept.running and kept.options == browser.options:
+        kept.timeout, kept.debug = browser.timeout, browser.debug
+
+        await kept.renew()
+
+        return kept
+    if kept is not None:
+        await kept.close()
+
+    return await browser.launch()
+
+
 class _Watch:
     """Records what a page logs and requests."""
 

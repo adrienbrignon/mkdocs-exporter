@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -29,6 +29,15 @@ class NavNode:
 
     children: list[NavNode] = field(default_factory=list)
 
+    def documents(self) -> Iterator[str]:
+        """The identifiers of the entry's documents, in order."""
+
+        if self.document is not None:
+            yield self.document
+
+        for child in self.children:
+            yield from child.documents()
+
 
 def flat_nav(documents: Sequence[Document]) -> list[NavNode]:
     """A navigation listing documents."""
@@ -36,9 +45,6 @@ def flat_nav(documents: Sequence[Document]) -> list[NavNode]:
     return [
         NavNode(title=document.title, document=document.id) for document in documents
     ]
-
-
-# --- Measurements ----------------------------------------------------------------------
 
 
 def _first(node: NavNode, parts: Mapping[str, Part]) -> Part | None:
