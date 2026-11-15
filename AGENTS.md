@@ -59,7 +59,7 @@ Before considering a change done, run the linter, the formatter check, the type 
 | `mkdocs_exporter/plugin.py` | The MkDocs plugin (`exporter`): adapts MkDocs pages and navigation to core data |
 | `mkdocs_exporter/covers.py` | Renders cover templates with Jinja (through mkdocs-macros when enabled) |
 | `mkdocs_exporter/config.py`, `formats/pdf/config.py` | Configuration schema (MkDocs `config_options`) |
-| `mkdocs_exporter/formats/pdf/buttons/download.py` | Callables referenced from users' `mkdocs.yml` via `!!python/name:` |
+| `mkdocs_exporter/formats/pdf/buttons/` | Button callables (`download`, `book`) referenced from users' `mkdocs.yml` via `!!python/name:` |
 | `tests/unit/`, `tests/integration/` | Unit tests; end-to-end tests building `tests/fixtures/site` (marker `browser`) |
 | `docs/`, `mkdocs.yml`, `resources/`, `macros/`, `overrides/` | This project's own documentation site (it dogfoods the plugin) |
 | `examples/` | Example projects shown by the documentation: `base.yml` and `content/` (the *Field Guide* website) are shared, each folder with a `mkdocs.yml` is a project. `build.py` builds them: `make examples` renders the previews of `docs/assets/images/examples/`, and the documentation's build publishes their documents (`macros/__init__.py`) |
@@ -166,7 +166,7 @@ Design decisions backed by measurements (don't revert them without measuring aga
   `on_pre_build`, never in `__init__` alone.
 - Keep these public surfaces stable (or deprecate them explicitly):
   - the `exporter` entry point and documented configuration keys;
-  - `mkdocs_exporter.formats.pdf.buttons.download.*` and `mkdocs_exporter.page.Page`;
+  - `mkdocs_exporter.formats.pdf.buttons.download.*`, `...buttons.book.*` and `mkdocs_exporter.page.Page`;
   - the `window.MkDocsExporter` JavaScript hooks and the `mkdocs-exporter-*` CSS classes.
 - Commits follow [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`,
   `refactor:`, `test:`, `build:`, `ci:`, `chore:`, `style:`); mark breaking changes with `!` and a

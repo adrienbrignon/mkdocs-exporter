@@ -15,6 +15,7 @@ Read the [migration guide](https://adrienbrignon.github.io/mkdocs-exporter/migra
 - Documents of pages can start with a table of contents of their headings (`formats.pdf.toc`, or `toc` in a page's front matter) (#24).
 - Several combined documents can be generated, selecting pages with patterns (`books`, `include`, `exclude`) (#31).
 - Pages of combined documents can start on odd pages (`start: odd`) (#67).
+- A ready-made button downloading the book a page is part of (`mkdocs_exporter.formats.pdf.buttons.book`).
 - Headers and footers with placeholders (`header`, `footer`) (#84).
 - Cover pages are Jinja templates, with or without the macros plugin (#50).
 - Per-page documents have bookmarks and are tagged (accessibility).

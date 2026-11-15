@@ -33,6 +33,23 @@ plugins:
           attributes: !!python/name:mkdocs_exporter.formats.pdf.buttons.download.attributes
 ```
 
+### Adding a button downloading a book
+
+Pages that are part of a [book](combining-pages.md) can link to it.
+The following button downloads the first book including the page, named after the book's title (`metadata.title`, the site's name by default):
+
+```yaml
+plugins:
+  - exporter:
+      buttons:
+        - title: Download the documentation
+          icon: material-book-arrow-down-outline
+          enabled: !!python/name:mkdocs_exporter.formats.pdf.buttons.book.enabled
+          attributes: !!python/name:mkdocs_exporter.formats.pdf.buttons.book.attributes
+```
+
+The books including a page are listed by `page.formats["pdf"]["books"]` (each with its `url`, relative to the website's root, and its `title`), for buttons of your own (see below).
+
 ### Defining a dynamic button
 
 Like the download button above, any property of a button can be computed by a Python function, called with the page.

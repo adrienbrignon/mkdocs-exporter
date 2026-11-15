@@ -6,7 +6,8 @@ class Page(Protocol):
 
     Besides MkDocs' own attributes, the exporter sets `formats`: the documents generated
     for the page, by format. For instance, `page.formats["pdf"]` holds the `path` of the
-    PDF document on disk and its `url` relative to the website's root.
+    PDF document on disk, its `url` relative to the website's root and the `books`
+    including the page (each with a `path`, a `url` and a `title`).
     """
 
     title: str

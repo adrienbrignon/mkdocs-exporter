@@ -6,6 +6,7 @@ from typing import Any
 import pytest
 from mkdocs.exceptions import Abort
 
+from mkdocs_exporter.formats.pdf.buttons import book as book_button
 from tests.conftest import Project, Site, single_book
 from tests.support.pdf import OutlineItem, PdfDocument
 
@@ -218,6 +219,41 @@ def test_several_books(project: Project) -> None:
     assert "Welcome to the" not in guide.text
     assert "Welcome to the" in others.text
     assert "Paragraph 1." not in others.text
+
+
+def test_book_buttons_link_to_the_first_book_of_the_page(project: Project) -> None:
+    site = project.build(
+        exporter={
+            "formats": {
+                "pdf": {
+                    "books": [
+                        {
+                            "output": "guide.pdf",
+                            "include": ["guide/*"],
+                            "covers": "none",
+                            "metadata": {"title": "The guide"},
+                        },
+                        {"output": "pdf/all.pdf", "covers": "none"},
+                    ],
+                }
+            },
+            "buttons": [
+                {
+                    "title": "Download the book",
+                    "icon": "material-book-arrow-down-outline",
+                    "enabled": book_button.enabled,
+                    "attributes": book_button.attributes,
+                }
+            ],
+        }
+    )
+    guide = site.html("guide/intro/index.html")
+    home = site.html("index.html")
+
+    assert 'href="../../guide.pdf"' in guide
+    assert 'download="The guide.pdf"' in guide
+    assert 'href="pdf/all.pdf"' in home
+    assert site.pdfs().count("guide.pdf") == 1
 
 
 def test_books_must_have_distinct_outputs(

@@ -202,6 +202,16 @@ class Plugin(BasePlugin[Config]):
 
         self.watched.update(templates.values())
         formats["pdf"]["covers"] = list(covers)
+        formats["pdf"]["books"] = [
+            {
+                "path": os.path.join(config.site_dir, *output.split("/")),
+                "url": output,
+                "title": str(options.metadata.get("title") or config.site_name),
+            }
+            for options in _books(self.config.formats.pdf)
+            if _selects(options, page.file.src_uri)
+            for output in [_output(options)]
+        ]
         self.exports[page.file.src_uri] = Export(
             page=page,
             document=Document(
@@ -370,17 +380,12 @@ class Plugin(BasePlugin[Config]):
     def _book(self, config: MkDocsConfig, options: Any) -> Book:
         """Describes a book."""
 
-        def selected(key: str) -> bool:
-            return any(
-                fnmatchcase(key, pattern) for pattern in options.include
-            ) and not any(fnmatchcase(key, pattern) for pattern in options.exclude)
-
         return Book(
-            output=options.output.replace(os.sep, "/"),
+            output=_output(options),
             documents=[
                 self.exports[key].document
                 for key in self.order
-                if key in self.exports and selected(key)
+                if key in self.exports and _selects(options, key)
             ],
             covers=options.covers,
             start=options.start,
@@ -433,6 +438,20 @@ def _books(options: Any) -> list[Any]:
     """The enabled books (including the deprecated `aggregator`)."""
 
     return [book for book in [*options.books, options.aggregator] if book.enabled]
+
+
+def _selects(book: Any, key: str) -> bool:
+    """Does a book include a page (by source path)?"""
+
+    return any(fnmatchcase(key, pattern) for pattern in book.include) and not any(
+        fnmatchcase(key, pattern) for pattern in book.exclude
+    )
+
+
+def _output(book: Any) -> str:
+    """The location of a book, relative to the website's root."""
+
+    return book.output.replace(os.sep, "/").lstrip("/")
 
 
 def _toc(options: Any) -> TocOptions | None:

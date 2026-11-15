@@ -117,6 +117,10 @@ plugins:
           icon: material-file-download-outline
           enabled: !!python/name:mkdocs_exporter.formats.pdf.buttons.download.enabled
           attributes: !!python/name:mkdocs_exporter.formats.pdf.buttons.download.attributes
+        - title: Download the documentation
+          icon: material-book-arrow-down-outline
+          enabled: !!python/name:mkdocs_exporter.formats.pdf.buttons.book.enabled
+          attributes: !!python/name:mkdocs_exporter.formats.pdf.buttons.book.attributes
 
 markdown_extensions:
   - admonition
