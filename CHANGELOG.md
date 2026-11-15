@@ -44,7 +44,7 @@ Read the [migration guide](https://adrienbrignon.github.io/mkdocs-exporter/migra
 - Download buttons link to the right document with `use_directory_urls: false` (#44, #60, #73).
 - Page numbers of combined documents account for the actual size of removed covers (#66).
 - Backgrounds of pages set by `@page` rules (e.g. a full-bleed cover's) are no longer hidden by the website's background, which is then left out of documents.
-- Wide content and pages of different sizes no longer shrink every page of a document, with any theme.
+- Wide content and pages of different sizes no longer shrink every page of a document, with any theme; content printed on pages of another size (e.g. landscape pages for wide tables) is laid out with their width.
 - Pages listed twice in the navigation, or skipped by dirty rebuilds, no longer break combined documents (#48, #51).
 - Stylesheets excluded from the build are no longer rewritten (#85).
 - `mailto:` and other non-HTTP links are preserved.

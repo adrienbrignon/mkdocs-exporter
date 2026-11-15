@@ -1,9 +1,13 @@
 /*
  * Content overflowing the page horizontally would make the browser shrink every page of
- * the document: cut it off instead (clipping the body itself has no effect).
+ * the document. Layout containment turns that overflow into ink overflow (cut off at the
+ * edge of the page) without clipping: an element clipping its overflow keeps the width
+ * of the page it starts on, while content printed on pages of another size (e.g.
+ * landscape pages) is laid out with their width. Containing the body itself has no
+ * effect.
  */
 body > * {
-  overflow-x: clip !important;
+  contain: layout !important;
 }
 
 /*

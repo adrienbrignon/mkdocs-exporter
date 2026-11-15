@@ -48,6 +48,52 @@ def test_pages_of_different_widths_do_not_shrink_pages(project: Project) -> None
     assert site.pdf("guide/intro/index.pdf").font_size("Introduction") == expected
 
 
+LANDSCAPE = """# Reference
+
+<div class="landscape" markdown>
+
+{text}
+
+</div>
+
+{text}
+"""
+
+
+@pytest.mark.parametrize("theme", ["material", "readthedocs"])
+def test_content_takes_the_width_of_landscape_pages(
+    project: Project, theme: str
+) -> None:
+    """Content on a page of another size is laid out with the width of that page."""
+
+    project.write("docs/reference.md", LANDSCAPE.format(text="word " * 400))
+    project.write(
+        "landscape.css",
+        "@page landscape { size: A4 landscape; } .landscape { page: landscape; }",
+    )
+
+    site = project.build(
+        exporter={"formats": {"pdf": {"stylesheets": ["pdf.css", "landscape.css"]}}},
+        theme={"name": theme},
+    )
+    document = site.pdf("reference/index.pdf")
+    landscape = [
+        index
+        for index, page in enumerate(document.reader.pages)
+        if page.mediabox.width > page.mediabox.height
+    ]
+
+    def words(page: int) -> int:
+        """The number of words of the longest line of a page."""
+
+        lines = document.pages_text[page].splitlines()
+
+        return max((line.count("word") for line in lines), default=0)
+
+    assert len(landscape) == 1
+    assert words(landscape[0]) > 1.3 * words(landscape[0] + 1) > 0
+
+
 def fills(document: PdfDocument, page: int) -> list[str]:
     """The colors a page is filled with, in order (`r g b`)."""
 
