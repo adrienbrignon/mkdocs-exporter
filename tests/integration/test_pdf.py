@@ -324,3 +324,22 @@ def test_documents_can_start_with_a_table_of_contents(
     # Pages without headings besides their title, and combined documents, have none.
     assert site.pdf("reference/index.pdf").count("Table of contents") == 0
     assert site.pdf("combined.pdf").count("Table of contents") == 0
+
+
+@pytest.mark.parametrize("enabled", [True, False])
+def test_pages_can_turn_their_table_of_contents_on_or_off(
+    project: Project, enabled: bool
+) -> None:
+    """The `toc` of a page's front matter overrides `formats.pdf.toc.enabled`."""
+
+    page = (project.path / "docs/guide/advanced.md").read_text(encoding="utf-8")
+    project.write(
+        "docs/guide/advanced.md", f"---\ntoc: {str(not enabled).lower()}\n---\n\n{page}"
+    )
+
+    site = project.build(exporter={"formats": {"pdf": {"toc": {"enabled": enabled}}}})
+
+    assert site.pdf("guide/advanced/index.pdf").count("Table of contents") == int(
+        not enabled
+    )
+    assert site.pdf("guide/intro/index.pdf").count("Table of contents") == int(enabled)

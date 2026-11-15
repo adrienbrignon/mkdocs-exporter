@@ -213,6 +213,7 @@ class Plugin(BasePlugin[Config]):
                 meta=dict(page.meta),
                 covers=covers,
                 metadata=_metadata(page, config),
+                toc=self._page_toc(page),
             ),
         )
 
@@ -319,7 +320,6 @@ class Plugin(BasePlugin[Config]):
                     {"header": dict(options.header), "footer": dict(options.footer)}
                 ),
                 variables={"site_name": config.site_name},
-                toc=_toc(options.toc),
             ),
             cache,
         )
@@ -395,6 +395,14 @@ class Plugin(BasePlugin[Config]):
             toc=_toc(options.toc),
         )
 
+    def _page_toc(self, page: Page) -> TocOptions | None:
+        """The table of contents of a page's document (`toc` of its front matter, or
+        `formats.pdf.toc`)."""
+
+        options = self.config.formats.pdf.toc
+
+        return _toc_options(options) if page.meta.get("toc", options.enabled) else None
+
     def _exported(self, page: Page) -> bool:
         """Should a PDF document be generated for the page?"""
 
@@ -430,8 +438,11 @@ def _books(options: Any) -> list[Any]:
 def _toc(options: Any) -> TocOptions | None:
     """The options of a table of contents (`None` when it is disabled)."""
 
-    if not options.enabled:
-        return None
+    return _toc_options(options) if options.enabled else None
+
+
+def _toc_options(options: Any) -> TocOptions:
+    """The options of a table of contents (enabled or not)."""
 
     return TocOptions(
         title=options.title,

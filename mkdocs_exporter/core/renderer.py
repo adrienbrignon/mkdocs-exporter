@@ -83,10 +83,6 @@ class RenderOptions:
     variables: Mapping[str, str] = field(default_factory=dict)
     """Values of the placeholders of headers and footers (e.g. `site_name`)."""
 
-    toc: TocOptions | None = None
-    """A table of contents of the document's headings, inserted after its front cover
-    (when it has headings besides its title)."""
-
 
 @dataclass
 class Outcome:
@@ -246,7 +242,7 @@ class Renderer:
         )
         moved = teleported(content) if keep else []
         headings = find_headings(content)
-        contents = self._insert_toc(html, content, headings)
+        contents = _insert_toc(html, content, headings, document.toc)
 
         _insert_anchors(html, headings)
         self._style(html, document)
@@ -319,41 +315,6 @@ class Renderer:
         for script in self.options.scripts:
             html.add_script(script)
 
-    def _toc_entries(
-        self, headings: Sequence[Heading], page: Callable[[str], int | None]
-    ) -> list[toc.TocEntry]:
-        """The entries of a document's table of contents (none without the option)."""
-
-        if self.options.toc is None:
-            return []
-
-        return toc.heading_entries(
-            toc.subheadings(headings), page, self.options.toc.depth
-        )
-
-    def _insert_toc(
-        self, html: HtmlDocument, content: Tag, headings: Sequence[Heading]
-    ) -> Tag | None:
-        """Inserts a document's table of contents after its front cover, with
-        placeholder page numbers (filled once printed, see `Refinement`)."""
-
-        entries = self._toc_entries(headings, lambda _: 0)
-
-        if self.options.toc is None or not entries:
-            return None
-
-        element = html.fragment(
-            toc.render(self.options.toc, entries), **{"class": toc.CLASS}
-        )
-        covers = content.find_all(class_="mkdocs-exporter-front-cover", recursive=False)
-
-        if covers:
-            covers[0].insert_after(element)
-        else:
-            content.insert(0, element)
-
-        return element
-
     async def _print(
         self, document: Document, html: str, headings: Sequence[Heading]
     ) -> PrintResult:
@@ -361,7 +322,7 @@ class Renderer:
 
         path = f"{document.url}?mkdocs-exporter=default"
         url = self.server.publish(path, html)
-        refinement = Refinement(self, headings)
+        refinement = Refinement(self, headings, document.toc)
 
         try:
             return await self.browser.print(
@@ -462,12 +423,18 @@ class Refinement:
     numbers of its table of contents, until they are stable.
     """
 
-    def __init__(self, renderer: Renderer, headings: Sequence[Heading]) -> None:
+    def __init__(
+        self,
+        renderer: Renderer,
+        headings: Sequence[Heading],
+        contents: TocOptions | None,
+    ) -> None:
         self.renderer = renderer
         self.headings = headings
+        self.contents = contents
         self.sections = renderer.options.margins.uses("section")
         """Do headers or footers show the section of pages?"""
-        self.listed = bool(renderer._toc_entries(headings, lambda _: 0))
+        self.listed = bool(_toc_entries(contents, headings, lambda _: 0))
         """Does the document have a table of contents?"""
         self.applied: dict[str, str] = {}
 
@@ -499,20 +466,59 @@ class Refinement:
                 range(layout.pages),
             )
             patch["css"] = margins.sections(list(heads.values()))
-        if self.listed and self.renderer.options.toc is not None:
-            entries = self.renderer._toc_entries(
+        if self.listed and self.contents is not None:
+            entries = _toc_entries(
+                self.contents,
                 self.headings,
                 lambda id: (
                     layout.anchors[id].page + 1 if id in layout.anchors else None
                 ),
             )
-            patch["toc"] = toc.render(self.renderer.options.toc, entries)
+            patch["toc"] = toc.render(self.contents, entries)
         if patch == self.applied:
             return None
 
         self.applied = patch
 
         return f"window.__MKDOCS_EXPORTER_PATCH__({json.dumps(patch)})"
+
+
+def _toc_entries(
+    options: TocOptions | None,
+    headings: Sequence[Heading],
+    page: Callable[[str], int | None],
+) -> list[toc.TocEntry]:
+    """The entries of a document's table of contents (none without one)."""
+
+    if options is None:
+        return []
+
+    return toc.heading_entries(toc.subheadings(headings), page, options.depth)
+
+
+def _insert_toc(
+    html: HtmlDocument,
+    content: Tag,
+    headings: Sequence[Heading],
+    options: TocOptions | None,
+) -> Tag | None:
+    """Inserts a document's table of contents after its front cover, with
+    placeholder page numbers (filled once printed, see `Refinement`)."""
+
+    entries = _toc_entries(options, headings, lambda _: 0)
+
+    if options is None or not entries:
+        return None
+
+    element = html.fragment(toc.render(options, entries), **{"class": toc.CLASS})
+    covers = content.find_all(class_="mkdocs-exporter-front-cover", recursive=False)
+
+    if covers:
+        covers[0].insert_after(element)
+    else:
+        content.insert(0, element)
+
+    return element
 
 
 def _insert_anchors(html: HtmlDocument, headings: Sequence[Heading]) -> None:

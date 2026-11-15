@@ -3,8 +3,11 @@ from __future__ import annotations
 import posixpath
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urlsplit
+
+if TYPE_CHECKING:
+    from mkdocs_exporter.core.toc import TocOptions
 
 
 @dataclass(frozen=True)
@@ -53,6 +56,10 @@ class Document:
 
     metadata: dict[str, str] = field(default_factory=dict)
     """The document information (`title`, `author`, `subject`, `keywords`...)."""
+
+    toc: TocOptions | None = None
+    """A table of contents of the document's headings, inserted after its front cover
+    (when it has headings besides its title)."""
 
     @property
     def directory(self) -> str:
