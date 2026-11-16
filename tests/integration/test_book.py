@@ -280,6 +280,17 @@ def test_books_reuse_the_content_prepared_for_pages(
     assert reused == ["guide/intro.md", "guide/advanced.md", "reference.md"]
 
 
+@pytest.mark.parametrize("tagged", [None, False], ids=["default", "disabled"])
+def test_books_are_tagged(project: Project, tagged: bool | None) -> None:
+    options = {} if tagged is None else {"tagged": tagged}
+    site = project.build(exporter=with_book(covers="none", **options))
+    book = site.pdf("combined.pdf")
+
+    assert book.tagged is (tagged is None)
+    assert book.outline
+    assert site.pdf("index.pdf").tagged
+
+
 def test_books_must_have_distinct_outputs(
     project: Project, caplog: pytest.LogCaptureFixture
 ) -> None:

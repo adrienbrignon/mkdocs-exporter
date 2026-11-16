@@ -157,6 +157,10 @@ class BookConfig(BaseConfig):
     outline = c.Type(int, default=3)
     """The depth of bookmarks: 0 for none, 1 for pages, 2 to add their `h2` headings..."""
 
+    tagged = c.Type(bool, default=True)
+    """Is the document tagged (its structure described, for screen readers)? Tagging
+    makes documents about half as large again."""
+
     toc = c.SubConfig(TocConfig)
     """The table of contents."""
 

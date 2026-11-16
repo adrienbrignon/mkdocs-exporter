@@ -78,6 +78,15 @@ books:
 Links between pages of the combined document point within the document, to the linked heading when there is one.
 Other links point to the website (`site_url` or `formats.pdf.url`), or are relative to the combined document when the website has no URL.
 
+Like the documents of pages, combined documents are tagged: their structure is described, so that screen readers can read them.
+Tagging makes them about half as large again; it can be disabled:
+
+```yaml
+books:
+  - output: documentation.pdf
+    tagged: false
+```
+
 ## Table of contents
 
 A table of contents can be inserted after the first front cover:

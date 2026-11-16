@@ -54,6 +54,16 @@ class PdfDocument:
         return [page.extract_text() or "" for page in self.reader.pages]
 
     @property
+    def tagged(self) -> bool:
+        """Is the document tagged (does it describe its structure)?"""
+
+        root = self.reader.trailer["/Root"]
+
+        return "/StructTreeRoot" in root and bool(
+            (root.get("/MarkInfo") or {}).get("/Marked")
+        )
+
+    @property
     def text(self) -> str:
         """The text of the whole document."""
 

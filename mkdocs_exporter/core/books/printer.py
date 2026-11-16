@@ -87,6 +87,9 @@ class Book:
     outline: int = 3
     """The depth of bookmarks: 0 for none, 1 for pages, 2 to add `h2` headings..."""
 
+    tagged: bool = True
+    """Is the document tagged (accessibility)? Drafts never are."""
+
     toc: TocOptions | None = None
     """The table of contents, inserted after the first page's front cover."""
 
@@ -250,7 +253,7 @@ class BookPrinter:
             return await self.context.browser.print(
                 server.publish(path, html),
                 outline=False,
-                tagged=False,
+                tagged=self.book.tagged,
                 refine=self._refine if patched else None,
                 draft=True,
                 attempts=ATTEMPTS,
