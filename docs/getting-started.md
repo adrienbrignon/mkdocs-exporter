@@ -36,7 +36,7 @@ Documents are printed by a headless Chromium browser driven by [Playwright](http
 ??? info "What about MkDocs 2.0 and Zensical?"
 
     MkDocs 2.0 no longer supports plugins and Zensical ignores MkDocs plugins it doesn't know about, so this plugin can't run there.
-    The rendering engine of *MkDocs Exporter* doesn't depend on MkDocs though, and a standalone command able to export any built website is planned.
+    Websites built by Zensical can be exported by a command run once they are built (experimental), see [Zensical](guides/zensical.md).
 
 ## Installation
 

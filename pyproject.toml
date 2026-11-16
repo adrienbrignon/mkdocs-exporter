@@ -29,6 +29,7 @@ classifiers = [
 ]
 dependencies = [
     "beautifulsoup4>=4.13",
+    "click>=8.1",
     "jinja2>=3.1",
     "lxml>=6.1",
     "mkdocs>=1.6,<2",
@@ -44,6 +45,9 @@ Repository = "https://github.com/adrienbrignon/mkdocs-exporter"
 Issues = "https://github.com/adrienbrignon/mkdocs-exporter/issues"
 Changelog = "https://github.com/adrienbrignon/mkdocs-exporter/blob/master/CHANGELOG.md"
 
+[project.scripts]
+mkdocs-exporter = "mkdocs_exporter.standalone.cli:main"
+
 [project.entry-points."mkdocs.plugins"]
 exporter = "mkdocs_exporter.plugin:Plugin"
 
@@ -56,6 +60,7 @@ dev = [
     "pytest-cov>=6.0",
     "pytest-xdist>=3.8.0",
     "ruff>=0.17",
+    "zensical>=0.1.1",
 ]
 docs = [
     "mdx-truly-sane-lists>=1.3",
@@ -118,7 +123,7 @@ warn_unused_ignores = true
 check_untyped_defs = true
 
 [[tool.mypy.overrides]]
-module = ["material.*", "tinycss2.*"]
+module = ["material.*", "tinycss2.*", "yaml.*"]
 ignore_missing_imports = true
 
 [tool.pytest]

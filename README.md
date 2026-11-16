@@ -43,7 +43,7 @@ Additionally, it can combine your entire documentation into a single PDF file.
 - Python `>= 3.11.5`
 - MkDocs `>= 1.6, < 2` (or [ProperDocs](https://github.com/ProperDocs/properdocs))
 
-MkDocs 2.0 doesn't support plugins and Zensical ignores MkDocs plugins: a standalone command, able to export any built website, is planned.
+MkDocs 2.0 doesn't support plugins and Zensical ignores MkDocs plugins: websites built by Zensical can be exported by the `mkdocs-exporter build` command (experimental).
 
 ## Installation
 
@@ -89,7 +89,7 @@ Check out the [examples](https://adrienbrignon.github.io/mkdocs-exporter/example
 
 - [x] Combine all pages into a single PDF document (✅ released in [`v6.0.0`](https://github.com/adrienbrignon/mkdocs-exporter/releases/tag/v6.0.0))
 - [x] Bookmarks, table of contents and links in combined documents (✅ released in `v7.0.0`)
-- [ ] A standalone command exporting any built website (Zensical, MkDocs 2.0...)
+- [x] A command exporting websites built by Zensical (experimental, MkDocs 2.0 to come)
 - [ ] Create a *GitHub* action that includes all dependencies to build the documentation and generate PDF documents
 
 Feel free to request additional features by submitting an issue or contributing through a pull request.
