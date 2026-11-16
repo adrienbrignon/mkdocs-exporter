@@ -60,10 +60,18 @@ def test_invalid_options_fail_the_build(
     assert "'enable'" in caplog.text
 
 
-def test_options_can_come_from_meta_files(project: Project) -> None:
+def test_options_can_come_from_meta_files(
+    project: Project, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Material for MkDocs' `meta` plugin merges `.meta.yml` into the front matter of
-    the pages of its directory (before the exporter reads it)."""
+    the pages of its directory (before the exporter reads it).
 
+    The project is built from its directory, like with `mkdocs build`: the plugin
+    finds `docs_dir` relative to the working directory, which fails on Windows when
+    they're on different drives.
+    """
+
+    monkeypatch.chdir(project.path)
     project.write("docs/guide/.meta.yml", "exporter:\n  pdf:\n    enabled: false\n")
     project.write(
         "docs/guide/intro.md",
