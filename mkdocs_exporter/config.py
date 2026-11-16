@@ -8,8 +8,10 @@ from mkdocs_exporter.formats.pdf.config import Config as PDFFormatConfig
 
 
 class FormatsConfig(BaseConfig):
+    """The formats of documents (`formats`)."""
+
     pdf = c.SubConfig(PDFFormatConfig)
-    """The PDF format configuration."""
+    """PDF documents."""
 
 
 CALLABLE = cast(type, Callable)
@@ -17,39 +19,44 @@ CALLABLE = cast(type, Callable)
 
 
 class ButtonConfig(BaseConfig):
-    """The configuration of a button."""
+    """A button added at the top of pages (`buttons[]`): each option can be a callable
+    computing it from the page."""
 
     enabled = c.Type((bool, CALLABLE), default=True)
     """Is the button enabled?"""
 
     title = c.Type((str, CALLABLE))
-    """The button's title."""
+    """The button's title (its tooltip with Material for MkDocs, its text with other
+    themes)."""
 
     icon = c.Type((str, CALLABLE))
-    """The button's icon (typically, an SVG element)."""
+    """The name of a Material for MkDocs icon (e.g. `material-file-download-outline`);
+    other themes don't show icons."""
 
     attributes = c.Type((dict, CALLABLE), default={})
-    """Some extra attributes to add to the button."""
+    """Attributes of the button's link (e.g. `href`, `target`, `download`; `class`
+    replaces the theme's classes)."""
 
 
 class LoggingConfig(BaseConfig):
-    """The logging configuration."""
+    """The messages logged by the plugin (`logging`)."""
 
     level = c.Choice(["debug", "info", "warning", "error", "critical"], default="info")
     """The log level."""
 
 
 class Config(BaseConfig):
-    """The plugin's configuration."""
+    """The options of the plugin (`plugins: - exporter:`)."""
 
     theme = c.Optional(c.Theme(default=None))
-    """Override the theme used by your MkDocs instance."""
+    """The theme whose adjustments are applied to documents (the website's theme by
+    default), e.g. `material` for a theme derived from Material for MkDocs."""
 
     formats = c.SubConfig(FormatsConfig)
-    """The formats to generate."""
+    """The formats of documents."""
 
     buttons = c.ListOfItems(c.SubConfig(ButtonConfig), default=[])
-    """The buttons to add."""
+    """Buttons added at the top of every page."""
 
     logging = c.SubConfig(LoggingConfig)
-    """The logging configuration."""
+    """The messages logged by the plugin."""

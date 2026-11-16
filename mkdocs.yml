@@ -56,9 +56,11 @@ plugins:
             - https://installer.readthedocs.io/en/stable/objects.inv
           options:
             show_bases: false
-            show_source: true
+            show_source: false
             show_labels: false
             show_root_heading: true
+            show_root_full_path: false
+            members_order: source
   - search:
       lang: en
   - awesome-pages

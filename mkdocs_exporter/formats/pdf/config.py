@@ -60,7 +60,8 @@ class MarginText(c.Type[str]):
 
 
 class MarginsConfig(BaseConfig):
-    """A header or a footer: texts with placeholders such as `{page}` / `{pages}`."""
+    """A header or a footer (`formats.pdf.header`, `formats.pdf.footer`): texts with
+    placeholders such as `{page}` and `{pages}`."""
 
     left = c.Optional(MarginText())
     """The text on the left."""
@@ -73,7 +74,7 @@ class MarginsConfig(BaseConfig):
 
 
 class BrowserConfig(BaseConfig):
-    """The browser's configuration."""
+    """The browser printing documents (`formats.pdf.browser`)."""
 
     debug = c.Type(bool, default=False)
     """Should console messages sent to the browser be logged?"""
@@ -95,17 +96,17 @@ class BrowserConfig(BaseConfig):
 
 
 class CoversConfig(BaseConfig):
-    """The cover's configuration."""
+    """The cover pages of documents (`formats.pdf.covers`)."""
 
     front = c.Optional(c.File(exists=True))
-    """The front cover template location."""
+    """The template of front covers (relative to the configuration file)."""
 
     back = c.Optional(c.File(exists=True))
-    """The back cover template location."""
+    """The template of back covers (relative to the configuration file)."""
 
 
 class CacheConfig(BaseConfig):
-    """The cache's configuration."""
+    """The cache of documents (`formats.pdf.cache`)."""
 
     enabled = c.Type(bool, default=True)
     """Should documents be reused while their page and resources are unchanged?"""
@@ -115,7 +116,8 @@ class CacheConfig(BaseConfig):
 
 
 class TocConfig(BaseConfig):
-    """A table of contents (of a document's headings, or of a book)."""
+    """A table of contents: of the headings of each page's document
+    (`formats.pdf.toc`), or of a book (`formats.pdf.books[].toc`)."""
 
     enabled = c.Type(bool, default=False)
     """Should a table of contents be inserted after the (first) front cover?"""
@@ -131,7 +133,8 @@ class TocConfig(BaseConfig):
 
 
 class BookConfig(BaseConfig):
-    """A book: pages combined into a single document."""
+    """A book: pages of the website combined into a single document
+    (`formats.pdf.books[]`)."""
 
     enabled = c.Type(bool, default=True)
     """Is the book generated?"""
@@ -152,14 +155,15 @@ class BookConfig(BaseConfig):
     """Patterns of the source paths of the pages to leave out."""
 
     start = c.Choice(START_MODES, default="any")
-    """`odd` to start every page on an odd (right-hand) page, inserting blank pages."""
+    """`odd` to start each page of the website on a right-hand (odd) page of the book,
+    inserting blank pages."""
 
     outline = c.Type(int, default=3)
     """The depth of bookmarks: 0 for none, 1 for pages, 2 to add their `h2` headings..."""
 
     tagged = c.Type(bool, default=True)
     """Is the document tagged (its structure described, for screen readers)? Tagging
-    makes documents about half as large again."""
+    makes documents about 50 % larger."""
 
     toc = c.SubConfig(TocConfig)
     """The table of contents."""
@@ -176,10 +180,10 @@ class AggregatorConfig(BookConfig):
 
 
 class Config(BaseConfig):
-    """The plugin's configuration."""
+    """The options of PDF documents (`formats.pdf`)."""
 
     enabled = c.Type(bool, default=True)
-    """Is the generator enabled?"""
+    """Are PDF documents generated (e.g. `!ENV [MKDOCS_EXPORTER_PDF, true]`)?"""
 
     serve = c.Type(bool, default=False)
     """Should documents be generated while serving the website (`mkdocs serve`)?"""
@@ -195,13 +199,14 @@ class Config(BaseConfig):
     default)."""
 
     stylesheets = c.ListOfItems(Stylesheet(exists=True), default=[])
-    """A list of custom stylesheets to apply before rendering documents."""
+    """Stylesheets applied to documents only (plain CSS), relative to the configuration
+    file."""
 
     scripts = c.ListOfItems(c.File(exists=True), default=[])
-    """A list of custom scripts to inject before rendering documents."""
+    """Scripts run in documents only, relative to the configuration file."""
 
     covers = c.SubConfig(CoversConfig)
-    """The document's cover pages."""
+    """The cover pages of documents."""
 
     header = c.SubConfig(MarginsConfig)
     """The header of pages (`{site_name}`, `{page_title}`, `{section}`, `{page}`, `{pages}`)."""
