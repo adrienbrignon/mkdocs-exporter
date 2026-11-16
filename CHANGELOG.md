@@ -3,6 +3,28 @@
 All notable changes to this project are documented in this file, and this project adheres to [Semantic Versioning](https://semver.org/).
 Entries are generated from commit messages ([Conventional Commits](https://www.conventionalcommits.org/)) by [release-please](https://github.com/googleapis/release-please), in release pull requests where they can be edited; earlier entries follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [7.0.0-rc.2](https://github.com/adrienbrignon/mkdocs-exporter/compare/v7.0.0-rc.1...v7.0.0-rc.2) (2026-11-16)
+
+### Added
+
+- Per-page options under the `exporter` key of the front matter (`exporter.pdf.enabled`, `exporter.pdf.covers`, `exporter.pdf.toc.enabled`, `exporter.buttons`), validated: a misspelled option or a value of the wrong type fails the build. Defaults for a directory can come from `.meta.yml` files (Material's `meta` plugin).
+- `mkdocs-exporter build` exports websites built by Zensical, once they are built (experimental).
+- `data-mkdocs-exporter-teleport` moves elements elsewhere in documents and pages (e.g. a cover's styles to the head).
+
+### Changed
+
+- Requires Python 3.11.5+.
+- Documents and books no longer carry duplicates of shared objects (e.g. the color profile of images): this documentation's book is 5 % smaller.
+
+### Fixed
+
+- The "Object count … exceeds defined trailer size" message printed while finishing books with images.
+
+### Deprecated
+
+- The top-level front matter keys `pdf`, `covers`, `hide: [covers]`, `toc`, `buttons` and `pdf-icon`, replaced by the `exporter` key (they still work, with a warning, which fails builds run with `--strict`).
+- The `data-teleport` attribute, replaced by `data-mkdocs-exporter-teleport` (still supported, with a warning).
+
 ## [7.0.0-rc.1](https://github.com/adrienbrignon/mkdocs-exporter/compare/v6.2.0...v7.0.0-rc.1) (2026-11-16)
 
 Read the [migration guide](https://adrienbrignon.github.io/mkdocs-exporter/migration/v7/) when upgrading from v6.
