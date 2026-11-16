@@ -186,3 +186,17 @@ jobs:
         with:
           name: dist
           path: dist/
+
+  all:
+    name: All checks
+    if: always()
+    needs: [lint, typecheck, test, minimal, properdocs, lowest, package]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check that every job succeeded
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          for result in $RESULTS; do
+            test "$result" = success
+          done
