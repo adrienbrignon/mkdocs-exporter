@@ -199,7 +199,7 @@ Templates have access to:
 The page's metadata are also available as variables (e.g. {% raw %}`{{ description }}`{% endraw %}).
 When the [macros](https://github.com/fralau/mkdocs_macros_plugin) plugin is enabled, templates are rendered with its environment: its variables (such as `navigation`, every page of the website), macros and filters are available too.
 
-- `<style data-teleport="head">` moves styles to the document's head: `@page :first` rules style the page of the front cover (e.g. without margins, with a background), and named pages the page of the back cover.
+- `<style data-mkdocs-exporter-teleport="head">` moves styles to the document's head: `@page :first` rules style the page of the front cover (e.g. without margins, with a background), and named pages the page of the back cover.
 - Paths starting with `/` (like `/assets/images/logo.png`) are resolved from the root of the website.
 - Headers and footers are not printed on cover pages, except on named pages of your own (set `content: none` on their margin boxes there).
 - Decorations drawn in the background of the cover's page stay in place, whatever the space the theme leaves above the content: prefer them to elements as tall as the page, which may overflow onto a blank page.

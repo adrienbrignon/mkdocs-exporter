@@ -26,12 +26,22 @@ ANCESTOR = "data-mkdocs-exporter-ancestor"
 ORIGIN = "http://mkdocs-exporter.invalid"
 """A placeholder origin to resolve URLs with."""
 
+TELEPORT = "data-mkdocs-exporter-teleport"
+"""Moves an element into the element its value selects (e.g. `head` for styles)."""
+
+LEGACY_TELEPORT = "data-teleport"
+"""The former name of `TELEPORT`, renamed when documents are parsed."""
+
 
 class HtmlDocument:
     """An HTML document being prepared, either for the website or for printing."""
 
     def __init__(self, html: str) -> None:
         self.soup = BeautifulSoup(html, "lxml")
+        self.legacy_teleports = (
+            _rename_teleports(self.soup) if LEGACY_TELEPORT in html else 0
+        )
+        """The number of elements using the deprecated `data-teleport` attribute."""
 
     def __str__(self) -> str:
         return str(self.soup)
@@ -58,8 +68,12 @@ class HtmlDocument:
         """Creates a `<div>` element holding an HTML fragment."""
 
         element = self.soup.new_tag("div", attrs=attributes)
+        fragment = BeautifulSoup(html, "html.parser")
 
-        for node in list(BeautifulSoup(html, "html.parser").contents):
+        if LEGACY_TELEPORT in html:
+            _rename_teleports(fragment)
+
+        for node in list(fragment.contents):
             element.append(node.extract())
 
         return element
@@ -92,10 +106,10 @@ class HtmlDocument:
         return self
 
     def teleport(self) -> HtmlDocument:
-        """Moves elements having a `data-teleport` attribute to their destination."""
+        """Moves the elements to teleport to their destination (see `TELEPORT`)."""
 
-        for element in self.soup.select("[data-teleport]"):
-            selector = str(element.get("data-teleport") or "")
+        for element in self.soup.select(f"[{TELEPORT}]"):
+            selector = str(element.get(TELEPORT) or "")
             destination = self.soup.select_one(selector) if selector else None
 
             if destination is None:
@@ -106,7 +120,7 @@ class HtmlDocument:
                 )
                 continue
 
-            del element["data-teleport"]
+            del element[TELEPORT]
             destination.append(element.extract())
 
         return self
@@ -282,7 +296,7 @@ def teleported(content: Tag) -> list[tuple[str, str, Tag]]:
 
     found = []
 
-    for element in content.find_all(True, attrs={"data-teleport": True}):
+    for element in content.find_all(True, attrs={TELEPORT: True}):
         origin = "content"
 
         for location in ("front", "back"):
@@ -291,9 +305,31 @@ def teleported(content: Tag) -> list[tuple[str, str, Tag]]:
             if cover is not None and cover.parent is content:
                 origin = location
 
-        found.append((origin, str(element.get("data-teleport") or ""), element))
+        found.append((origin, str(element.get(TELEPORT) or ""), element))
 
     return found
+
+
+def uses_legacy_teleport(html: str) -> bool:
+    """Does an HTML fragment use the deprecated `data-teleport` attribute?"""
+
+    return LEGACY_TELEPORT in html and bool(
+        BeautifulSoup(html, "html.parser").find(True, attrs={LEGACY_TELEPORT: True})
+    )
+
+
+def _rename_teleports(soup: BeautifulSoup) -> int:
+    """Renames the deprecated `data-teleport` attribute (see `TELEPORT`), returning
+    the number of elements using it."""
+
+    elements = soup.find_all(True, attrs={LEGACY_TELEPORT: True})
+
+    for element in elements:
+        element.attrs.setdefault(TELEPORT, element[LEGACY_TELEPORT])
+
+        del element[LEGACY_TELEPORT]
+
+    return len(elements)
 
 
 @dataclass

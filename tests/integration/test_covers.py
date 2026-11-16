@@ -8,7 +8,7 @@ from tests.conftest import Project
 pytestmark = pytest.mark.browser
 
 TEMPLATE = """
-<style data-teleport="head">
+<style data-mkdocs-exporter-teleport="head">
   .cover-meta { color: #ea2027; }
 </style>
 <div class="cover">
@@ -87,7 +87,7 @@ def test_teleported_styles_take_precedence_over_stylesheets(project: Project) ->
     project.write("pdf.css", css + "\n.cover-marker { display: block; }\n")
     project.write(
         "covers/front.html",
-        '<style data-teleport="head">.cover-marker { display: none; }</style>\n'
+        '<style data-mkdocs-exporter-teleport="head">.cover-marker { display: none; }</style>\n'
         '<p class="cover-marker">HIDDEN-BY-COVER</p><h1>FRONT-COVER</h1>\n',
     )
 

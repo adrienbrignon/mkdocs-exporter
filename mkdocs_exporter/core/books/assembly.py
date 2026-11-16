@@ -21,6 +21,7 @@ from mkdocs_exporter.core.books.urls import rewrite_urls
 from mkdocs_exporter.core.document import Document, Heading
 from mkdocs_exporter.core.html import (
     ANCESTOR,
+    TELEPORT,
     HtmlDocument,
     PageResources,
     page_resources,
@@ -96,7 +97,7 @@ class Part:
         if destination == "head" and element.name == "style":
             self.styles.append(element.string or "")
         else:
-            element["data-teleport"] = destination
+            element[TELEPORT] = destination
             self.teleported.append(element)
 
 
@@ -217,8 +218,8 @@ def prepare(
 
         by_url.setdefault(part.document.url, part)
 
-        for element in part.content.select("[data-teleport]"):
-            part.keep(element.extract(), str(element.get("data-teleport") or ""))
+        for element in part.content.select(f"[{TELEPORT}]"):
+            part.keep(element.extract(), str(element.get(TELEPORT) or ""))
 
         found = find_headings(part.content, identify=True)
         part.ids = collect_ids(part.content)
@@ -350,11 +351,11 @@ def _teleport(shell: HtmlDocument, parts: Sequence[Part]) -> None:
     is missing)."""
 
     for element in (element for part in parts for element in part.teleported):
-        selector = str(element.get("data-teleport") or "")
+        selector = str(element.get(TELEPORT) or "")
         destination = shell.select_one(selector) if selector else None
 
         if destination is not None:
-            del element["data-teleport"]
+            del element[TELEPORT]
             destination.append(element)
 
 

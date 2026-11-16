@@ -23,7 +23,7 @@ Start each document with a full-bleed cover showing the page's title, its descri
     ```
 
 - The front cover is a [Jinja template](../configuration/generating-pdf-documents.md#cover-pages), rendered for each page: `page` is the page (`page.title`, `page.meta` for its front matter), and `extra` the `extra` settings of `mkdocs.yml`.
-- `<style data-teleport="head">` moves the template's styles to the head of the document: its `@page :first` rule removes the margins of the first page and gives it a color.
+- `<style data-mkdocs-exporter-teleport="head">` moves the template's styles to the head of the document: its `@page :first` rule removes the margins of the first page and gives it a color.
 - The template is rendered by Jinja: `extra.version.rsplit(".", 1)[0]` keeps the major and minor version (`2.4`), printed in large type. Its content stays in the flow of the page, so that it can't overflow onto another page.
 - `toc` inserts a [table of contents](../configuration/generating-pdf-documents.md#table-of-contents) of the page's headings after the front cover, with their page numbers.
 

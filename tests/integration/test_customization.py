@@ -56,20 +56,34 @@ def test_render_hook_is_awaited_before_pagination(project: Project) -> None:
     assert "HOOK-MARKER" in site.pdf("index.pdf").text
 
 
-def test_elements_can_be_teleported(project: Project) -> None:
+@pytest.mark.parametrize(
+    "attribute",
+    ["data-mkdocs-exporter-teleport", "data-teleport"],
+    ids=["exporter", "deprecated"],
+)
+def test_elements_can_be_teleported(
+    project: Project, attribute: str, caplog: pytest.LogCaptureFixture
+) -> None:
     project.write(
         "docs/reference.md",
         '# Reference\n\n<div id="target"></div>\n\nPlain reference page.\n\n'
-        '<span data-teleport="#target">TELEPORT-MARKER</span>\n',
+        f'<span {attribute}="#target">TELEPORT-MARKER</span>\n',
+    )
+    project.write(
+        "covers/front.html",
+        f'<style {attribute}="head">.cover-marker {{ color: red; }}</style>\n'
+        "<div><h1>FRONT-COVER</h1></div>\n",
     )
 
     site = project.build()
     text = site.pdf("reference/index.pdf").text
+    deprecated = caplog.text.count("'data-teleport' attribute is deprecated")
 
     assert text.index("TELEPORT-MARKER") < text.index("Plain reference page")
     assert 'id="target"><span>TELEPORT-MARKER</span>' in site.html(
         "reference/index.html"
     )
+    assert deprecated == (attribute == "data-teleport")
 
 
 @pytest.mark.parametrize(

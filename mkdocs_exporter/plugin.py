@@ -21,7 +21,12 @@ from mkdocs_exporter.core.browser import Browser, relaunch
 from mkdocs_exporter.core.cache import Cache
 from mkdocs_exporter.core.document import Document, Site
 from mkdocs_exporter.core.exporter import Exporter
-from mkdocs_exporter.core.html import HtmlDocument
+from mkdocs_exporter.core.html import (
+    LEGACY_TELEPORT,
+    TELEPORT,
+    HtmlDocument,
+    uses_legacy_teleport,
+)
 from mkdocs_exporter.core.renderer import Outcome
 from mkdocs_exporter.core.runner import Loop, run
 from mkdocs_exporter.core.themes import Theme, get_theme
@@ -34,7 +39,7 @@ from mkdocs_exporter.logging import Logger
 logger = Logger()
 pdf_logger = Logger("pdf")
 
-MARKERS = ("mkdocs-exporter-only", "data-decompose", "data-teleport")
+MARKERS = ("mkdocs-exporter-only", "data-decompose", TELEPORT, LEGACY_TELEPORT)
 """What the website's pages are processed for, besides buttons (see `_decorate_page`)."""
 
 
@@ -194,6 +199,13 @@ class Plugin(BasePlugin[Config]):
             key: self.covers.render(path, page) for key, path in templates.items()
         }
 
+        if any(uses_legacy_teleport(cover) for cover in covers.values()):
+            self._deprecated(
+                "'data-teleport' attribute",
+                f"covers of '{page.file.src_uri}'",
+                f"'{TELEPORT}'",
+            )
+
         self.watched.update(templates.values())
         formats["pdf"]["covers"] = list(covers)
         formats["pdf"]["books"] = self._books_of(page, config)
@@ -222,6 +234,11 @@ class Plugin(BasePlugin[Config]):
             return output
 
         html = HtmlDocument(output)
+
+        if html.legacy_teleports:
+            self._deprecated(
+                "'data-teleport' attribute", f"'{page.file.src_uri}'", f"'{TELEPORT}'"
+            )
 
         for button in buttons:
             attributes = {
@@ -388,16 +405,25 @@ class Plugin(BasePlugin[Config]):
                 ) from error
 
             for name in parsed.deprecated:
-                if name not in self.deprecated:
-                    self.deprecated.add(name)
-                    logger.warning(
-                        "The '%s' key of the front matter is deprecated (used in "
-                        "'%s'), use %s instead",
-                        "hide: [covers]" if name == "hide" else name,
-                        key,
-                        front_matter.DEPRECATED[name],
-                    )
+                self._deprecated(
+                    f"'{'hide: [covers]' if name == 'hide' else name}' key of the "
+                    "front matter",
+                    f"'{key}'",
+                    front_matter.DEPRECATED[name],
+                )
 
             self.page_options[key] = parsed.options
 
         return self.page_options[key]
+
+    def _deprecated(self, feature: str, where: str, replacement: str) -> None:
+        """Warns about a deprecated feature, once per build."""
+
+        if feature not in self.deprecated:
+            self.deprecated.add(feature)
+            logger.warning(
+                "The %s is deprecated (used in %s), use %s instead",
+                feature,
+                where,
+                replacement,
+            )
