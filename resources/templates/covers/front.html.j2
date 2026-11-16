@@ -1,38 +1,53 @@
+{% set url = config.site_url | replace("https://", "") | trim("/") %}
 <style data-mkdocs-exporter-teleport="head">
+  /* The footer is in the margin of the page: at its bottom, whatever its size */
   @page :first {
-    margin: 0;
+    margin: 2cm 2cm 2.6cm;
+
+    @bottom-left {
+      content: "{{ version }}";
+      font-family: "Roboto Mono", monospace;
+      font-size: 8.5pt;
+      color: #1a1a1a;
+      vertical-align: top;
+      padding-top: 0.2cm;
+      border-top: 1px solid #1a1a1a;
+    }
+
+    @bottom-center {
+      content: "{{ url }}";
+      font-family: "Roboto Mono", monospace;
+      font-size: 8.5pt;
+      color: #1a1a1a;
+      vertical-align: top;
+      padding-top: 0.2cm;
+      border-top: 1px solid #1a1a1a;
+    }
+
+    @bottom-right {
+      content: "{{ config.site_name }}";
+      font-family: "Roboto Mono", monospace;
+      font-size: 8.5pt;
+      color: #1a1a1a;
+      vertical-align: top;
+      padding-top: 0.2cm;
+      border-top: 1px solid #1a1a1a;
+    }
   }
 
   .manual {
-    position: relative;
-    height: 27.6cm;
-    box-sizing: border-box;
-    padding: 2cm;
     break-after: page;
     color: #1a1a1a;
     font-family: "Roboto Mono", monospace;
     font-size: 10pt;
     line-height: 1.6;
 
-    .header,
-    .footer {
+    .header {
       display: flex;
       justify-content: space-between;
-      font-size: 8.5pt;
-    }
-
-    .header {
       padding-bottom: 0.2cm;
       border-bottom: 1px solid;
-    }
-
-    .footer {
-      position: absolute;
-      right: 2cm;
-      bottom: 0;
-      left: 2cm;
-      padding-top: 0.2cm;
-      border-top: 1px solid;
+      font-size: 8.5pt;
     }
 
     .name {
@@ -134,9 +149,4 @@
     {% for other in related %}{{ other.title | lower | replace(" ", "-") }}{{ ", " if not loop.last }}{% endfor %}
   </div>
   {% endif %}
-  <div class="footer">
-    <span>{{ version }}</span>
-    <span>{{ config.site_name }}</span>
-    <span>{{ config.site_url | replace("https://", "") | trim("/") }}</span>
-  </div>
 </div>
