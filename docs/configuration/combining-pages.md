@@ -37,7 +37,7 @@ Since every page is part of the same HTML document:
 - identifiers are prefixed by page (e.g. `p2-installation`), so that footnotes, tabs and other references of different pages don't interfere: stylesheets and scripts targeting identifiers of the content (`#installation`) don't match them in combined documents;
 - stylesheets and scripts loaded by some pages only are loaded once for the whole document, and the scripts of [`formats.pdf.scripts`](customizing-documents.md#scripts) run once;
 - `@page :first` rules apply to the pages of front covers (in a page's own document, its first page is its front cover);
-- styles teleported to the head by cover pages (`<style data-teleport="head">`) are included once when they are the same for every page; otherwise they only apply to their own page.
+- styles teleported to the head by cover pages (`<style data-mkdocs-exporter-teleport="head">`) are included once when they are the same for every page; otherwise they only apply to their own page.
 
 ## Cover pages
 

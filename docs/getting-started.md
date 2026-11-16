@@ -28,7 +28,7 @@ Documents are printed by a headless Chromium browser driven by [Playwright](http
 
 ## Prerequisites
 
-- Python `>= 3.11`
+- Python `>= 3.11.5`
 - MkDocs `>= 1.6, < 2` or [ProperDocs](https://github.com/ProperDocs/properdocs)
 - Chromium `>= 138`, installed with Playwright (see below), or Chrome / Edge with [`browser.channel`](configuration/customizing-documents.md#browser)
 - A theme: [`material`](https://github.com/squidfunk/mkdocs-material) (:material-star-shooting: *used by this documentation*) and [`readthedocs`](https://www.mkdocs.org/user-guide/choosing-your-theme/#readthedocs) have dedicated support, other themes are supported on a best-effort basis.
@@ -36,7 +36,7 @@ Documents are printed by a headless Chromium browser driven by [Playwright](http
 ??? info "What about MkDocs 2.0 and Zensical?"
 
     MkDocs 2.0 no longer supports plugins and Zensical ignores MkDocs plugins it doesn't know about, so this plugin can't run there.
-    The rendering engine of *MkDocs Exporter* doesn't depend on MkDocs though, and a standalone command able to export any built website is planned.
+    Websites built by Zensical can be exported by a command run once they are built (experimental), see [Zensical](guides/zensical.md).
 
 ## Installation
 

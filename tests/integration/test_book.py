@@ -448,7 +448,7 @@ def test_cover_styles_depending_on_the_page_stay_in_their_part(
 ) -> None:
     project.write(
         "covers/front.html",
-        '<style data-teleport="head">'
+        '<style data-mkdocs-exporter-teleport="head">'
         '.cover-title::after { content: " ({{ page.title }})"; }</style>\n'
         '<div class="front-cover"><h1 class="cover-title">FRONT-COVER</h1></div>\n',
     )

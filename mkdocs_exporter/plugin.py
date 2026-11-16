@@ -14,26 +14,32 @@ from mkdocs.structure.files import Files
 from mkdocs.structure.nav import Navigation
 from mkdocs.structure.pages import Page
 
-from mkdocs_exporter import adapter
+from mkdocs_exporter import adapter, front_matter
 from mkdocs_exporter.config import Config
 from mkdocs_exporter.core.books import Book, NavNode
 from mkdocs_exporter.core.browser import Browser, relaunch
 from mkdocs_exporter.core.cache import Cache
 from mkdocs_exporter.core.document import Document, Site
 from mkdocs_exporter.core.exporter import Exporter
-from mkdocs_exporter.core.html import HtmlDocument
+from mkdocs_exporter.core.html import (
+    LEGACY_TELEPORT,
+    TELEPORT,
+    HtmlDocument,
+    uses_legacy_teleport,
+)
 from mkdocs_exporter.core.renderer import Outcome
 from mkdocs_exporter.core.runner import Loop, run
 from mkdocs_exporter.core.themes import Theme, get_theme
 from mkdocs_exporter.covers import CoverRenderer
 from mkdocs_exporter.formats.pdf.config import BookConfig
+from mkdocs_exporter.front_matter import PageOptions
 from mkdocs_exporter.helpers import resolve
 from mkdocs_exporter.logging import Logger
 
 logger = Logger()
 pdf_logger = Logger("pdf")
 
-MARKERS = ("mkdocs-exporter-only", "data-decompose", "data-teleport")
+MARKERS = ("mkdocs-exporter-only", "data-decompose", TELEPORT, LEGACY_TELEPORT)
 """What the website's pages are processed for, besides buttons (see `_decorate_page`)."""
 
 
@@ -58,6 +64,8 @@ class Plugin(BasePlugin[Config]):
         self.nav: list[NavNode] = []
         self.watched: set[str] = set()
         self.decomposed = False
+        self.page_options: dict[str, PageOptions] = {}
+        self.deprecated: set[str] = set()
         self.covers: CoverRenderer
         self.loop: Loop | None = None
         self.browser: Browser | None = None
@@ -103,7 +111,9 @@ class Plugin(BasePlugin[Config]):
         self.nav = []
         self.watched = set()
         self.decomposed = False
-        self.covers = CoverRenderer(config)
+        self.page_options = {}
+        self.deprecated = set()
+        self.covers = CoverRenderer.of(config)
         self.pdf = options.enabled and (self.command != "serve" or options.serve)
 
         if options.aggregator.enabled:
@@ -181,10 +191,20 @@ class Plugin(BasePlugin[Config]):
         if "pdf" not in formats:
             return output
 
-        templates = self.covers.locations(dict(self.config.formats.pdf.covers), page)
+        page_options = self._page_options(page)
+        templates = self.covers.locations(
+            dict(self.config.formats.pdf.covers), page_options.pdf.covers
+        )
         covers = {
             key: self.covers.render(path, page) for key, path in templates.items()
         }
+
+        if any(uses_legacy_teleport(cover) for cover in covers.values()):
+            self._deprecated(
+                "'data-teleport' attribute",
+                f"covers of '{page.file.src_uri}'",
+                f"'{TELEPORT}'",
+            )
 
         self.watched.update(templates.values())
         formats["pdf"]["covers"] = list(covers)
@@ -197,7 +217,8 @@ class Plugin(BasePlugin[Config]):
                 formats["pdf"]["url"],
                 covers,
                 self.config.formats.pdf,
-                config,
+                adapter.Website.of(config),
+                page_options,
             ),
         )
 
@@ -213,6 +234,11 @@ class Plugin(BasePlugin[Config]):
             return output
 
         html = HtmlDocument(output)
+
+        if html.legacy_teleports:
+            self._deprecated(
+                "'data-teleport' attribute", f"'{page.file.src_uri}'", f"'{TELEPORT}'"
+            )
 
         for button in buttons:
             attributes = {
@@ -250,7 +276,8 @@ class Plugin(BasePlugin[Config]):
             if self.config.formats.pdf.explicit:
                 pdf_logger.warning(
                     "No page has been rendered: in explicit mode, "
-                    "pages must enable PDF generation with 'pdf: true' in their metadata"
+                    "pages must enable PDF generation in their front matter "
+                    "('exporter: {pdf: {enabled: true}}')"
                 )
             return
 
@@ -284,7 +311,7 @@ class Plugin(BasePlugin[Config]):
             site,
             self.theme,
             await self._browser(),
-            adapter.render_options(options, config),
+            adapter.render_options(options, adapter.Website.of(config)),
             cache,
         )
         report = await exporter.export([e.document for e in exports], books)
@@ -321,7 +348,7 @@ class Plugin(BasePlugin[Config]):
             if key in self.exports and adapter.includes(options, key)
         ]
 
-        return adapter.book(options, config, documents, self.nav)
+        return adapter.book(options, adapter.Website.of(config), documents, self.nav)
 
     def _books_of(self, page: Page, config: MkDocsConfig) -> list[dict[str, str]]:
         """The books including a page (see `mkdocs_exporter.page.Page`).
@@ -341,7 +368,7 @@ class Plugin(BasePlugin[Config]):
                     {
                         "path": os.path.join(config.site_dir, *url.split("/")),
                         "url": url,
-                        "title": adapter.title(options, config),
+                        "title": adapter.title(options, adapter.Website.of(config)),
                     }
                 )
 
@@ -352,11 +379,51 @@ class Plugin(BasePlugin[Config]):
 
         return [
             resolve(dict(button), page=page)
-            for button in [*self.config.buttons, *page.meta.get("buttons", [])]
+            for button in [*self.config.buttons, *self._page_options(page).buttons]
             if resolve(button.get("enabled", True), page=page)
         ]
 
     def _exported(self, page: Page) -> bool:
         """Should a PDF document be generated for the page?"""
 
-        return bool(page.meta.get("pdf", not self.config.formats.pdf.explicit))
+        enabled = self._page_options(page).pdf.enabled
+
+        return not self.config.formats.pdf.explicit if enabled is None else enabled
+
+    def _page_options(self, page: Page) -> PageOptions:
+        """The options of a page's front matter (read once per build, once other
+        plugins have changed it, e.g. Material's `meta` plugin)."""
+
+        key = page.file.src_uri
+
+        if key not in self.page_options:
+            try:
+                parsed = front_matter.parse(page.meta)
+            except front_matter.FrontMatterError as error:
+                raise PluginError(
+                    f"[mkdocs-exporter] Invalid front matter in '{key}': {error}"
+                ) from error
+
+            for name in parsed.deprecated:
+                self._deprecated(
+                    f"'{'hide: [covers]' if name == 'hide' else name}' key of the "
+                    "front matter",
+                    f"'{key}'",
+                    front_matter.DEPRECATED[name],
+                )
+
+            self.page_options[key] = parsed.options
+
+        return self.page_options[key]
+
+    def _deprecated(self, feature: str, where: str, replacement: str) -> None:
+        """Warns about a deprecated feature, once per build."""
+
+        if feature not in self.deprecated:
+            self.deprecated.add(feature)
+            logger.warning(
+                "The %s is deprecated (used in %s), use %s instead",
+                feature,
+                where,
+                replacement,
+            )

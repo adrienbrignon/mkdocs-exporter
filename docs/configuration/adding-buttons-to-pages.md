@@ -1,11 +1,12 @@
 ---
-buttons:
-  - title: I'm Feeling Lucky
-    icon: material-star-outline
-    attributes:
-      class: md-content__button md-icon md-icon-spin
-      href: https://www.youtube.com/watch?v=dQw4w9WgXcQ
-      target: _blank
+exporter:
+  buttons:
+    - title: I'm Feeling Lucky
+      icon: material-star-outline
+      attributes:
+        class: md-content__button md-icon md-icon-spin
+        href: https://www.youtube.com/watch?v=dQw4w9WgXcQ
+        target: _blank
 ---
 
 # Adding buttons to pages
@@ -88,21 +89,22 @@ The module has to be importable when MkDocs reads its configuration: install it,
 
 ### Adding buttons to a specific page
 
-You can add buttons to pages using the buttons field in your page's front matter, enabling you to define buttons specific to each page.
+Pages can add buttons of their own with `exporter.buttons` in their [front matter](../reference/front-matter.md), besides those of the configuration.
 
 Here's how it's configured for this page:
 
 ```yaml
 ---
-{% set button = page.meta.buttons[0] -%}
+{% set button = page.meta.exporter.buttons[0] -%}
 
-buttons:
-  - title: {{ button.title }}
-    icon: {{ button.icon }}
-    attributes:
-      class: {{ button.attributes.class }}
-      href: {{ button.attributes.href }}
-      target: {{ button.attributes.target }}
+exporter:
+  buttons:
+    - title: {{ button.title }}
+      icon: {{ button.icon }}
+      attributes:
+        class: {{ button.attributes.class }}
+        href: {{ button.attributes.href }}
+        target: {{ button.attributes.target }}
 ---
 
 # {{ page.title }}

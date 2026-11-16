@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import logging
 import posixpath
 from collections.abc import Callable, Mapping
 from typing import cast
@@ -13,6 +14,42 @@ from mkdocs_exporter.core.html import resolve_link
 
 RELATIVE_LINKS_BASE = "https://mkdocs-exporter.invalid/"
 """A placeholder base URL for links that must end up relative to the PDF document."""
+
+
+class _CopiedObjects(logging.Filter):
+    """Leaves out pypdf's warning that a copy of a document has more objects than the
+    document (see `clone`)."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        return "exceeds defined trailer size" not in record.getMessage()
+
+
+def clone(pdf: bytes) -> PdfWriter:
+    """A writer holding a copy of a PDF document, to modify and `serialize`.
+
+    pypdf copies an object once for each object referencing it (e.g. the color profile
+    of every image Chromium prints), and warns that the copy has more objects than the
+    document: the warning is left out, and `serialize` merges these objects back.
+    """
+
+    logger = logging.getLogger("pypdf._writer")
+    copies = _CopiedObjects()
+    logger.addFilter(copies)
+
+    try:
+        return PdfWriter(clone_from=PdfReader(io.BytesIO(pdf)))
+    finally:
+        logger.removeFilter(copies)
+
+
+def serialize(writer: PdfWriter) -> bytes:
+    """Writes a document, merging its identical objects."""
+
+    writer.compress_identical_objects()
+    output = io.BytesIO()
+    writer.write(output)
+
+    return output.getvalue()
 
 
 def relative_url(target: str, directory: str) -> str:
@@ -76,7 +113,7 @@ def link_actions(writer: PdfWriter) -> list[tuple[int, DictionaryObject, str]]:
 def rewrite_links(pdf: bytes, rewrite: Callable[[str], str | None]) -> bytes:
     """Rewrites the URIs of a document's links (`None` keeps a link untouched)."""
 
-    writer = PdfWriter(clone_from=PdfReader(io.BytesIO(pdf)))
+    writer = clone(pdf)
     changed = False
 
     for _, annotation, uri in link_actions(writer):
@@ -90,11 +127,7 @@ def rewrite_links(pdf: bytes, rewrite: Callable[[str], str | None]) -> bytes:
     if not changed:
         return pdf
 
-    output = io.BytesIO()
-
-    writer.write(output)
-
-    return output.getvalue()
+    return serialize(writer)
 
 
 def info(values: Mapping[str, object]) -> dict[str, str]:

@@ -154,16 +154,28 @@ def test_metadata_of_books(project: Project) -> None:
     assert site.pdf("combined.pdf").metadata.get("/Title") == "Handbook"
 
 
-def test_explicit_mode_only_renders_opted_in_pages(project: Project) -> None:
-    project.write("docs/reference.md", "---\npdf: true\n---\n\n# Reference\n")
+@pytest.mark.parametrize(
+    "front_matter",
+    ["pdf: true", "exporter: {pdf: {enabled: true}}"],
+    ids=["deprecated", "exporter"],
+)
+def test_explicit_mode_only_renders_opted_in_pages(
+    project: Project, front_matter: str
+) -> None:
+    project.write("docs/reference.md", f"---\n{front_matter}\n---\n\n# Reference\n")
 
     site = project.build(exporter={"formats": {"pdf": {"explicit": True}}})
 
     assert site.pdfs() == ["combined.pdf", "reference/index.pdf"]
 
 
-def test_pages_can_opt_out(project: Project) -> None:
-    project.write("docs/reference.md", "---\npdf: false\n---\n\n# Reference\n")
+@pytest.mark.parametrize(
+    "front_matter",
+    ["pdf: false", "exporter: {pdf: {enabled: false}}"],
+    ids=["deprecated", "exporter"],
+)
+def test_pages_can_opt_out(project: Project, front_matter: str) -> None:
+    project.write("docs/reference.md", f"---\n{front_matter}\n---\n\n# Reference\n")
 
     site = project.build()
 
@@ -171,8 +183,13 @@ def test_pages_can_opt_out(project: Project) -> None:
     assert "Plain reference page" not in site.pdf("combined.pdf").text
 
 
-def test_pages_can_hide_covers(project: Project) -> None:
-    project.write("docs/reference.md", "---\nhide:\n  - covers\n---\n\n# Reference\n")
+@pytest.mark.parametrize(
+    "front_matter",
+    ["hide: [covers]", "exporter: {pdf: {covers: {enabled: false}}}"],
+    ids=["deprecated", "exporter"],
+)
+def test_pages_can_hide_covers(project: Project, front_matter: str) -> None:
+    project.write("docs/reference.md", f"---\n{front_matter}\n---\n\n# Reference\n")
 
     site = project.build()
     document = site.pdf("reference/index.pdf")
@@ -327,14 +344,21 @@ def test_documents_can_start_with_a_table_of_contents(
 
 
 @pytest.mark.parametrize("enabled", [True, False])
+@pytest.mark.parametrize(
+    "front_matter",
+    ["toc: {value}", "exporter: {{pdf: {{toc: {{enabled: {value}}}}}}}"],
+    ids=["deprecated", "exporter"],
+)
 def test_pages_can_turn_their_table_of_contents_on_or_off(
-    project: Project, enabled: bool
+    project: Project, enabled: bool, front_matter: str
 ) -> None:
-    """The `toc` of a page's front matter overrides `formats.pdf.toc.enabled`."""
+    """A page's front matter overrides `formats.pdf.toc.enabled`."""
 
     page = (project.path / "docs/guide/advanced.md").read_text(encoding="utf-8")
+    value = str(not enabled).lower()
     project.write(
-        "docs/guide/advanced.md", f"---\ntoc: {str(not enabled).lower()}\n---\n\n{page}"
+        "docs/guide/advanced.md",
+        f"---\n{front_matter.format(value=value)}\n---\n\n{page}",
     )
 
     site = project.build(exporter={"formats": {"pdf": {"toc": {"enabled": enabled}}}})

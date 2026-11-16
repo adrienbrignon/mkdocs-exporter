@@ -1,6 +1,11 @@
 import pytest
 
-from mkdocs_exporter.core.html import HtmlDocument, resolve_link
+from mkdocs_exporter.core.html import (
+    TELEPORT,
+    HtmlDocument,
+    resolve_link,
+    uses_legacy_teleport,
+)
 
 BASE = "https://example.org/docs/"
 
@@ -37,7 +42,7 @@ def test_resolve_link_replaces_the_root_with_another_base() -> None:
 
 def test_teleport_moves_elements_to_their_destination() -> None:
     html = HtmlDocument(
-        '<html><head></head><body><style data-teleport="head">a{}</style></body></html>'
+        '<html><head></head><body><style data-mkdocs-exporter-teleport="head">a{}</style></body></html>'
     )
 
     html.teleport()
@@ -46,11 +51,35 @@ def test_teleport_moves_elements_to_their_destination() -> None:
 
 
 def test_teleport_keeps_elements_without_destination() -> None:
-    html = HtmlDocument('<body><p data-teleport="#missing">x</p></body>')
+    html = HtmlDocument(
+        '<body><p data-mkdocs-exporter-teleport="#missing">x</p></body>'
+    )
 
     html.teleport()
 
     assert html.select_one("p") is not None
+
+
+def test_the_deprecated_teleport_attribute_is_renamed() -> None:
+    html = HtmlDocument(
+        '<html><head></head><body><style data-teleport="head">a{}</style>'
+        "<code>&lt;p data-teleport=&quot;head&quot;&gt;</code></body></html>"
+    )
+    cover = html.fragment('<style data-teleport="head">b{}</style>')
+
+    assert html.legacy_teleports == 1
+    assert cover.style is not None
+    assert cover.style.get(TELEPORT) == "head"
+
+    html.teleport()
+
+    assert str(html.head) == "<head><style>a{}</style></head>"
+
+
+def test_uses_of_the_deprecated_teleport_attribute_are_found() -> None:
+    assert uses_legacy_teleport('<style data-teleport="head">a{}</style>')
+    assert not uses_legacy_teleport("<code>data-teleport=&quot;head&quot;</code>")
+    assert not uses_legacy_teleport(f'<style {TELEPORT}="head">a{{}}</style>')
 
 
 def test_scripts_can_be_inserted_first_in_the_head() -> None:

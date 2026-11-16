@@ -192,10 +192,10 @@ def test_parts_are_named_after_their_first_page() -> None:
 def test_prepared_content_keeps_the_covers_of_the_part() -> None:
     html = HtmlDocument(
         '<article><div class="mkdocs-exporter-front-cover">'
-        '<style data-teleport="head">.front {}</style>FRONT</div><p>Text</p>'
-        '<style data-teleport="head">.page {}</style>'
+        '<style data-mkdocs-exporter-teleport="head">.front {}</style>FRONT</div><p>Text</p>'
+        '<style data-mkdocs-exporter-teleport="head">.page {}</style>'
         '<div class="mkdocs-exporter-back-cover">'
-        '<style data-teleport="head">.back {}</style>BACK</div></article>'
+        '<style data-mkdocs-exporter-teleport="head">.back {}</style>BACK</div></article>'
     )
     content = html.select_one("article")
     assert content is not None

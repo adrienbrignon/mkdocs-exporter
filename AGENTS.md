@@ -19,6 +19,11 @@ third-party plugins, so neither is supported as a plugin host.
 doesn't import MkDocs, so a standalone command running without it (e.g. next to MkDocs 2.0) can ship the
 core as a separate distribution that this one depends on, without breaking plugin users.
 
+Websites built by Zensical are exported by the `mkdocs-exporter build` command (experimental,
+`mkdocs_exporter/standalone/`), once they are built: it reads the plugin's options from the website's
+configuration, the pages from the built website, their front matter from their sources, and rewrites the
+pages like the plugin does. It refuses websites built by MkDocs or ProperDocs (the plugin exports them).
+
 ## Commands
 
 | Task | Command |
@@ -67,6 +72,8 @@ Before considering a change done, run the linter, the formatter check, the type 
 | `mkdocs_exporter/plugin.py` | The MkDocs plugin (`exporter`): its events, the state of a build |
 | `mkdocs_exporter/adapter.py` | MkDocs configuration, pages and navigation turned into core data (options, documents, books) |
 | `mkdocs_exporter/covers.py` | Renders cover templates with Jinja (through mkdocs-macros when enabled) |
+| `mkdocs_exporter/standalone/` | The `mkdocs-exporter` command (Zensical): `project.py` (configuration), `site.py` (built pages, navigation), `export.py` |
+| `mkdocs_exporter/front_matter.py` | Per-page options: the `exporter` key of the front matter (schema, deprecated top-level keys) |
 | `mkdocs_exporter/config.py`, `formats/pdf/config.py` | Configuration schema (MkDocs `config_options`) |
 | `mkdocs_exporter/formats/pdf/buttons/` | Button callables (`download`, `book`) referenced from users' `mkdocs.yml` via `!!python/name:` |
 | `tests/unit/`, `tests/integration/` | Unit tests; end-to-end tests building `tests/fixtures/site` (marker `browser`) |
@@ -163,19 +170,20 @@ Design decisions backed by measurements (don't revert them without measuring aga
 
 ## Conventions
 
-- Python `>=3.11`, PEP 8 enforced by `ruff format` (88 columns), imports sorted by ruff.
+- Python `>=3.11.5`, PEP 8 enforced by `ruff format` (88 columns), imports sorted by ruff.
 - Type hints on all new code; keep `mypy` clean.
 - Docstrings on public classes and functions; no comments at the top of files (module docstrings, headers).
 - Log through a module-level `logger = Logger("<area>")` (`mkdocs_exporter.logging`), which prefixes
   messages with `[mkdocs-exporter.<area>]`; `PluginError` messages carry the prefix themselves.
 - Keep the core free of `mkdocs` imports: it is meant to be driven by other engines (a standalone
-  command for Zensical and MkDocs 2.0 is planned).
+  command exports websites built by Zensical, see `standalone/`).
 - Do not use `asyncio.get_event_loop()` / `asyncio.set_event_loop()`: the plugin runs inside other tools'
   processes (`mkdocs serve`, other plugins, notebooks).
 - MkDocs reuses plugin instances across rebuilds (`mkdocs serve`): reset per-build state in `on_config` /
   `on_pre_build`, never in `__init__` alone.
 - Keep these public surfaces stable (or deprecate them explicitly):
-  - the `exporter` entry point and documented configuration keys;
+  - the `exporter` entry point, documented configuration keys and the options of the `exporter` front
+    matter key (per-page options go there, never in top-level keys, which other tools may use);
   - `mkdocs_exporter.formats.pdf.buttons.download.*`, `...buttons.book.*` and `mkdocs_exporter.page.Page`;
   - the `window.MkDocsExporter` JavaScript hooks and the `mkdocs-exporter-*` CSS classes.
 - Commits follow [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`,
@@ -192,6 +200,8 @@ Design decisions backed by measurements (don't revert them without measuring aga
   `project.build(exporter={...}, **mkdocs_config)` merges options into the defaults of
   `tests/conftest.py`; `project.serve(builds=2, dirty=False)` reproduces `mkdocs serve` rebuilds;
   `project.write(path, content)` customizes the project first.
+- `tests/integration/test_standalone.py` builds the fixture with Zensical (a dev dependency; skipped when
+  missing) and runs the command in-process (`click.testing.CliRunner`).
 - The example projects (`examples/`) are built by `tests/integration/test_examples.py`, which checks what the
   documentation says each one does: a new project needs a test, and `make examples` to refresh its previews.
 - Inspect output with `site.pdf(path)` (`tests/support/pdf.py`): text per page, links, outline, metadata,
@@ -217,7 +227,7 @@ the version or tag by hand.
 4. Release candidates: while `"versioning": "prerelease"` and `"prerelease": true` are set, versions are
    `x.y.z-rc.N` (`x.y.zrcN` on PyPI) and GitHub releases are marked as pre-releases. For the final
    version, remove both settings in a commit whose body has `Release-As: x.y.z`, and install instructions
-   (README, getting started, migration guide, CI guide) no longer ask for a pre-release: search for
+   (README, getting started, migration guide, CI and Zensical guides) no longer ask for a pre-release: search for
    `7.0.0rc1`.
 5. Release pull requests are opened with a GitHub App's token when the repository has the
    `RELEASE_APP_CLIENT_ID` variable and the `RELEASE_APP_PRIVATE_KEY` secret (an app with read and write
