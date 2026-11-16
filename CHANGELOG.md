@@ -5,17 +5,25 @@ Entries are generated from commit messages ([Conventional Commits](https://www.c
 
 ## [7.0.0-rc.2](https://github.com/adrienbrignon/mkdocs-exporter/compare/v7.0.0-rc.1...v7.0.0-rc.2) (2026-11-16)
 
-
 ### Added
 
-* export websites built by Zensical (experimental command) ([f30a245](https://github.com/adrienbrignon/mkdocs-exporter/commit/f30a24542adb5e89934921edb10afd7f1fb3c914))
-* namespace the teleport attribute (`data-mkdocs-exporter-teleport`) ([d71d160](https://github.com/adrienbrignon/mkdocs-exporter/commit/d71d160b4532043323ed487ff97895420dd4a7f1))
-* per-page options under the `exporter` key of the front matter ([f0465e6](https://github.com/adrienbrignon/mkdocs-exporter/commit/f0465e63a6f4e51c14d4fe889fbe4e0bcad2eb60))
+- Per-page options under the `exporter` key of the front matter (`exporter.pdf.enabled`, `exporter.pdf.covers`, `exporter.pdf.toc.enabled`, `exporter.buttons`), validated: a misspelled option or a value of the wrong type fails the build. Defaults for a directory can come from `.meta.yml` files (Material's `meta` plugin).
+- `mkdocs-exporter build` exports websites built by Zensical, once they are built (experimental).
+- `data-mkdocs-exporter-teleport` moves elements elsewhere in documents and pages (e.g. a cover's styles to the head).
 
+### Changed
+
+- Requires Python 3.11.5+.
+- Documents and books no longer carry duplicates of shared objects (e.g. the color profile of images): this documentation's book is 5 % smaller.
 
 ### Fixed
 
-* **pdf:** merge the objects pypdf duplicates when copying documents ([cd1cf0a](https://github.com/adrienbrignon/mkdocs-exporter/commit/cd1cf0a3d3f7b81c0332ace1ad5547daa10d7ba0))
+- The "Object count … exceeds defined trailer size" message printed while finishing books with images.
+
+### Deprecated
+
+- The top-level front matter keys `pdf`, `covers`, `hide: [covers]`, `toc`, `buttons` and `pdf-icon`, replaced by the `exporter` key (they still work, with a warning, which fails builds run with `--strict`).
+- The `data-teleport` attribute, replaced by `data-mkdocs-exporter-teleport` (still supported, with a warning).
 
 ## [7.0.0-rc.1](https://github.com/adrienbrignon/mkdocs-exporter/compare/v6.2.0...v7.0.0-rc.1) (2026-11-16)
 
