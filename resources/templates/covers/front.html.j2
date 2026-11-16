@@ -1,9 +1,7 @@
 {% set url = config.site_url | replace("https://", "") | trim("/") %}
 <style data-mkdocs-exporter-teleport="head">
-  /* The footer is in the margin of the page: at its bottom, whatever its size */
+  /* The footer is in the margin of the page (the margins of pages, see `pdf.css`) */
   @page :first {
-    margin: 2cm 2cm 2.6cm;
-
     @bottom-left {
       content: "{{ version }}";
       font-family: "Roboto Mono", monospace;
