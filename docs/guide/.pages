@@ -1,0 +1,9 @@
+title: User guide
+nav:
+  - documents.md
+  - cover-pages.md
+  - headers-and-footers.md
+  - tables-of-contents.md
+  - books.md
+  - styles-and-scripts.md
+  - buttons.md

@@ -27,13 +27,7 @@ mkdocs-exporter build
 
 The documents are written into the built website, next to its pages (e.g. `site/guide/index.pdf`), and books where their `output` says.
 
-| Option | Effect |
-|---|---|
-| `-f`, `--config-file` | The configuration file of the website, when it isn't in the current directory |
-| `-s`, `--strict` | Fails when warnings are logged |
-| `-v`, `--verbose` | Logs details |
-
-`mkdocs-exporter --version` shows the version of the plugin, and `mkdocs-exporter build --help` these options.
+See [Command line](../reference/command-line.md) for its options (e.g. `--strict`).
 
 ## Configuration
 

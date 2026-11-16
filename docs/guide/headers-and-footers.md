@@ -72,7 +72,7 @@ In the following layouts, `header` and `footer` are under `formats.pdf`, as abov
 
 ## Using CSS
 
-Headers and footers are generated as [page margin boxes](https://www.w3.org/TR/css-page-3/#margin-boxes): they can be styled, or written entirely, in your own [stylesheet](customizing-documents.md#stylesheets). For instance:
+Headers and footers are generated as [page margin boxes](https://www.w3.org/TR/css-page-3/#margin-boxes): they can be styled, or written entirely, in your own [stylesheet](styles-and-scripts.md#stylesheets). For instance:
 
 ```css
 @page {
@@ -94,4 +94,4 @@ Headers and footers are generated as [page margin boxes](https://www.w3.org/TR/c
 ```
 
 The generated rules come before your stylesheets, so they can be refined there.
-Browsers don't support running headers in CSS (`string-set`): use the `{section}` and `{page_title}` placeholders, or [Paged.js](customizing-documents.md#using-paged-js).
+Browsers don't support running headers in CSS (`string-set`): use the `{section}` and `{page_title}` placeholders, or [Paged.js](styles-and-scripts.md#using-paged-js).

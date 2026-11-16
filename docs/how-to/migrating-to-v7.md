@@ -22,8 +22,8 @@ Version 7 is a release candidate for now: install it with `pip install "mkdocs-e
 Pages are now laid out by Chromium itself, which is faster and supports more CSS (nesting, `@page` rules in media queries, different page sizes), instead of the bundled [Paged.js](https://pagedjs.org/) polyfill.
 Page sizes, margins, margin boxes with page counters, named pages and `@page :first` keep working.
 
-- Running headers written with `string-set` / `string()`: use the [`header` and `footer` options](../configuration/headers-and-footers.md) (`{section}`, `{page_title}`) instead.
-- Other Paged.js features (`target-counter`, footnotes, `running()`, `:blank`, left/right page breaks, `Paged.registerHandlers`): [load Paged.js yourself](../configuration/customizing-documents.md#using-paged-js).
+- Running headers written with `string-set` / `string()`: use the [`header` and `footer` options](../guide/headers-and-footers.md) (`{section}`, `{page_title}`) instead.
+- Other Paged.js features (`target-counter`, footnotes, `running()`, `:blank`, left/right page breaks, `Paged.registerHandlers`): [load Paged.js yourself](../guide/styles-and-scripts.md#using-paged-js).
 - Pagination may differ slightly, as layouts are computed by another engine.
 - Elements with `position: fixed` are repeated on every page when they belong to the body (its children, `body::before` and `body::after`); fixed elements inside the page's content are only printed on its first page.
 - Backgrounds of `@page` rules are printed: when one is set (e.g. by a cover page), the website's own background is left out of documents, give it to pages with `@page { background: ... }` if needed.
@@ -43,12 +43,12 @@ Cover pages are now Jinja templates rendered by the plugin, inserted into PDF do
 - Templates are no longer processed as Markdown: use HTML instead of Markdown syntax and emoji shortcodes.
 - Cover pages are no longer part of the website's pages (they were hidden from them).
 - The back cover comes after footnotes.
-- Covers sized to fill the page (e.g. with a fixed height) may overflow onto a blank page: end the front cover with `break-after: page`, and draw full-page backgrounds with `@page :first` instead (see [Cover pages](../configuration/generating-pdf-documents.md#cover-pages)).
+- Covers sized to fill the page (e.g. with a fixed height) may overflow onto a blank page: end the front cover with `break-after: page`, and draw full-page backgrounds with `@page :first` instead (see [Cover pages](../guide/cover-pages.md)).
 - Elements are moved elsewhere in the document (e.g. styles to its head) with the `data-mkdocs-exporter-teleport` attribute instead of `data-teleport`, which other tools may use. `data-teleport` still works, with a warning.
 
 ## Books (combined documents)
 
-Books are no longer made by rendering every page again and merging the documents: the pages are combined into a single HTML document, printed once (see [How books are printed](../configuration/books.md#how-books-are-printed)).
+Books are no longer made by rendering every page again and merging the documents: the pages are combined into a single HTML document, printed once (see [How books are printed](../guide/books.md#how-books-are-printed)).
 
 - `aggregator` is deprecated (it still works, with a warning): books are listed in `books`, with the same options (`enabled` is `true` by default, `output` is `book.pdf`).
 

@@ -9,7 +9,7 @@ exporter:
         target: _blank
 ---
 
-# Adding buttons to pages
+# Buttons
 
 You can define custom buttons at the top of your pages.
 

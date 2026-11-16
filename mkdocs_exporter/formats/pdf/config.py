@@ -17,7 +17,7 @@ class Stylesheet(c.File):
             raise c.ValidationError(
                 f"Sass stylesheets are no longer supported ('{value}'), "
                 "use plain CSS instead. "
-                "See https://adrienbrignon.github.io/mkdocs-exporter/guides/migrating-to-v7/"
+                "See https://adrienbrignon.github.io/mkdocs-exporter/how-to/migrating-to-v7/"
             )
 
         return path

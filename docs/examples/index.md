@@ -39,7 +39,7 @@ The same page, printed with the [`material`](https://squidfunk.github.io/mkdocs-
 
 {{ previews("field-guide:4", "field-guide-readthedocs") }}
 
-Other themes are supported on a best-effort basis: their navigation is hidden by generic rules, which a [stylesheet](../configuration/customizing-documents.md#stylesheets) can complete.
+Other themes are supported on a best-effort basis: their navigation is hidden by generic rules, which a [stylesheet](../guide/styles-and-scripts.md#stylesheets) can complete.
 
 ## Content
 

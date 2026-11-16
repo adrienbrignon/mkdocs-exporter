@@ -62,7 +62,7 @@ jobs:
 {% endraw %}
 
 - The browser is cached for each version of Playwright (in `~/Library/Caches/ms-playwright` on macOS, `~\AppData\Local\ms-playwright` on Windows); `--with-deps` still installs its system libraries on every run.
-- Documents are cached too: only the pages that changed since the last run are rendered (see [Cache](../configuration/generating-pdf-documents.md#cache)).
+- Documents are cached too: only the pages that changed since the last run are rendered (see [Cache](performance.md#cache)).
 - GitHub Pages has to be published by GitHub Actions (*Settings* › *Pages* › *Source*).
 
 ## GitLab CI

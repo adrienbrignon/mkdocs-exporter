@@ -44,7 +44,7 @@ exporter:
           - https://unpkg.com/mermaid@11/dist/mermaid.min.js
         ```
 
-        Diagrams drawn later (e.g. by a script of your own) can be awaited in a [`render` hook](../../configuration/customizing-documents.md#scripts).
+        Diagrams drawn later (e.g. by a script of your own) can be awaited in a [`render` hook](../../guide/styles-and-scripts.md#scripts).
 
 ## Mermaid
 

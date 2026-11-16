@@ -29,11 +29,11 @@ Exports your [*MkDocs*](https://github.com/mkdocs/mkdocs), [*ProperDocs*](https:
 
 - 📚 **Books** - combine pages into PDF documents with bookmarks, a table of contents and working links
 - 🎨 **Customizable** - full control over the resulting documents
-  - [Cover pages](https://adrienbrignon.github.io/mkdocs-exporter/configuration/generating-pdf-documents/#cover-pages) written as Jinja templates
-  - [Headers and footers](https://adrienbrignon.github.io/mkdocs-exporter/configuration/headers-and-footers/) with page numbers
-  - Custom [stylesheets, scripts and hooks](https://adrienbrignon.github.io/mkdocs-exporter/configuration/customizing-documents/)
+  - [Cover pages](https://adrienbrignon.github.io/mkdocs-exporter/guide/cover-pages/) written as Jinja templates
+  - [Headers and footers](https://adrienbrignon.github.io/mkdocs-exporter/guide/headers-and-footers/) with page numbers
+  - Custom [stylesheets, scripts and hooks](https://adrienbrignon.github.io/mkdocs-exporter/guide/styles-and-scripts/)
   - Per-page options in the [front matter](https://adrienbrignon.github.io/mkdocs-exporter/reference/front-matter/)
-  - [Buttons](https://adrienbrignon.github.io/mkdocs-exporter/configuration/adding-buttons-to-pages/) at the top of your pages (e.g. to download the page or the book as PDF)
+  - [Buttons](https://adrienbrignon.github.io/mkdocs-exporter/guide/buttons/) at the top of your pages (e.g. to download the page or the book as PDF)
   - Dedicated support for the [`material`](https://github.com/squidfunk/mkdocs-material) and [`readthedocs`](https://www.mkdocs.org/user-guide/choosing-your-theme/#readthedocs) themes, check out [sample PDF documents](https://adrienbrignon.github.io/mkdocs-exporter/examples/#themes)
 - ♿ **Accessible** - documents are tagged for screen readers, with bookmarks, their language and document information
 - 🚀 **Fast** - documents are rendered concurrently, and unchanged ones are reused from a cache
@@ -45,7 +45,7 @@ Exports your [*MkDocs*](https://github.com/mkdocs/mkdocs), [*ProperDocs*](https:
 |---|---|
 | MkDocs `>= 1.6, < 2` | ✅ A plugin, documents are generated while building the website |
 | [ProperDocs](https://github.com/ProperDocs/properdocs) | ✅ The same plugin |
-| [Zensical](https://zensical.org/) | 🧪 A command, run once the website is built (experimental, see the [Zensical guide](https://adrienbrignon.github.io/mkdocs-exporter/guides/zensical/)) |
+| [Zensical](https://zensical.org/) | 🧪 A command, run once the website is built (experimental, see the [Zensical guide](https://adrienbrignon.github.io/mkdocs-exporter/how-to/zensical/)) |
 | MkDocs 2.0 | ⏳ Not yet (it doesn't support plugins) |
 
 Requires Python `>= 3.11.5`.
@@ -61,7 +61,7 @@ playwright install --with-deps --only-shell chromium
 
 Version 7 is a release candidate: until 7.0.0 is released, `pip install mkdocs-exporter` (without a version) installs 6.2.0.
 
-Upgrading from v6? Read the [migration guide](https://adrienbrignon.github.io/mkdocs-exporter/guides/migrating-to-v7/).
+Upgrading from v6? Read the [migration guide](https://adrienbrignon.github.io/mkdocs-exporter/how-to/migrating-to-v7/).
 
 ## Usage
 

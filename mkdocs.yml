@@ -73,8 +73,15 @@ plugins:
   - redirects:
       redirect_maps:
         'index.md': 'getting-started.md'
-        'migration/v7.md': 'guides/migrating-to-v7.md'
-        'configuration/combining-pages.md': 'configuration/books.md'
+        'migration/v7.md': 'how-to/migrating-to-v7.md'
+        'configuration/generating-pdf-documents.md': 'guide/documents.md'
+        'configuration/customizing-documents.md': 'guide/styles-and-scripts.md'
+        'configuration/headers-and-footers.md': 'guide/headers-and-footers.md'
+        'configuration/combining-pages.md': 'guide/books.md'
+        'configuration/adding-buttons-to-pages.md': 'guide/buttons.md'
+        'guides/continuous-integration.md': 'how-to/continuous-integration.md'
+        'guides/zensical.md': 'how-to/zensical.md'
+        'guides/troubleshooting.md': 'how-to/troubleshooting.md'
         'samples/diagrams.md': 'examples/content/diagrams.md'
         'samples/mathematics.md': 'examples/content/mathematics.md'
         'samples/multimedia.md': 'examples/content/multimedia.md'

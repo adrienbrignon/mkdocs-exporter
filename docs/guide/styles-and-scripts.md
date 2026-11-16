@@ -1,4 +1,4 @@
-# Customizing documents
+# Styles and scripts
 
 ## Stylesheets
 
@@ -34,7 +34,7 @@ Documents are styled like your website, with print media rules. Custom styleshee
     }
     ```
 
-Stylesheets are plain CSS: nesting is supported, Sass isn't (see the [migration guide](../guides/migrating-to-v7.md#sass)).
+Stylesheets are plain CSS: nesting is supported, Sass isn't (see the [migration guide](../how-to/migrating-to-v7.md#sass)).
 
 Documents are laid out by Chromium, which supports page sizes (they can differ from a page to another), margins, [margin boxes](https://www.w3.org/TR/css-page-3/#margin-boxes) with page counters, named pages (`page: ...`), `@page :first` and page breaks. Running headers are available through [headers and footers](headers-and-footers.md); for other features of the [CSS Generated Content for Paged Media](https://www.w3.org/TR/css-gcpm-3/) module, see [Using Paged.js](#using-paged-js).
 
@@ -76,18 +76,6 @@ Pages are printed on the background of your website (in print media) unless a `@
   margin: 0;
   background: url("/assets/images/cover.png") center / cover;
 }
-```
-
-## Page titles
-
-Some themes don't print the page's title when its content has no first-level heading. The `title` option inserts it in documents:
-
-```yaml
-plugins:
-  - exporter:
-      formats:
-        pdf:
-          title: true
 ```
 
 ## Utility classes
@@ -171,9 +159,7 @@ window.MkDocsExporter = {
 };
 ```
 
-- Hooks run in that order, once per document: a book's hooks run once for the whole book.
-- An error in a hook is logged as a warning: the document is still printed, but not [cached](generating-pdf-documents.md#cache).
-- Waiting for fonts, images and diagrams gives up after 10 seconds, with a warning.
+See [JavaScript hooks](../reference/javascript.md) for when hooks run and how their errors are handled.
 
 When other scripts need more time, either use a hook or give them a delay (in milliseconds):
 
@@ -214,19 +200,3 @@ To use it, download [`paged.polyfill.min.js`](https://unpkg.com/pagedjs@0.4.3/di
 
 Paged.js lays out pages in JavaScript: expect documents to take longer to generate, especially books.
 Paged.js 0.4 also fails on some `:nth-child(An+B)` selectors, such as those of the `readthedocs` theme.
-
-## Browser
-
-The browser can be configured too:
-
-```yaml
-plugins:
-  - exporter:
-      formats:
-        pdf:
-          browser:
-            timeout: 60000 # Time given to each document to render (ms)
-            channel: chrome # Use an installed browser instead of Chromium (138 or later)
-            debug: true # Log the browser's console
-            args: [] # Extra command-line arguments
-```

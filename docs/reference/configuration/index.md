@@ -1,6 +1,6 @@
 # Configuration
 
-The options of the plugin, set in `mkdocs.yml` (or in `zensical.toml`, see [Zensical](../../guides/zensical.md)):
+The options of the plugin, set in `mkdocs.yml` (or in `zensical.toml`, see [Zensical](../../how-to/zensical.md)):
 
 ```yaml
 plugins:

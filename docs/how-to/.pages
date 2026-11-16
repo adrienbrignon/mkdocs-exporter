@@ -1,5 +1,7 @@
+title: How-to
 nav:
   - continuous-integration.md
+  - performance.md
   - zensical.md
   - troubleshooting.md
   - migrating-to-v7.md

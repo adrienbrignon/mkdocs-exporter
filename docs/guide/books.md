@@ -41,19 +41,19 @@ flowchart LR
 ```
 
 What the browser can't print by itself (the page numbers of the table of contents, blank pages and `{section}`) is computed from a draft print of the book's layout, then the book is printed again.
-Books are printed on every build: the [cache](generating-pdf-documents.md#cache) only reuses the documents of pages.
+Books are printed on every build: the [cache](../how-to/performance.md#cache) only reuses the documents of pages.
 
 Since every page is part of the same HTML document:
 
 - each page of the website starts on a new page;
 - identifiers are prefixed by page (e.g. `p2-installation`), so that footnotes, tabs and other references of different pages don't interfere: stylesheets and scripts targeting identifiers of the content (`#installation`) don't match them in books;
-- stylesheets and scripts loaded by some pages only are loaded once for the whole book, and the scripts of [`formats.pdf.scripts`](customizing-documents.md#scripts) run once;
+- stylesheets and scripts loaded by some pages only are loaded once for the whole book, and the scripts of [`formats.pdf.scripts`](styles-and-scripts.md#scripts) run once;
 - `@page :first` rules apply to the pages of front covers (in a page's own document, its first page is its front cover);
 - styles teleported to the head by cover pages (`<style data-mkdocs-exporter-teleport="head">`) are included once when they are the same for every page; otherwise they only apply to their own page.
 
 ## Cover pages
 
-The `covers` option tells which [cover pages](generating-pdf-documents.md#cover-pages) are kept:
+The `covers` option tells which [cover pages](cover-pages.md) are kept:
 
 | Value | Cover pages kept | For instance |
 |---|---|---|
@@ -92,34 +92,14 @@ Other links point to the website (`site_url` or `formats.pdf.url`), or are relat
 
 ## Table of contents
 
-A table of contents can be inserted after the first front cover:
+A table of contents can be inserted after the first front cover (see [Tables of contents](tables-of-contents.md#books)):
 
 ```yaml
 books:
   - output: documentation.pdf
     toc:
       enabled: true
-      title: Contents # "Table of contents" by default
-      depth: 2 # Pages and their second-level headings
 ```
-
-Its appearance can be changed with CSS (`.mkdocs-exporter-toc` and the classes of the default [template](https://github.com/adrienbrignon/mkdocs-exporter/blob/master/mkdocs_exporter/core/resources/toc.html)), or replaced with a Jinja template of your own (`toc.template`, relative to `mkdocs.yml`).
-Templates receive the `title` and the `entries` of the table of contents, each entry having a `title`, a `page` number, an `href` and `children`: navigation sections, then pages, then their headings.
-For instance, a table of contents laid out as a table:
-
-=== "`mkdocs.yml`"
-
-    {{ example("toc-template/mkdocs.yml") }}
-
-=== "`toc.html.j2`"
-
-    {{ example("toc-template/toc.html.j2") }}
-
-=== "`pdf.css`"
-
-    {{ example("toc-template/pdf.css") }}
-
-{{ previews("toc-template") }}
 
 ## Starting pages on the right
 
