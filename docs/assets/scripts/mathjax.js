@@ -6,8 +6,19 @@ window.MathJax = {
     processEnvironments: true
   },
   options: {
+    enableMenu: false,
     ignoreHtmlClass: '.*|',
-    processHtmlClass: 'arithmatex'
+    enableEnrichment: false,
+    processHtmlClass: 'arithmatex',
+    menuOptions: {
+      settings: {
+        enrich: false,
+        collapsible: false,
+        speech: false,
+        braille: false,
+        assistiveMml: false,
+      }
+    },
   }
 };
 
