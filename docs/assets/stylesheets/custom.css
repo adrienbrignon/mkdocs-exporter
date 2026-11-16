@@ -13,12 +13,6 @@
   }
 }
 
-@page {
-  @bottom-center {
-    content: 'Page ' counter(page) ' of ' counter(pages);
-  }
-}
-
 .md-icon-spin {
   animation-name: spin;
   animation-duration: 3s;
@@ -59,4 +53,26 @@ a.autorefs-external::after {
 a.external:hover::after,
 a.autorefs-external:hover::after {
   background-color: var(--md-accent-fg-color);
+}
+
+/* Previews of example documents */
+
+.md-typeset .previews > p {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+}
+
+.md-typeset .previews img,
+.md-typeset img.thumbnail {
+  height: 14rem;
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 0.2rem;
+  box-shadow: var(--md-shadow-z1);
+}
+
+.md-typeset .grid.cards img.thumbnail {
+  display: block;
+  height: 10rem;
+  margin: 0 auto 0.8rem;
 }

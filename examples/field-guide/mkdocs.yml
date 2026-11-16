@@ -1,0 +1,24 @@
+INHERIT: ../base.yml
+
+plugins:
+  - exporter:
+      formats:
+        pdf:
+          stylesheets:
+            - pdf.css
+          covers:
+            front: covers/front.html.j2
+            back: covers/back.html.j2
+          header:
+            left: "{site_name}"
+            right: "{section}"
+          footer:
+            center: "Page {page} of {pages}"
+          toc:
+            enabled: true
+            depth: 3
+          books:
+            - output: field-guide.pdf
+              covers: limits
+              toc:
+                enabled: true

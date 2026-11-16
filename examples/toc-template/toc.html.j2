@@ -1,0 +1,10 @@
+<h1>{{ title }}</h1>
+<table class="contents">
+  {%- for entry in entries recursive %}
+  <tr class="level-{{ loop.depth }}">
+    <td><a href="{{ entry.href }}">{{ entry.title }}</a></td>
+    <td>{{ entry.page }}</td>
+  </tr>
+  {{- loop(entry.children) }}
+  {%- endfor %}
+</table>

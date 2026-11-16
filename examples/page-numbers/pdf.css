@@ -1,0 +1,15 @@
+@page {
+  size: A4;
+  margin: 2.5cm 2cm;
+
+  @top-left {
+    color: #3949ab;
+    font-weight: 600;
+    border-bottom: 1px solid #c5cae9;
+  }
+
+  @top-right {
+    color: #3949ab;
+    border-bottom: 1px solid #c5cae9;
+  }
+}

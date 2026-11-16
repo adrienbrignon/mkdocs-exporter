@@ -1,0 +1,10 @@
+INHERIT: ../base.yml
+
+plugins:
+  - exporter:
+      formats:
+        pdf:
+          stylesheets:
+            - pdf.css
+          footer:
+            center: "{page}"

@@ -2,31 +2,50 @@ ifeq ($(origin .RECIPEPREFIX), undefined)
   $(error This Make does not support .RECIPEPREFIX. Please use GNU Make 4.0 or later)
 endif
 
-PDF = true
-PDF_AGGREGATOR = true
-DEBUG = false
+PDF ?= true
+BOOKS ?= true
 
 .RECIPEPREFIX = >
-.PHONY: install build serve clean fclean re browser
+.PHONY: all install browser lint format typecheck test build serve examples dist clean fclean re
 
-all: build
+all: lint typecheck test
 
 install:
-> poetry install $(ARGS)
+> uv sync $(ARGS)
 
 browser:
-> poetry run playwright install $(if $(FORCE),--force,) --with-deps
+> uv run playwright install --only-shell chromium $(if $(WITH_DEPS),--with-deps,) $(if $(FORCE),--force,)
+
+lint:
+> uv run ruff check
+> uv run ruff format --check
+
+format:
+> uv run ruff check --fix
+> uv run ruff format
+
+typecheck:
+> uv run mypy
+
+test:
+> uv run pytest -n auto --dist loadscope $(ARGS)
 
 build:
->@ MKDOCS_EXPORTER_PDF=$(PDF) MKDOCS_EXPORTER_PDF_AGGREGATOR=$(PDF_AGGREGATOR) poetry run mkdocs build
+>@ MKDOCS_EXPORTER_PDF=$(PDF) MKDOCS_EXPORTER_BOOKS=$(BOOKS) uv run properdocs build -f mkdocs.yml $(ARGS)
 
 serve:
->@ MKDOCS_EXPORTER_PDF=$(PDF) MKDOCS_EXPORTER_PDF_AGGREGATOR=$(PDF_AGGREGATOR) poetry run mkdocs serve
+>@ MKDOCS_EXPORTER_PDF=$(PDF) MKDOCS_EXPORTER_BOOKS=$(BOOKS) uv run properdocs serve -f mkdocs.yml $(ARGS)
+
+examples:
+> uv run python examples/build.py
+
+dist:
+> uv build
 
 clean:
-> $(RM) -rf dist/
+> $(RM) -r dist/ site/ .pytest_cache/ .mypy_cache/ .ruff_cache/
 
 fclean: clean
-> $(RM) -rf .venv/
+> $(RM) -r .venv/
 
 re: clean all

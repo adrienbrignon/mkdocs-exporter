@@ -1,0 +1,14 @@
+<h1 class="mkdocs-exporter-toc-title">{{ title }}</h1>
+<ol class="mkdocs-exporter-toc-entries">
+  {%- for entry in entries recursive %}
+  <li class="mkdocs-exporter-toc-entry mkdocs-exporter-toc-level-{{ loop.depth }}">
+    <a href="{{ entry.href }}">
+      <span class="mkdocs-exporter-toc-label">{{ entry.title }}</span>
+      <span class="mkdocs-exporter-toc-page">{{ entry.page }}</span>
+    </a>
+    {%- if entry.children %}
+    <ol class="mkdocs-exporter-toc-entries">{{ loop(entry.children) }}</ol>
+    {%- endif %}
+  </li>
+  {%- endfor %}
+</ol>

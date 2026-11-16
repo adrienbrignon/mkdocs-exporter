@@ -1,0 +1,13 @@
+@page {
+  size: letter;
+  margin: 2cm;
+}
+
+/* Elements of the `landscape` class are printed on landscape pages */
+@page landscape {
+  size: letter landscape;
+}
+
+.landscape {
+  page: landscape;
+}

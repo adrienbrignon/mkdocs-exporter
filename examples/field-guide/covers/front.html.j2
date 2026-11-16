@@ -1,0 +1,85 @@
+<style data-teleport="head">
+  @page :first {
+    margin: 0;
+  }
+
+  .manual {
+    break-after: page;
+    padding: 2cm 2cm 0;
+    color: #1a1a1a;
+    font-family: "DejaVu Sans Mono", Menlo, Consolas, monospace;
+    font-size: 9.5pt;
+    line-height: 1.6;
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      padding-bottom: 0.2cm;
+      border-bottom: 1px solid;
+      font-size: 8.5pt;
+    }
+
+    .name {
+      margin: 5cm 0 1.2cm;
+      font-size: 36pt;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+
+      /* A cursor after the name */
+      &::after {
+        content: "";
+        display: inline-block;
+        width: 0.5em;
+        height: 0.85em;
+        margin-left: 0.1em;
+        vertical-align: -0.1em;
+        background: #002fa7;
+      }
+    }
+
+    .label {
+      margin-top: 0.6cm;
+      color: #002fa7;
+      font-weight: 700;
+    }
+
+    .text {
+      padding-left: 4ch;
+    }
+
+    .number {
+      color: #9e9e9e;
+    }
+  }
+</style>
+{% set home = page.is_homepage %}
+{% set name = (config.site_name if home else page.title) | lower | replace(" ", "-") %}
+{% set toc = page.toc | list %}
+{% set sections = toc[0].children if toc and toc[0].level == 1 else toc %}
+{% set related = (page.parent.children | rejectattr("url", "equalto", page.url) | list) if page.parent else [] %}
+<div class="manual">
+  <div class="header">
+    <span>{{ config.site_name | upper }}</span>
+    <span>{{ page.parent.title if page.parent else config.site_author }}</span>
+    <span>{{ config.site_name | upper }}</span>
+  </div>
+  <div class="name">{{ name }}</div>
+  <div class="label">NAME</div>
+  <div class="text">{{ name }} - {{ config.site_name if home else page.title }}</div>
+  <div class="label">DESCRIPTION</div>
+  <div class="text">{{ config.site_description if home else page.meta.description }}</div>
+  {% if sections %}
+  <div class="label">SECTIONS</div>
+  <div class="text">
+    {% for section in sections %}
+    <div><span class="number">{{ "%02d" | format(loop.index) }}</span> {{ section.title }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% if related %}
+  <div class="label">SEE ALSO</div>
+  <div class="text">
+    {% for other in related %}{{ other.title | lower | replace(" ", "-") }}{{ ", " if not loop.last }}{% endfor %}
+  </div>
+  {% endif %}
+</div>

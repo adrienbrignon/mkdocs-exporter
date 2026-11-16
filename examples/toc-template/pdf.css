@@ -1,0 +1,24 @@
+.contents {
+  width: 100%;
+
+  a {
+    color: inherit;
+  }
+
+  td:last-child {
+    text-align: right;
+  }
+
+  .level-1 td {
+    padding-top: 0.8em;
+    font-weight: bold;
+  }
+
+  .level-2 td:first-child {
+    padding-left: 1.5em;
+  }
+
+  .level-3 td:first-child {
+    padding-left: 3em;
+  }
+}

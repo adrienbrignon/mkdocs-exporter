@@ -1,0 +1,202 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DISABLE_MKDOCS_2_WARNING: 'true'
+  NO_MKDOCS_2_WARNING: '1'
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v10.3.3
+        with:
+          enable-cache: true
+      - name: Install dependencies
+        run: uv sync --locked --no-default-groups --group dev
+      - name: Run Ruff linter
+        run: uv run --no-sync ruff check --output-format github
+      - name: Run Ruff formatter
+        run: uv run --no-sync ruff format --check
+
+  typecheck:
+    name: Type check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v10.3.3
+        with:
+          enable-cache: true
+      - name: Install dependencies
+        run: uv sync --locked --no-default-groups --group dev
+      - name: Run mypy
+        run: uv run --no-sync mypy
+
+  test:
+    name: Test (Python ${{ matrix.python }}, ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        python: ['3.11', '3.12', '3.13', '3.14']
+        include:
+          - os: windows-latest
+            python: '3.13'
+    env:
+      UV_PYTHON: ${{ matrix.python }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v10.3.3
+        with:
+          enable-cache: true
+      - name: Install dependencies
+        run: uv sync --locked --no-default-groups --group dev
+      - name: Get Playwright version
+        id: playwright
+        shell: bash
+        run: echo "version=$(uv run --no-sync python -c 'import importlib.metadata as m; print(m.version("playwright"))')" >> "$GITHUB_OUTPUT"
+      - name: Cache browsers
+        uses: actions/cache@v6
+        with:
+          path: ${{ runner.os == 'Windows' && '~\AppData\Local\ms-playwright' || '~/.cache/ms-playwright' }}
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+      - name: Install browser
+        run: uv run --no-sync playwright install --with-deps --only-shell chromium
+      - name: Run tests
+        run: uv run --no-sync pytest -n auto --dist loadscope --cov --cov-report=term
+      - name: Report coverage
+        if: runner.os == 'Linux' && matrix.python == '3.13'
+        run: uv run --no-sync coverage report --format=markdown >> "$GITHUB_STEP_SUMMARY"
+
+  minimal:
+    name: Test (without Material for MkDocs)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v10.3.3
+        with:
+          enable-cache: true
+      - name: Install dependencies
+        run: |
+          uv sync --locked --no-default-groups
+          uv pip install pytest pymdown-extensions
+      - name: Install browser
+        run: uv run --no-sync playwright install --with-deps --only-shell chromium
+      - name: Run unit tests
+        run: uv run --no-sync pytest tests/unit
+      - name: Run integration tests (readthedocs theme)
+        run: uv run --no-sync pytest tests/integration -k readthedocs
+
+  properdocs:
+    name: Test (ProperDocs)
+    runs-on: ubuntu-latest
+    env:
+      MKDOCS_EXPORTER_TEST_PROPERDOCS: '1'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v10.3.3
+        with:
+          enable-cache: true
+      - name: Install dependencies
+        run: |
+          uv sync --locked --no-default-groups --group dev
+          uv pip install properdocs properdocs-theme-mkdocs properdocs-theme-readthedocs
+      - name: Install browser
+        run: uv run --no-sync playwright install --with-deps --only-shell chromium
+      - name: Run tests
+        run: uv run --no-sync pytest -n auto --dist loadscope
+
+  lowest:
+    name: Test (lowest supported versions)
+    runs-on: ubuntu-24.04
+    env:
+      UV_PYTHON: '3.11'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v10.3.3
+        with:
+          enable-cache: true
+      - name: Install dependencies
+        run: uv sync --resolution lowest-direct --no-default-groups --group dev
+      - name: Show versions
+        run: |
+          uv run --no-sync python - <<'PY'
+          import importlib.metadata as metadata
+
+          for name in ("mkdocs", "playwright", "pypdf", "beautifulsoup4", "lxml", "jinja2", "tinycss2"):
+              print(name, metadata.version(name))
+          PY
+      - name: Install browser
+        run: uv run --no-sync playwright install --with-deps --only-shell chromium
+      - name: Run tests
+        run: uv run --no-sync pytest -n auto --dist loadscope
+
+  package:
+    name: Package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v10.3.3
+        with:
+          enable-cache: true
+      - name: Build distributions
+        run: uv build
+      - name: Check bundled resources
+        run: |
+          python3 - <<'PY'
+          import glob, zipfile
+
+          names = zipfile.ZipFile(glob.glob("dist/*.whl")[0]).namelist()
+          required = ("pdf.js", "book.js", "material.js", "toc.html", "base.css", "material.css", "readthedocs.css")
+          missing = [r for r in required if not any(n.endswith(r) for n in names)]
+          assert not missing, f"missing from wheel: {missing}"
+          PY
+      - name: Upload distributions
+        uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dist/
+
+  all:
+    name: All checks
+    if: always()
+    needs: [lint, typecheck, test, minimal, properdocs, lowest, package]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check that every job succeeded
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          for result in $RESULTS; do
+            test "$result" = success
+          done

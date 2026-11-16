@@ -66,6 +66,5 @@ target/
 .venv/
 .python-version
 
-# poetry
-poetry.toml
-.python-version
+# MkDocs
+/site/

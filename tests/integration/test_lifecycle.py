@@ -1,0 +1,253 @@
+from __future__ import annotations
+
+import asyncio
+import logging
+import re
+from pathlib import Path
+from types import SimpleNamespace
+
+import pytest
+from mkdocs.commands.build import build
+from mkdocs.exceptions import Abort
+
+from tests.conftest import BOOK_BUTTON, Project, Site, merge
+
+pytestmark = pytest.mark.browser
+
+FAILING_PAGE = """
+window.MkDocsExporter = {
+  before: () => location.pathname.includes('reference') ? new Promise(() => {}) : null,
+};
+"""
+
+
+def test_consecutive_builds_in_the_same_process(project: Project) -> None:
+    """`mkdocs serve` rebuilds the site in the same process (#47)."""
+
+    project.build()
+    site = project.build()
+
+    assert "combined.pdf" in site.pdfs()
+
+
+def test_build_inside_a_running_event_loop(project: Project) -> None:
+    """The plugin doesn't conflict with an event loop run by the caller (#45)."""
+
+    async def main() -> Site:
+        return project.build()
+
+    site = asyncio.run(main())
+
+    assert "combined.pdf" in site.pdfs()
+
+
+def test_documents_are_not_generated_while_serving_by_default(
+    project: Project, exporter_logs
+) -> None:
+    site = project.serve(builds=1)
+
+    assert site.pdfs() == []
+    assert any("not generated while serving" in m for m in exporter_logs())
+
+
+def test_rebuilds_while_serving(project: Project) -> None:
+    """The plugin instance is kept across rebuilds and resets its state (#47, #49)."""
+
+    site = project.serve(builds=3, exporter={"formats": {"pdf": {"serve": True}}})
+
+    assert "combined.pdf" in site.pdfs()
+    assert site.pdf("combined.pdf").count("FRONT-COVER") == 4
+
+
+def test_browser_is_kept_while_serving(project: Project, exporter_logs) -> None:
+    project.serve(builds=3, exporter={"formats": {"pdf": {"serve": True}}})
+
+    assert sum("Launching browser" in m for m in exporter_logs()) == 1
+
+
+def test_browser_is_relaunched_when_its_options_change(
+    project: Project, exporter_logs
+) -> None:
+    serve = {"formats": {"pdf": {"serve": True}}}
+    cfg = project.config(serve)
+    plugin = cfg.plugins["exporter"]
+
+    cfg.plugins.on_startup(command="serve", dirty=False)
+
+    try:
+        build(cfg)
+        cfg = project.config(
+            merge(serve, {"formats": {"pdf": {"browser": {"args": ["--mute-audio"]}}}})
+        )
+        build(cfg)
+        cfg = project.config(
+            merge(
+                serve,
+                {
+                    "formats": {
+                        "pdf": {"browser": {"args": ["--mute-audio"], "timeout": 5000}}
+                    }
+                },
+            )
+        )
+        build(cfg)
+
+        assert plugin.browser is not None
+        assert plugin.browser.timeout == 5000
+    finally:
+        cfg.plugins.on_shutdown()
+
+    assert plugin.browser is None
+    assert sum("Launching browser" in m for m in exporter_logs()) == 2
+
+
+def test_dirty_rebuilds_while_serving(project: Project) -> None:
+    """Pages skipped by dirty rebuilds don't break books (#48)."""
+
+    site = project.serve(
+        builds=2, dirty=True, exporter={"formats": {"pdf": {"serve": True}}}
+    )
+
+    assert "combined.pdf" in site.pdfs()
+
+
+def test_a_failing_page_does_not_prevent_others_from_rendering(
+    project: Project, caplog: pytest.LogCaptureFixture
+) -> None:
+    project.write("scripts/fail.js", FAILING_PAGE)
+
+    with pytest.raises(Abort):
+        project.build(
+            exporter={
+                "formats": {
+                    "pdf": {
+                        "scripts": ["scripts/fail.js"],
+                        "browser": {"timeout": 3000},
+                    }
+                }
+            }
+        )
+
+    assert re.search(r"- reference\.md: Timed out after 3000 ms", caplog.text)
+    assert (project.path / "site" / "index.pdf").exists()
+    assert not (project.path / "site" / "reference" / "index.pdf").exists()
+
+
+def test_timeouts_are_reported_with_diagnostics(
+    project: Project, caplog: pytest.LogCaptureFixture
+) -> None:
+    project.write(
+        "scripts/hang.js",
+        "window.MkDocsExporter = { before: () => new Promise(() => {}) };",
+    )
+
+    with pytest.raises(Abort):
+        project.build(
+            exporter={
+                "formats": {
+                    "pdf": {
+                        "scripts": ["scripts/hang.js"],
+                        "browser": {"timeout": 2000},
+                    }
+                }
+            },
+        )
+
+    assert "- index.md: Timed out after 2000 ms" in caplog.text
+
+
+def test_rendering_failures_fail_the_build(
+    project: Project, caplog: pytest.LogCaptureFixture
+) -> None:
+    project.write(
+        "scripts/broken.js",
+        "window.MkDocsExporterTheme = { settle() { throw new Error('BROKEN'); } };",
+    )
+
+    with pytest.raises(Abort):
+        project.build(exporter={"formats": {"pdf": {"scripts": ["scripts/broken.js"]}}})
+
+    assert "- index.md: Rendering failed: Error: BROKEN" in caplog.text
+
+
+def test_files_of_documents_are_watched_while_serving(project: Project) -> None:
+    cfg = project.config({"formats": {"pdf": {"serve": True}}})
+    plugin = cfg.plugins["exporter"]
+    watched: list[str] = []
+
+    cfg.plugins.on_startup(command="serve", dirty=False)
+
+    try:
+        build(cfg)
+        plugin.on_serve(SimpleNamespace(watch=watched.append), config=cfg, builder=None)
+    finally:
+        cfg.plugins.on_shutdown()
+
+    assert {Path(path) for path in watched} == {
+        project.path / "pdf.css",
+        project.path / "covers" / "front.html",
+        project.path / "covers" / "back.html",
+    }
+
+
+def test_script_errors_do_not_prevent_rendering(
+    project: Project, exporter_logs
+) -> None:
+    project.write("scripts/broken.js", "throw new Error('broken script');")
+
+    site = project.build(
+        exporter={"formats": {"pdf": {"scripts": ["scripts/broken.js"]}}}
+    )
+
+    assert "index.pdf" in site.pdfs()
+    assert exporter_logs(logging.WARNING) == []
+
+
+def test_hook_errors_are_reported(project: Project, exporter_logs) -> None:
+    project.write(
+        "scripts/hook.js",
+        "window.MkDocsExporter = { render: () => { throw new Error('hook failure'); } };",
+    )
+
+    site = project.build(
+        exporter={"formats": {"pdf": {"scripts": ["scripts/hook.js"]}}}
+    )
+
+    assert "index.pdf" in site.pdfs()
+    assert any("hook failure" in m for m in exporter_logs(logging.WARNING))
+
+
+def test_missing_resources_are_reported(project: Project, exporter_logs) -> None:
+    project.write("docs/reference.md", "# Reference\n\n![Missing](missing.png)\n")
+
+    project.build()
+
+    warnings = exporter_logs(logging.WARNING)
+
+    assert any("reference.md" in m and "missing.png" in m for m in warnings)
+
+
+def test_explicit_mode_without_pages_warns(project: Project, exporter_logs) -> None:
+    site = project.build(exporter={"formats": {"pdf": {"explicit": True}}})
+
+    assert site.pdfs() == []
+    assert any("explicit mode" in m for m in exporter_logs(logging.WARNING))
+
+
+def test_duplicate_navigation_entries(project: Project) -> None:
+    """Pages listed twice in the navigation are combined once (#51)."""
+
+    site = project.build(nav=["index.md", "reference.md", {"Again": "reference.md"}])
+
+    assert site.pdf("combined.pdf").count("Plain reference page") == 1
+
+
+def test_pages_outside_the_navigation(project: Project) -> None:
+    """Pages outside the navigation get a document but are not in books."""
+
+    site = project.build(exporter={"buttons": [BOOK_BUTTON]}, nav=["index.md"])
+
+    assert "reference/index.pdf" in site.pdfs()
+    assert "Plain reference page" not in site.pdf("combined.pdf").text
+    assert 'href="combined.pdf"' in site.html("index.html")
+    assert "combined.pdf" not in site.html("reference/index.html")

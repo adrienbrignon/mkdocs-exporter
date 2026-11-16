@@ -1,0 +1,42 @@
+<style data-teleport="head">
+  /* A page of its own, without the header and the footer */
+  @page colophon {
+    @top-left {
+      content: none;
+    }
+
+    @top-right {
+      content: none;
+    }
+
+    @bottom-center {
+      content: none;
+    }
+  }
+
+  .colophon {
+    page: colophon;
+    padding-top: 18cm;
+    color: #1a1a1a;
+    font-family: "DejaVu Sans Mono", Menlo, Consolas, monospace;
+    font-size: 9pt;
+    line-height: 1.6;
+
+    .label {
+      color: #002fa7;
+      font-weight: 700;
+    }
+
+    .text {
+      max-width: 13cm;
+      padding-left: 4ch;
+    }
+  }
+</style>
+<div class="colophon">
+  <div class="label">COLOPHON</div>
+  <div class="text">
+    {{ config.site_name }}: {{ config.site_description }}
+    Printed by MkDocs Exporter.
+  </div>
+</div>

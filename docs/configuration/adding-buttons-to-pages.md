@@ -33,36 +33,58 @@ plugins:
           attributes: !!python/name:mkdocs_exporter.formats.pdf.buttons.download.attributes
 ```
 
-### Defining a dynamic button
+### Adding a button downloading a book
 
-As you saw in the previous example, Python functions can be used to dynamically resolve button attributes.  
-Now, let's write a button that, when clicked, initiates a Google search using the current page's title as the query.
-
-To begin with, let's write the function that will return the button's `href` attribute:
-
-```python
-from urllib.parse import urlencode
-from mkdocs_exporter.page import Page
-
-def href(page: Page, **kwargs) -> str:
-  """The button's 'href' attribute."""
-
-  return 'https://google.com/search?' + urlencode({'q': page.title})
-```
-
-Next, we can define the button and specify the path to the function previously defined (assuming it has been saved in the `button.py` file under the `my_module` module):
+Pages that are part of a [book](combining-pages.md) can link to it.
+The following button downloads the first book including the page, named after the book's title (`metadata.title`, the site's name by default):
 
 ```yaml
 plugins:
   - exporter:
       buttons:
-        - title: Download as PDF
-          icon: material-file-download-outline
-          attributes:
-            href: !!python/name:my_module.button.href
+        - title: Download the documentation
+          icon: material-book-arrow-down-outline
+          enabled: !!python/name:mkdocs_exporter.formats.pdf.buttons.book.enabled
+          attributes: !!python/name:mkdocs_exporter.formats.pdf.buttons.book.attributes
 ```
 
-Repeat this process as needed; you can apply this method to any property of a button.
+The books including a page are listed by `page.formats["pdf"]["books"]` (each with its `url`, relative to the website's root, and its `title`), for buttons of your own (see below).
+
+### Defining a dynamic button
+
+Like the download button above, any property of a button can be computed by a Python function, called with the page.
+For instance, a button opening an issue about the page:
+
+=== "`my_module/buttons.py`"
+
+    ```python
+    from urllib.parse import urlencode
+
+    from mkdocs_exporter.page import Page
+
+
+    def href(page: Page, **kwargs) -> str:
+        """A link opening an issue about the page."""
+
+        return "https://github.com/example/docs/issues/new?" + urlencode(
+            {"title": f"Feedback on {page.title}"}
+        )
+    ```
+
+=== "`mkdocs.yml`"
+
+    ```yaml
+    plugins:
+      - exporter:
+          buttons:
+            - title: Report an issue
+              icon: material-bug-outline
+              attributes:
+                href: !!python/name:my_module.buttons.href
+                target: _blank
+    ```
+
+The module has to be importable when MkDocs reads its configuration: install it, or build your website with `PYTHONPATH=.` (e.g. `PYTHONPATH=. mkdocs build`) when it sits next to `mkdocs.yml`.
 
 ### Adding buttons to a specific page
 

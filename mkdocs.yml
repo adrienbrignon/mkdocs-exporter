@@ -3,7 +3,7 @@ site_url: https://adrienbrignon.github.io/mkdocs-exporter
 repo_url: https://github.com/adrienbrignon/mkdocs-exporter
 repo_name: adrienbrignon/mkdocs-exporter
 edit_uri: edit/master/docs/
-site_dir: dist
+site_dir: site
 
 validation:
   absolute_links: ignore
@@ -25,6 +25,7 @@ theme:
   features:
     - announce.dismiss
     - content.action.edit
+    - content.code.annotate
     - navigation.footer
     - navigation.indexes
     - navigation.instant
@@ -50,7 +51,7 @@ plugins:
   - mkdocstrings:
       handlers:
         python:
-          import:
+          inventories:
             - https://docs.python.org/3/objects.inv
             - https://installer.readthedocs.io/en/stable/objects.inv
           options:
@@ -70,6 +71,9 @@ plugins:
   - redirects:
       redirect_maps:
         'index.md': 'getting-started.md'
+        'samples/diagrams.md': 'examples/content/diagrams.md'
+        'samples/mathematics.md': 'examples/content/mathematics.md'
+        'samples/multimedia.md': 'examples/content/multimedia.md'
   - minify:
       minify_html: true
   - social:
@@ -86,16 +90,22 @@ plugins:
           enabled: !ENV [MKDOCS_EXPORTER_PDF, true]
           concurrency: 16
           stylesheets:
-            - resources/stylesheets/pdf.scss
+            - resources/stylesheets/pdf.css
           covers:
             front: resources/templates/covers/front.html.j2
             back: resources/templates/covers/back.html.j2
+          header:
+            center: "{site_name} — {page_title}"
+          footer:
+            center: "Page {page} of {pages}"
           browser:
             debug: false
-          aggregator:
-            enabled: !ENV [MKDOCS_EXPORTER_PDF_AGGREGATOR, true]
-            output: documentation.pdf
-            covers: front
+          books:
+            - enabled: !ENV [MKDOCS_EXPORTER_BOOKS, true]
+              output: documentation.pdf
+              covers: front
+              toc:
+                enabled: true
       buttons:
         - title: View as PDF
           icon: material-file-move-outline
@@ -107,6 +117,10 @@ plugins:
           icon: material-file-download-outline
           enabled: !!python/name:mkdocs_exporter.formats.pdf.buttons.download.enabled
           attributes: !!python/name:mkdocs_exporter.formats.pdf.buttons.download.attributes
+        - title: Download the documentation
+          icon: material-book-arrow-down-outline
+          enabled: !!python/name:mkdocs_exporter.formats.pdf.buttons.book.enabled
+          attributes: !!python/name:mkdocs_exporter.formats.pdf.buttons.book.attributes
 
 markdown_extensions:
   - admonition
@@ -136,13 +150,12 @@ markdown_extensions:
 
 extra_css:
   - assets/stylesheets/custom.css
-  - https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css
+  - https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.19.1/katex.min.css
 
 extra_javascript:
   - assets/scripts/katex.js
   - assets/scripts/mathjax.js
   - assets/scripts/mkdocs-exporter.js
-  - https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js
-  - https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js
-  - https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js
-  - https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.1/mermaid.min.js
+  - https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.19.1/katex.min.js
+  - https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.19.1/contrib/auto-render.min.js
+  - https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-mml-chtml.min.js

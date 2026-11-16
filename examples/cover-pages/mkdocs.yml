@@ -1,0 +1,14 @@
+INHERIT: ../base.yml
+
+extra:
+  version: 2.4.0
+
+plugins:
+  - exporter:
+      formats:
+        pdf:
+          covers:
+            front: covers/front.html.j2
+          toc:
+            enabled: true
+            title: Contents

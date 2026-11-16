@@ -1,0 +1,24 @@
+site_name: Fixture
+site_url: https://example.org/docs/
+theme:
+  name: material
+  font: false
+nav:
+  - index.md
+  - Guide:
+      - guide/intro.md
+      - guide/advanced.md
+  - reference.md
+markdown_extensions:
+  - admonition
+  - attr_list
+  - footnotes
+  - md_in_html
+  - pymdownx.details
+  - pymdownx.highlight:
+      linenums: true
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - toc:
+      permalink: true

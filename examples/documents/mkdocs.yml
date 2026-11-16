@@ -1,0 +1,24 @@
+INHERIT: ../base.yml
+
+plugins:
+  - exporter:
+      formats:
+        pdf:
+          footer:
+            center: "Page {page} of {pages}"
+          books:
+            - output: pdf/field-guide.pdf
+              exclude:
+                - index.md
+              toc:
+                enabled: true
+            - output: pdf/guide.pdf
+              include:
+                - guide/*
+              metadata:
+                title: Field Guide - Guide
+            - output: pdf/reference.pdf
+              include:
+                - reference/*
+              metadata:
+                title: Field Guide - Reference

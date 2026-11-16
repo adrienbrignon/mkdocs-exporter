@@ -1,48 +1,139 @@
 [build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
 
-[tool.poetry]
+[project]
 name = "mkdocs-exporter"
-version = "6.2.0"
-repository = "https://github.com/adrienbrignon/mkdocs-exporter"
-keywords = ["mkdocs", "pdf", "exporter"]
+version = "7.0.0rc1"
 description = "A highly-configurable plugin for MkDocs that exports your pages to PDF files."
-authors = ["Adrien Brignon <adrien@brignon.dev>"]
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Adrien Brignon", email = "adrien@brignon.dev" }]
+requires-python = ">=3.11"
+keywords = ["mkdocs", "mkdocs-plugin", "pdf", "exporter", "playwright", "pagedjs"]
 classifiers = [
-  "License :: OSI Approved :: MIT License",
-  "Operating System :: OS Independent",
-  "Programming Language :: Python :: 3",
-  "Topic :: Documentation",
-  "Topic :: Software Development :: Documentation",
-  "Topic :: Text Processing :: Markup :: HTML",
+    "Development Status :: 5 - Production/Stable",
+    "Framework :: MkDocs",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Documentation",
+    "Topic :: Software Development :: Documentation",
+    "Topic :: Text Processing :: Markup :: HTML",
+]
+dependencies = [
+    "beautifulsoup4>=4.13",
+    "jinja2>=3.1",
+    "lxml>=6.1",
+    "mkdocs>=1.6,<2",
+    "playwright>=1.53",
+    "pypdf>=6.16",
+    "tinycss2>=1.3",
 ]
 
-[tool.poetry.dependencies]
-python = ">=3.9,<4"
-mkdocs = ">=1.4"
-playwright = ">=1.33"
-beautifulsoup4 = ">=4.12.2"
-lxml = ">=4.9"
-libsass = ">=0.22.0"
-pypdf = ">=4.2.0"
+[project.urls]
+Homepage = "https://adrienbrignon.github.io/mkdocs-exporter"
+Documentation = "https://adrienbrignon.github.io/mkdocs-exporter"
+Repository = "https://github.com/adrienbrignon/mkdocs-exporter"
+Issues = "https://github.com/adrienbrignon/mkdocs-exporter/issues"
+Changelog = "https://github.com/adrienbrignon/mkdocs-exporter/blob/master/CHANGELOG.md"
 
-[tool.poetry.plugins."mkdocs.plugins"]
-"exporter" = "mkdocs_exporter.plugin:Plugin"
+[project.entry-points."mkdocs.plugins"]
+exporter = "mkdocs_exporter.plugin:Plugin"
 
-[tool.poetry.urls]
-"Bug Tracker" = "https://github.com/adrienbrignon/mkdocs-exporter/issues"
+[dependency-groups]
+dev = [
+    "mkdocs-macros-plugin>=1.3",
+    "mkdocs-material>=9.7",
+    "mypy>=2.0",
+    "pytest>=9.0",
+    "pytest-cov>=6.0",
+    "pytest-xdist>=3.8.0",
+    "ruff>=0.17",
+]
+docs = [
+    "mdx-truly-sane-lists>=1.3",
+    "mkdocs-awesome-pages-plugin>=2.10",
+    "mkdocs-git-committers-plugin-2>=2.5",
+    "mkdocs-git-revision-date-localized-plugin>=1.4",
+    "mkdocs-macros-plugin>=1.3",
+    "mkdocs-material[imaging]>=9.7",
+    "mkdocs-minify-plugin>=0.8",
+    "mkdocs-redirects>=1.2",
+    "mkdocstrings[python]>=1.0",
+    "properdocs>=1.6.7",
+    "properdocs-theme-readthedocs>=1.6.5",
+]
 
-[tool.poetry.group.dev.dependencies]
-flake8 = "^7.0"
-mkdocs-material = {version="^9.4.11", extras=["imaging"]}
-mkdocs-git-revision-date-localized-plugin = "^1.2.0"
-mkdocs-awesome-pages-plugin = "^2.9.1"
-mkdocs-macros-plugin = "^1.0.4"
-mkdocs-minify-plugin = "^0.6.4"
-mkdocs-redirects = "^1.2.0"
-mdx-truly-sane-lists = "^1.3"
-mkdocstrings = {extras = ["python"], version = "^0.25.1"}
-mkdocs-git-committers-plugin-2 = "^2.3.0"
-bandit = "^1.7.9"
+[tool.uv]
+default-groups = ["dev", "docs"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["mkdocs_exporter"]
+
+[tool.hatch.build.targets.sdist]
+include = ["mkdocs_exporter", "README.md", "LICENSE"]
+
+[tool.ruff]
+target-version = "py311"
+
+[tool.ruff.lint]
+select = [
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "I",   # isort
+    "PT",  # flake8-pytest-style
+    "RUF", # ruff-specific rules
+    "S",   # flake8-bandit (replaces bandit)
+    "SIM", # flake8-simplify
+    "TID", # flake8-tidy-imports
+    "UP",  # pyupgrade
+    "W",   # pycodestyle warnings
+]
+ignore = [
+    "E501", # line length is handled by the formatter
+]
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"mkdocs".msg = "The core must not depend on MkDocs (see AGENTS.md)."
+
+[tool.ruff.lint.per-file-ignores]
+"!mkdocs_exporter/core/**" = ["TID251"]
+"tests/**" = ["S101", "S603"]
+
+[tool.mypy]
+python_version = "3.11"
+files = ["mkdocs_exporter"]
+warn_unused_configs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+check_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = ["material.*", "tinycss2.*"]
+ignore_missing_imports = true
+
+[tool.pytest]
+minversion = "9.0"
+testpaths = ["tests"]
+addopts = ["-ra", "--strict-markers", "--strict-config"]
+xfail_strict = true
+markers = ["browser: requires Chromium (uv run playwright install chromium)"]
+
+[tool.coverage.run]
+source = ["mkdocs_exporter"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 85
+show_missing = true
+skip_covered = true
+exclude_also = ["if TYPE_CHECKING:", "pragma: no cover"]

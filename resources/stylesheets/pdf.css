@@ -1,0 +1,39 @@
+@page {
+  size: A4;
+  margin: 1.20cm;
+
+  @top-center {
+    color: #7f7f7f;
+  }
+
+  @bottom-center {
+    color: #7f7f7f;
+  }
+}
+
+hr:has(+ div.md-source-file), .md-source-file {
+  display: none !important;
+}
+
+summary::after {
+  display: none;
+}
+
+body {
+  print-color-adjust: exact;
+  text-rendering: geometricPrecision;
+  background-color: transparent;
+}
+
+.md-main .md-main__inner {
+  margin: 0;
+}
+
+.md-content .md-content__inner {
+  margin: 0;
+  padding: 0;
+
+  &::before {
+    height: 0;
+  }
+}
