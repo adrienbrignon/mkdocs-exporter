@@ -17,9 +17,9 @@ jobs:
     name: Release pull request
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # Release commits, tags and draft releases
-      issues: write  # Labels of the release pull request
-      pull-requests: write  # The release pull request
+      contents: write
+      issues: write
+      pull-requests: write
     outputs:
       created: ${{ steps.release.outputs.release_created }}
       tag: ${{ steps.release.outputs.tag_name }}
@@ -47,8 +47,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      attestations: write  # Stores the provenance attestation
-      id-token: write  # Signs the provenance attestation
+      attestations: write
+      id-token: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -60,7 +60,6 @@ jobs:
       - name: Check that the tag matches the project version
         env:
           TAG: ${{ needs.release-please.outputs.tag }}
-        # PEP 440 versions are compared: tag v7.0.0-rc.1 matches version 7.0.0rc1.
         run: >-
           uv run --no-project --with packaging python -c
           'import sys; from packaging.version import Version; sys.exit(Version(sys.argv[1]) != Version(sys.argv[2]))'
@@ -86,7 +85,7 @@ jobs:
       name: pypi
       url: https://pypi.org/project/mkdocs-exporter/
     permissions:
-      id-token: write  # Trusted publishing, PEP 740 attestations
+      id-token: write
     steps:
       - name: Download distributions
         uses: actions/download-artifact@v8
