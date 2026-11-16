@@ -101,7 +101,7 @@ Check out the [examples](https://adrienbrignon.github.io/mkdocs-exporter/example
 ## Roadmap
 
 - [x] Combine all pages into a single PDF document (✅ released in [`v6.0.0`](https://github.com/adrienbrignon/mkdocs-exporter/releases/tag/v6.0.0))
-- [x] Bookmarks, table of contents and links in combined documents (✅ released in `v7.0.0`)
+- [x] Bookmarks, table of contents and links in books (✅ released in `v7.0.0`)
 - [x] Export websites built by Zensical (🧪 experimental, released in `v7.0.0`)
 - [ ] Export websites built by MkDocs 2.0
 - [ ] Create a *GitHub* action that includes all dependencies to build the documentation and generate PDF documents

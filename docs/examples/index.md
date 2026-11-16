@@ -30,7 +30,7 @@ A complete example: every page gets a document with a cover, a table of contents
     {{ example("field-guide/covers/back.html.j2") }}
 
 - The front cover is laid out like a manual page, from the page itself: its title (`page.title`), its description (`page.meta.description`), its sections (`page.toc`) and the other pages of its section (`page.parent.children`).
-- The front cover of the home page is the cover of the combined document (`covers: limits`): on that page, the template shows the website's name and description instead (`page.is_homepage`).
+- The front cover of the home page is the cover of the book (`covers: limits`): on that page, the template shows the website's name and description instead (`page.is_homepage`).
 - The back cover is printed on a named page (`page: colophon`), which leaves out the header and the footer itself (`content: none` for each of them): the plugin only leaves them out of its own cover pages.
 
 ## Themes
@@ -87,6 +87,6 @@ How diagrams, mathematics and images are printed, with the configuration of this
 
     __[One document per section](documents.md)__
 
-    Several combined documents, selecting pages with patterns.
+    Several books, selecting pages with patterns.
 
 </div>

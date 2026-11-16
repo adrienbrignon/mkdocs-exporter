@@ -144,7 +144,7 @@ plugins:
             depth: 3 # Second and third-level headings
 ```
 
-Pages without headings besides their title don't get one, nor do [combined documents](combining-pages.md#table-of-contents), which have a table of contents of their own.
+Pages without headings besides their title don't get one, nor do [books](books.md#table-of-contents), which have a table of contents of their own.
 A page can do without one, or have one while the option is disabled, in its front matter:
 
 ```yaml
@@ -156,7 +156,7 @@ exporter:
 ---
 ```
 
-Like the table of contents of combined documents, its appearance can be changed with CSS or a template of your own (`toc.template`).
+Like the table of contents of books, its appearance can be changed with CSS or a template of your own (`toc.template`).
 The page numbers are filled from a first print of the document, which is then printed again.
 
 ## Cover pages

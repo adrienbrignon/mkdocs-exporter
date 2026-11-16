@@ -74,6 +74,7 @@ plugins:
       redirect_maps:
         'index.md': 'getting-started.md'
         'migration/v7.md': 'guides/migrating-to-v7.md'
+        'configuration/combining-pages.md': 'configuration/books.md'
         'samples/diagrams.md': 'examples/content/diagrams.md'
         'samples/mathematics.md': 'examples/content/mathematics.md'
         'samples/multimedia.md': 'examples/content/multimedia.md'

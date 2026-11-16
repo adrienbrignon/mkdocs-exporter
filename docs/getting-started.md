@@ -20,7 +20,7 @@ Documents are printed by a headless Chromium browser driven by [Playwright](http
 
 <div class="previews" markdown>
 
-[![The cover of a combined document](assets/images/examples/field-guide-1.webp)](examples/index.md)
+[![The cover of a book](assets/images/examples/field-guide-1.webp)](examples/index.md)
 [![Its table of contents](assets/images/examples/field-guide-2.webp)](examples/index.md)
 [![One of its pages](assets/images/examples/field-guide-3.webp)](examples/index.md)
 [![A book's cover](assets/images/examples/book-1.webp)](examples/book.md)
@@ -105,7 +105,7 @@ plugins:
                 enabled: true
 ```
 
-See [Books](configuration/combining-pages.md) for cover pages, several books, and pages starting on the right.
+See [Books](configuration/books.md) for cover pages, several books, and pages starting on the right.
 
 ## Next steps
 

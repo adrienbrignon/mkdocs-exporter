@@ -36,7 +36,7 @@ plugins:
 
 ### Adding a button downloading a book
 
-Pages that are part of a [book](combining-pages.md) can link to it.
+Pages that are part of a [book](books.md) can link to it.
 The following button downloads the first book including the page, named after the book's title (`metadata.title`, the site's name by default):
 
 ```yaml

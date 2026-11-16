@@ -16,7 +16,7 @@ Combine every page into a book of 6 × 9 inches, a common size of printed books:
 
     {{ example("book/covers/front.html.j2") }}
 
-- The [book](../configuration/combining-pages.md) combines the pages, in the order of the navigation, into `field-guide.pdf`.
+- The [book](../configuration/books.md) combines the pages, in the order of the navigation, into `field-guide.pdf`.
 - `covers: limits` only keeps the front cover of the first page (and the back cover of the last page, if there was one): the cover of the home page is the cover of the book. The template shows the website's description on the home page, and the page's title on the other pages' own documents.
 - `toc` inserts the table of contents after the cover, and `outline` sets the depth of bookmarks (pages and their second-level headings).
 - `start: odd` starts every chapter on a right-hand page, inserting blank pages (without headers nor footers) when needed.
