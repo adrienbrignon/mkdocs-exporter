@@ -50,9 +50,11 @@ MkDocs 2.0 doesn't support plugins and Zensical ignores MkDocs plugins: a standa
 The plugin is hosted on [*PyPI*](https://pypi.org/project/mkdocs-exporter/) and can be installed via `pip` (or your favourite package manager), along with the browser it uses:
 
 ```bash
-pip install mkdocs-exporter
+pip install "mkdocs-exporter>=7.0.0rc1"
 playwright install --with-deps --only-shell chromium
 ```
+
+Version 7 is a release candidate: until 7.0.0 is released, `pip install mkdocs-exporter` (without a version) installs 6.2.0.
 
 Upgrading from v6? Read the [migration guide](https://adrienbrignon.github.io/mkdocs-exporter/migration/v7/).
 

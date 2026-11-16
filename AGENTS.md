@@ -15,6 +15,10 @@ Supported hosts: MkDocs `>=1.6,<2` and [ProperDocs](https://github.com/ProperDoc
 1.x fork that runs MkDocs plugins unchanged). MkDocs 2.0 has no plugin API and Zensical silently ignores
 third-party plugins, so neither is supported as a plugin host.
 
+`mkdocs>=1.6,<2` stays a hard dependency in 7.x: plugin users install `mkdocs-exporter` alone. The core
+doesn't import MkDocs, so a standalone command running without it (e.g. next to MkDocs 2.0) can ship the
+core as a separate distribution that this one depends on, without breaking plugin users.
+
 ## Commands
 
 | Task | Command |
@@ -212,7 +216,9 @@ the version or tag by hand.
 3. A commit body with `Release-As: <version>` forces the next version (e.g. `Release-As: 7.0.0-rc.1`).
 4. Release candidates: while `"versioning": "prerelease"` and `"prerelease": true` are set, versions are
    `x.y.z-rc.N` (`x.y.zrcN` on PyPI) and GitHub releases are marked as pre-releases. For the final
-   version, remove both settings in a commit whose body has `Release-As: x.y.z`.
+   version, remove both settings in a commit whose body has `Release-As: x.y.z`, and install instructions
+   (README, getting started, migration guide, CI guide) no longer ask for a pre-release: search for
+   `7.0.0rc1`.
 5. Release pull requests are opened with a GitHub App's token when the repository has the
    `RELEASE_APP_CLIENT_ID` variable and the `RELEASE_APP_PRIVATE_KEY` secret (an app with read and write
    access to contents, issues and pull requests), so that CI runs on them. Without it, the workflow's token
