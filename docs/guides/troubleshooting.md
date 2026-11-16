@@ -1,5 +1,14 @@
 # Troubleshooting
 
+## The browser isn't installed
+
+```
+playwright._impl._errors.Error: BrowserType.launch: Executable doesn't exist at ...
+```
+
+Install Chromium with the same Python environment as the plugin: `playwright install --with-deps --only-shell chromium`, or `python -m playwright install --with-deps --only-shell chromium` when the `playwright` command isn't found.
+Playwright needs the browser of its own version: install it again after upgrading Playwright.
+
 ## A page fails to render
 
 When a page can't be rendered, the build fails once every other page has been rendered, with the reason for each failing page:
@@ -15,6 +24,13 @@ ERROR   -  [mkdocs-exporter.pdf] Failed to render pages:
 
 - **Rendering failed**: a script prevented the page from being prepared; the error tells which one.
 - **Timed out**: the page didn't finish rendering in time (`formats.pdf.browser.timeout`, 60 seconds by default), typically because a [hook](../configuration/customizing-documents.md#scripts) never returns or a resource takes too long to load.
+
+## Warnings
+
+- **Gave up waiting for fonts, images or diagrams after 10 seconds**: something the page loads never finished loading, often a resource from another website. The document is printed anyway, but not cached.
+- **The layout of '…' could not be fully measured**: the browser is too old (Chromium 138 or later is required, also with `browser.channel`), or the theme lays the content out of the normal flow: the page numbers and bookmarks of the book may be wrong.
+- **Failed to teleport \<…\> element: destination '…' not found**: the selector of a [`data-mkdocs-exporter-teleport`](../configuration/customizing-documents.md#moving-elements) attribute matches nothing.
+- **The '…' key of the front matter is deprecated**: see the [front matter reference](../reference/front-matter.md#deprecated-keys).
 
 ## Something is missing from documents
 

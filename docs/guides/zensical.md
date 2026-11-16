@@ -33,6 +33,8 @@ The documents are written into the built website, next to its pages (e.g. `site/
 | `-s`, `--strict` | Fails when warnings are logged |
 | `-v`, `--verbose` | Logs details |
 
+`mkdocs-exporter --version` shows the version of the plugin, and `mkdocs-exporter build --help` these options.
+
 ## Configuration
 
 The options are the plugin's, read from the configuration of the website, which Zensical ignores:

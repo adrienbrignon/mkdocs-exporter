@@ -29,7 +29,7 @@ Number headings, print the address of links, mark every page as a draft, and kee
 
 - [Stylesheets](../configuration/customizing-documents.md#stylesheets) of the plugin only apply to documents: the website keeps its own styles.
 - CSS counters number headings; `counter-reset` restarts the numbering of third-level headings at each second-level heading.
-- `attr(href)` prints the address of links after them. Links to other pages point to the website (`site_url`), so their address is printed too: add `:not([href^="https://field-guide.example.com"])` to the selector to only print the address of other websites. In combined documents, links between pages point within the document, without an address.
+- `attr(href)` prints the address of links after them. Links to other pages point to the website (`site_url`), so their address is printed too: add `:not([href^="https://field-guide.example.com"])` to the selector to only print the address of other websites. In books, links between pages point within the book, without an address. Without `site_url` (nor `formats.pdf.url`), links to other pages are temporarily given a placeholder address, `https://mkdocs-exporter.invalid/...`: exclude it too.
 - A `position: fixed` element of the body (a child or a pseudo-element of `body`, here `body::after`) is printed on every page, at the same place. Fixed elements inside the page's content are only printed on its first page.
 - Elements of the `mkdocs-exporter-ignore` class are left out of documents, while those of the `mkdocs-exporter-only` class are left out of the website (here, a paragraph given the class with the `attr_list` extension).
 

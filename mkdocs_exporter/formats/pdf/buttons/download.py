@@ -33,6 +33,7 @@ def attributes(page: Page, **kwargs: Any) -> dict[str, str]:
 
 
 def icon(page: Page, **kwargs: Any) -> str:
-    """The button's icon."""
+    """The button's icon: `pdf-icon` of the page's front matter (deprecated, like this
+    function: give the button an `icon` instead)."""
 
     return str(page.meta.get("pdf-icon", "material-file-download-outline"))

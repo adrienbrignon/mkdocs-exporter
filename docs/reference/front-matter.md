@@ -54,6 +54,6 @@ They still work, but log a warning (which fails builds run with `--strict`):
 | `hide: [covers]` | `exporter.pdf.covers.enabled: false` |
 | `toc` | `exporter.pdf.toc.enabled` |
 | `buttons` | `exporter.buttons` |
-| `pdf-icon` | The `icon` of a button in `exporter.buttons` |
+| `pdf-icon` | The `icon` of the download button in `buttons` (the same for every page) |
 
 When a page has both, the options of `exporter` take precedence.
