@@ -33,8 +33,10 @@ A page can use another cover, or none, in its front matter:
 
     ```yaml
     ---
-    covers:
-      front: covers/release-notes.html.j2
+    exporter:
+      pdf:
+        covers:
+          front: covers/release-notes.html.j2
     ---
     ```
 
@@ -42,8 +44,10 @@ A page can use another cover, or none, in its front matter:
 
     ```yaml
     ---
-    hide:
-      - covers
+    exporter:
+      pdf:
+        covers:
+          enabled: false
     ---
     ```
 

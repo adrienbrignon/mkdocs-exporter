@@ -17,11 +17,13 @@ Each page gets a PDF document next to its HTML file (e.g. `guide/intro/index.pdf
 
 ### Choosing pages
 
-By default, every page gets a PDF document. A page can opt out with its front matter:
+By default, every page gets a PDF document. A page can opt out with its [front matter](../reference/front-matter.md):
 
 ```yaml
 ---
-pdf: false
+exporter:
+  pdf:
+    enabled: false
 ---
 ```
 
@@ -41,7 +43,9 @@ In explicit mode, pages have to opt in instead:
 
     ```yaml
     ---
-    pdf: true
+    exporter:
+      pdf:
+        enabled: true
     ---
     ```
 
@@ -145,7 +149,10 @@ A page can do without one, or have one while the option is disabled, in its fron
 
 ```yaml
 ---
-toc: false
+exporter:
+  pdf:
+    toc:
+      enabled: false
 ---
 ```
 
@@ -203,8 +210,10 @@ Pages can override cover pages in their front matter (paths are relative to `mkd
 
 ```yaml
 ---
-covers:
-  front: resources/templates/covers/special.html.j2
+exporter:
+  pdf:
+    covers:
+      front: resources/templates/covers/special.html.j2
 ---
 ```
 
@@ -214,7 +223,9 @@ Pages can also opt out of cover pages:
 
 ```yaml
 ---
-hide:
-  - covers
+exporter:
+  pdf:
+    covers:
+      enabled: false
 ---
 ```

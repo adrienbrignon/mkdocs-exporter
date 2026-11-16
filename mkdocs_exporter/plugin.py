@@ -14,7 +14,7 @@ from mkdocs.structure.files import Files
 from mkdocs.structure.nav import Navigation
 from mkdocs.structure.pages import Page
 
-from mkdocs_exporter import adapter
+from mkdocs_exporter import adapter, front_matter
 from mkdocs_exporter.config import Config
 from mkdocs_exporter.core.books import Book, NavNode
 from mkdocs_exporter.core.browser import Browser, relaunch
@@ -27,6 +27,7 @@ from mkdocs_exporter.core.runner import Loop, run
 from mkdocs_exporter.core.themes import Theme, get_theme
 from mkdocs_exporter.covers import CoverRenderer
 from mkdocs_exporter.formats.pdf.config import BookConfig
+from mkdocs_exporter.front_matter import PageOptions
 from mkdocs_exporter.helpers import resolve
 from mkdocs_exporter.logging import Logger
 
@@ -58,6 +59,8 @@ class Plugin(BasePlugin[Config]):
         self.nav: list[NavNode] = []
         self.watched: set[str] = set()
         self.decomposed = False
+        self.page_options: dict[str, PageOptions] = {}
+        self.deprecated: set[str] = set()
         self.covers: CoverRenderer
         self.loop: Loop | None = None
         self.browser: Browser | None = None
@@ -103,6 +106,8 @@ class Plugin(BasePlugin[Config]):
         self.nav = []
         self.watched = set()
         self.decomposed = False
+        self.page_options = {}
+        self.deprecated = set()
         self.covers = CoverRenderer(config)
         self.pdf = options.enabled and (self.command != "serve" or options.serve)
 
@@ -181,7 +186,10 @@ class Plugin(BasePlugin[Config]):
         if "pdf" not in formats:
             return output
 
-        templates = self.covers.locations(dict(self.config.formats.pdf.covers), page)
+        page_options = self._page_options(page)
+        templates = self.covers.locations(
+            dict(self.config.formats.pdf.covers), page_options.pdf.covers
+        )
         covers = {
             key: self.covers.render(path, page) for key, path in templates.items()
         }
@@ -198,6 +206,7 @@ class Plugin(BasePlugin[Config]):
                 covers,
                 self.config.formats.pdf,
                 config,
+                page_options,
             ),
         )
 
@@ -250,7 +259,8 @@ class Plugin(BasePlugin[Config]):
             if self.config.formats.pdf.explicit:
                 pdf_logger.warning(
                     "No page has been rendered: in explicit mode, "
-                    "pages must enable PDF generation with 'pdf: true' in their metadata"
+                    "pages must enable PDF generation in their front matter "
+                    "('exporter: {pdf: {enabled: true}}')"
                 )
             return
 
@@ -352,11 +362,42 @@ class Plugin(BasePlugin[Config]):
 
         return [
             resolve(dict(button), page=page)
-            for button in [*self.config.buttons, *page.meta.get("buttons", [])]
+            for button in [*self.config.buttons, *self._page_options(page).buttons]
             if resolve(button.get("enabled", True), page=page)
         ]
 
     def _exported(self, page: Page) -> bool:
         """Should a PDF document be generated for the page?"""
 
-        return bool(page.meta.get("pdf", not self.config.formats.pdf.explicit))
+        enabled = self._page_options(page).pdf.enabled
+
+        return not self.config.formats.pdf.explicit if enabled is None else enabled
+
+    def _page_options(self, page: Page) -> PageOptions:
+        """The options of a page's front matter (read once per build, once other
+        plugins have changed it, e.g. Material's `meta` plugin)."""
+
+        key = page.file.src_uri
+
+        if key not in self.page_options:
+            try:
+                parsed = front_matter.parse(page.meta)
+            except front_matter.FrontMatterError as error:
+                raise PluginError(
+                    f"[mkdocs-exporter] Invalid front matter in '{key}': {error}"
+                ) from error
+
+            for name in parsed.deprecated:
+                if name not in self.deprecated:
+                    self.deprecated.add(name)
+                    logger.warning(
+                        "The '%s' key of the front matter is deprecated (used in "
+                        "'%s'), use %s instead",
+                        "hide: [covers]" if name == "hide" else name,
+                        key,
+                        front_matter.DEPRECATED[name],
+                    )
+
+            self.page_options[key] = parsed.options
+
+        return self.page_options[key]

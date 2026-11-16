@@ -67,6 +67,7 @@ Before considering a change done, run the linter, the formatter check, the type 
 | `mkdocs_exporter/plugin.py` | The MkDocs plugin (`exporter`): its events, the state of a build |
 | `mkdocs_exporter/adapter.py` | MkDocs configuration, pages and navigation turned into core data (options, documents, books) |
 | `mkdocs_exporter/covers.py` | Renders cover templates with Jinja (through mkdocs-macros when enabled) |
+| `mkdocs_exporter/front_matter.py` | Per-page options: the `exporter` key of the front matter (schema, deprecated top-level keys) |
 | `mkdocs_exporter/config.py`, `formats/pdf/config.py` | Configuration schema (MkDocs `config_options`) |
 | `mkdocs_exporter/formats/pdf/buttons/` | Button callables (`download`, `book`) referenced from users' `mkdocs.yml` via `!!python/name:` |
 | `tests/unit/`, `tests/integration/` | Unit tests; end-to-end tests building `tests/fixtures/site` (marker `browser`) |
@@ -175,7 +176,8 @@ Design decisions backed by measurements (don't revert them without measuring aga
 - MkDocs reuses plugin instances across rebuilds (`mkdocs serve`): reset per-build state in `on_config` /
   `on_pre_build`, never in `__init__` alone.
 - Keep these public surfaces stable (or deprecate them explicitly):
-  - the `exporter` entry point and documented configuration keys;
+  - the `exporter` entry point, documented configuration keys and the options of the `exporter` front
+    matter key (per-page options go there, never in top-level keys, which other tools may use);
   - `mkdocs_exporter.formats.pdf.buttons.download.*`, `...buttons.book.*` and `mkdocs_exporter.page.Page`;
   - the `window.MkDocsExporter` JavaScript hooks and the `mkdocs-exporter-*` CSS classes.
 - Commits follow [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`,

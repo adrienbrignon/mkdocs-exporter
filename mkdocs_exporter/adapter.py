@@ -21,6 +21,7 @@ from mkdocs_exporter.formats.pdf.config import (
     TocConfig,
 )
 from mkdocs_exporter.formats.pdf.config import Config as PdfConfig
+from mkdocs_exporter.front_matter import PageOptions
 
 
 def render_options(options: PdfConfig, config: MkDocsConfig) -> RenderOptions:
@@ -61,6 +62,7 @@ def document(
     covers: Mapping[str, str],
     options: PdfConfig,
     config: MkDocsConfig,
+    page_options: PageOptions,
 ) -> Document:
     """The document of a page.
 
@@ -71,7 +73,10 @@ def document(
         covers: Its rendered cover pages, by location.
         options: The options of PDF documents.
         config: The configuration of the website.
+        page_options: The options of its front matter.
     """
+
+    toc_enabled = page_options.pdf.toc.enabled
 
     return Document(
         id=page.file.src_uri,
@@ -82,7 +87,9 @@ def document(
         meta=dict(page.meta),
         covers=dict(covers),
         metadata=metadata(page, config),
-        toc=toc(options.toc, bool(page.meta.get("toc", options.toc.enabled))),
+        toc=toc(
+            options.toc, options.toc.enabled if toc_enabled is None else toc_enabled
+        ),
     )
 
 

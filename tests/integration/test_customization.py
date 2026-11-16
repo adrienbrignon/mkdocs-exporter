@@ -72,12 +72,17 @@ def test_elements_can_be_teleported(project: Project) -> None:
     )
 
 
-def test_pages_can_override_covers(project: Project) -> None:
+@pytest.mark.parametrize(
+    "front_matter",
+    [
+        "covers:\n  front: covers/special.html",
+        "exporter:\n  pdf:\n    covers:\n      front: covers/special.html",
+    ],
+    ids=["deprecated", "exporter"],
+)
+def test_pages_can_override_covers(project: Project, front_matter: str) -> None:
     project.write("covers/special.html", "<div><h1>SPECIAL-COVER</h1></div>\n")
-    project.write(
-        "docs/reference.md",
-        "---\ncovers:\n  front: covers/special.html\n---\n\n# Reference\n",
-    )
+    project.write("docs/reference.md", f"---\n{front_matter}\n---\n\n# Reference\n")
 
     site = project.build()
     document = site.pdf("reference/index.pdf")

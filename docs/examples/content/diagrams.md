@@ -1,11 +1,12 @@
 ---
-buttons:
-  - title: Documentation
-    icon: material-book-outline
-    attributes:
-      class: md-content__button md-icon
-      href: https://squidfunk.github.io/mkdocs-material/reference/diagrams/
-      target: _blank
+exporter:
+  buttons:
+    - title: Documentation
+      icon: material-book-outline
+      attributes:
+        class: md-content__button md-icon
+        href: https://squidfunk.github.io/mkdocs-material/reference/diagrams/
+        target: _blank
 ---
 
 # Diagrams

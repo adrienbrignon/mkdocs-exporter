@@ -8,6 +8,8 @@ from mkdocs.config.defaults import MkDocsConfig
 from mkdocs.exceptions import PluginError
 from mkdocs.structure.pages import Page
 
+from mkdocs_exporter.front_matter import CoversOptions
+
 
 class CoverRenderer:
     """Renders cover page templates with Jinja.
@@ -59,16 +61,19 @@ class CoverRenderer:
 
         return self.templates[key]
 
-    def locations(self, defaults: dict[str, str | None], page: Page) -> dict[str, str]:
-        """The cover templates of a page, by location (`front`, `back`)."""
+    def locations(
+        self, defaults: dict[str, str | None], covers: CoversOptions
+    ) -> dict[str, str]:
+        """The cover templates of a page, by location (`front`, `back`), given the
+        options of its front matter."""
 
-        if "covers" in page.meta.get("hide", []):
+        if covers.enabled is False:
             return {}
 
         overrides = {
             key: os.path.join(self.root, value)
-            for key, value in (page.meta.get("covers") or {}).items()
-            if value
+            for key in ("front", "back")
+            if (value := covers[key])
         }
 
         return {
