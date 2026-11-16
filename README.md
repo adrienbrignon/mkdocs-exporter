@@ -40,7 +40,7 @@ Additionally, it can combine your entire documentation into a single PDF file.
 
 ## Prerequisites
 
-- Python `>= 3.11`
+- Python `>= 3.11.5`
 - MkDocs `>= 1.6, < 2` (or [ProperDocs](https://github.com/ProperDocs/properdocs))
 
 MkDocs 2.0 doesn't support plugins and Zensical ignores MkDocs plugins: a standalone command, able to export any built website, is planned.
