@@ -27,11 +27,9 @@ Documents are styled like your website, with print media rules. Custom styleshee
       }
     }
 
-    .front-cover {
-      page-break-after: always;
-
-      .title {
-        font-size: 26pt;
+    .md-typeset {
+      table {
+        font-size: 9pt;
       }
     }
     ```
@@ -120,6 +118,20 @@ This paragraph is only printed.
 
     [Print styles](../examples/print-styles.md): numbered headings, the address of links, a watermark, and content for the website or for documents only.
 
+## Moving elements
+
+The `data-mkdocs-exporter-teleport` attribute moves an element into the element its value selects (a CSS selector), in documents and in the website's pages, e.g. the styles of a cover template to the head of the document:
+
+```html
+<style data-mkdocs-exporter-teleport="head">
+  @page :first {
+    margin: 0;
+  }
+</style>
+```
+
+When the selector matches nothing, the element stays where it is, with a warning.
+
 ## Scripts
 
 Custom scripts are executed in PDF documents only:
@@ -138,7 +150,8 @@ Scripts can define hooks, awaited by the exporter:
 ```javascript
 window.MkDocsExporter = {
   /**
-   * Once the page and the website's scripts are loaded.
+   * Once the page is loaded, with its fonts, images, MathJax formulas and
+   * Material for MkDocs' diagrams.
    */
   before: async () => {},
 
@@ -152,13 +165,17 @@ window.MkDocsExporter = {
   },
 
   /**
-   * Last, right before printing.
+   * Last, right before printing (after `browser.delay`).
    */
   after: async () => {},
 };
 ```
 
-Fonts, images, MathJax and Material for MkDocs' diagrams are awaited automatically. When other scripts need more time, either use a hook or give them a delay (in milliseconds):
+- Hooks run in that order, once per document: a book's hooks run once for the whole book.
+- An error in a hook is logged as a warning: the document is still printed, but not [cached](generating-pdf-documents.md#cache).
+- Waiting for fonts, images and diagrams gives up after 10 seconds, with a warning.
+
+When other scripts need more time, either use a hook or give them a delay (in milliseconds):
 
 ```yaml
 plugins:
@@ -195,7 +212,7 @@ To use it, download [`paged.polyfill.min.js`](https://unpkg.com/pagedjs@0.4.3/di
     };
     ```
 
-Paged.js lays out pages in JavaScript: expect documents to take longer to generate, especially combined ones.
+Paged.js lays out pages in JavaScript: expect documents to take longer to generate, especially books.
 Paged.js 0.4 also fails on some `:nth-child(An+B)` selectors, such as those of the `readthedocs` theme.
 
 ## Browser
