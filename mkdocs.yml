@@ -7,8 +7,8 @@ site_dir: site
 
 validation:
   absolute_links: ignore
-  unrecognized_links: ignore
-  anchors: ignore
+  unrecognized_links: warn
+  anchors: warn
 
 theme:
   name: material
@@ -71,6 +71,7 @@ plugins:
   - redirects:
       redirect_maps:
         'index.md': 'getting-started.md'
+        'migration/v7.md': 'guides/migrating-to-v7.md'
         'samples/diagrams.md': 'examples/content/diagrams.md'
         'samples/mathematics.md': 'examples/content/mathematics.md'
         'samples/multimedia.md': 'examples/content/multimedia.md'

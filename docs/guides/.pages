@@ -2,3 +2,4 @@ nav:
   - continuous-integration.md
   - zensical.md
   - troubleshooting.md
+  - migrating-to-v7.md

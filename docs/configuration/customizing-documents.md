@@ -36,7 +36,7 @@ Documents are styled like your website, with print media rules. Custom styleshee
     }
     ```
 
-Stylesheets are plain CSS: nesting is supported, Sass isn't (see the [migration guide](../migration/v7.md#sass)).
+Stylesheets are plain CSS: nesting is supported, Sass isn't (see the [migration guide](../guides/migrating-to-v7.md#sass)).
 
 Documents are laid out by Chromium, which supports page sizes (they can differ from a page to another), margins, [margin boxes](https://www.w3.org/TR/css-page-3/#margin-boxes) with page counters, named pages (`page: ...`), `@page :first` and page breaks. Running headers are available through [headers and footers](headers-and-footers.md); for other features of the [CSS Generated Content for Paged Media](https://www.w3.org/TR/css-gcpm-3/) module, see [Using Paged.js](#using-paged-js).
 
@@ -169,7 +169,7 @@ plugins:
             delay: 500
 ```
 
-## Using Paged.js
+## Using Paged.js { #using-paged-js }
 
 [Paged.js](https://pagedjs.org/) implements features of [CSS Generated Content for Paged Media](https://www.w3.org/TR/css-gcpm-3/) that browsers lack, such as running headers (`string-set`), page references (`target-counter`) or footnotes.
 To use it, download [`paged.polyfill.min.js`](https://unpkg.com/pagedjs@0.4.3/dist/paged.polyfill.min.js) to your project and load it after a script running it before documents are printed:
