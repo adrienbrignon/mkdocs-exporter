@@ -3,6 +3,20 @@
 All notable changes to this project are documented in this file, and this project adheres to [Semantic Versioning](https://semver.org/).
 Entries are generated from commit messages ([Conventional Commits](https://www.conventionalcommits.org/)) by [release-please](https://github.com/googleapis/release-please), in release pull requests where they can be edited; earlier entries follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [7.0.0-rc.2](https://github.com/adrienbrignon/mkdocs-exporter/compare/v7.0.0-rc.1...v7.0.0-rc.2) (2026-11-16)
+
+
+### Added
+
+* export websites built by Zensical (experimental command) ([f30a245](https://github.com/adrienbrignon/mkdocs-exporter/commit/f30a24542adb5e89934921edb10afd7f1fb3c914))
+* namespace the teleport attribute (`data-mkdocs-exporter-teleport`) ([d71d160](https://github.com/adrienbrignon/mkdocs-exporter/commit/d71d160b4532043323ed487ff97895420dd4a7f1))
+* per-page options under the `exporter` key of the front matter ([f0465e6](https://github.com/adrienbrignon/mkdocs-exporter/commit/f0465e63a6f4e51c14d4fe889fbe4e0bcad2eb60))
+
+
+### Fixed
+
+* **pdf:** merge the objects pypdf duplicates when copying documents ([cd1cf0a](https://github.com/adrienbrignon/mkdocs-exporter/commit/cd1cf0a3d3f7b81c0332ace1ad5547daa10d7ba0))
+
 ## [7.0.0-rc.1](https://github.com/adrienbrignon/mkdocs-exporter/compare/v6.2.0...v7.0.0-rc.1) (2026-11-16)
 
 Read the [migration guide](https://adrienbrignon.github.io/mkdocs-exporter/migration/v7/) when upgrading from v6.
