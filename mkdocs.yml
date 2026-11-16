@@ -127,6 +127,8 @@ plugins:
           attributes: !!python/name:mkdocs_exporter.formats.pdf.buttons.book.attributes
 
 markdown_extensions:
+  - toc:
+      permalink: true
   - admonition
   - attr_list
   - md_in_html
@@ -146,11 +148,6 @@ markdown_extensions:
       emoji_generator: !!python/name:material.extensions.emoji.to_svg
   - pymdownx.arithmatex:
       generic: true
-  - pymdownx.superfences:
-      custom_fences:
-        - name: mermaid
-          class: mermaid
-          format: !!python/name:pymdownx.superfences.fence_code_format
 
 extra_css:
   - assets/stylesheets/custom.css
@@ -159,7 +156,6 @@ extra_css:
 extra_javascript:
   - assets/scripts/katex.js
   - assets/scripts/mathjax.js
-  - assets/scripts/mkdocs-exporter.js
   - https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.19.1/katex.min.js
   - https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.19.1/contrib/auto-render.min.js
   - https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-mml-chtml.min.js
