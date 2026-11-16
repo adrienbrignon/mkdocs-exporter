@@ -23,7 +23,7 @@ def renderer(root: Path) -> CoverRenderer:
         config_file_path=str(root / "mkdocs.yml"), plugins={}, extra={}
     )
 
-    return CoverRenderer(config)
+    return CoverRenderer.of(config)
 
 
 def test_templates_are_compiled_once_per_build(tmp_path: Path) -> None:

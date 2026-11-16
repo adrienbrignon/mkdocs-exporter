@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import os
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass, field
 from fnmatch import fnmatchcase
-from typing import Any
+from typing import Any, Protocol
 
 from mkdocs.config.defaults import MkDocsConfig
 from mkdocs.structure.nav import Section
@@ -24,10 +25,56 @@ from mkdocs_exporter.formats.pdf.config import Config as PdfConfig
 from mkdocs_exporter.front_matter import PageOptions
 
 
-def render_options(options: PdfConfig, config: MkDocsConfig) -> RenderOptions:
+@dataclass
+class Website:
+    """The settings of a website the exporter uses (whatever built it)."""
+
+    name: str
+    url: str | None = None
+    author: str | None = None
+    description: str | None = None
+    extra: Mapping[str, Any] = field(default_factory=dict)
+
+    @classmethod
+    def of(cls, config: MkDocsConfig) -> Website:
+        """The settings of a MkDocs website."""
+
+        return cls(
+            name=config.site_name,
+            url=config.site_url or None,
+            author=config.site_author,
+            description=config.site_description,
+            extra=config.extra,
+        )
+
+
+class Source(Protocol):
+    """A source file of a page."""
+
+    @property
+    def src_uri(self) -> str: ...
+
+
+class PageLike(Protocol):
+    """A page, as the exporter reads it (a MkDocs page, or a page of a built website)."""
+
+    @property
+    def file(self) -> Source: ...
+
+    @property
+    def url(self) -> str: ...
+
+    @property
+    def title(self) -> str | None: ...
+
+    @property
+    def meta(self) -> Mapping[str, Any]: ...
+
+
+def render_options(options: PdfConfig, website: Website) -> RenderOptions:
     """The options of the renderer."""
 
-    links = options.url or config.site_url or None
+    links = options.url or website.url or None
 
     return RenderOptions(
         stylesheets=[read(path) for path in options.stylesheets],
@@ -39,7 +86,7 @@ def render_options(options: PdfConfig, config: MkDocsConfig) -> RenderOptions:
         margins=Margins.of(
             {"header": dict(options.header), "footer": dict(options.footer)}
         ),
-        variables={"site_name": config.site_name},
+        variables={"site_name": website.name},
     )
 
 
@@ -56,12 +103,12 @@ def browser(options: BrowserConfig) -> Browser:
 
 
 def document(
-    page: Page,
+    page: PageLike,
     html: str,
     path: str,
     covers: Mapping[str, str],
     options: PdfConfig,
-    config: MkDocsConfig,
+    website: Website,
     page_options: PageOptions,
 ) -> Document:
     """The document of a page.
@@ -72,7 +119,7 @@ def document(
         path: The location of its document, relative to the website's root.
         covers: Its rendered cover pages, by location.
         options: The options of PDF documents.
-        config: The configuration of the website.
+        website: The settings of the website.
         page_options: The options of its front matter.
     """
 
@@ -86,14 +133,14 @@ def document(
         html=html,
         meta=dict(page.meta),
         covers=dict(covers),
-        metadata=metadata(page, config),
+        metadata=metadata(page, website),
         toc=toc(
             options.toc, options.toc.enabled if toc_enabled is None else toc_enabled
         ),
     )
 
 
-def metadata(page: Page, config: MkDocsConfig) -> dict[str, str]:
+def metadata(page: PageLike, website: Website) -> dict[str, str]:
     """The document information of a page's document."""
 
     keywords = page.meta.get("keywords") or page.meta.get("tags") or []
@@ -105,8 +152,8 @@ def metadata(page: Page, config: MkDocsConfig) -> dict[str, str]:
         key: str(value)
         for key, value in {
             "title": page.title,
-            "author": page.meta.get("author") or config.site_author,
-            "subject": page.meta.get("description") or config.site_description,
+            "author": page.meta.get("author") or website.author,
+            "subject": page.meta.get("description") or website.description,
             "keywords": ", ".join(str(keyword) for keyword in keywords),
         }.items()
         if value
@@ -135,7 +182,7 @@ def books(options: PdfConfig) -> list[BookConfig]:
 
 def book(
     options: BookConfig,
-    config: MkDocsConfig,
+    website: Website,
     documents: Sequence[Document],
     nav: Sequence[NavNode],
 ) -> Book:
@@ -147,9 +194,9 @@ def book(
         covers=options.covers,
         start=options.start,
         metadata={
-            "title": config.site_name,
-            "author": config.site_author,
-            "subject": config.site_description,
+            "title": website.name,
+            "author": website.author,
+            "subject": website.description,
             **options.metadata,
         },
         nav=nav,
@@ -172,10 +219,10 @@ def output(options: BookConfig) -> str:
     return options.output.replace(os.sep, "/").lstrip("/")
 
 
-def title(options: BookConfig, config: MkDocsConfig) -> str:
+def title(options: BookConfig, website: Website) -> str:
     """The title of a book (the website's name by default)."""
 
-    return str(options.metadata.get("title") or config.site_name)
+    return str(options.metadata.get("title") or website.name)
 
 
 def toc(options: TocConfig, enabled: bool | None = None) -> TocOptions | None:

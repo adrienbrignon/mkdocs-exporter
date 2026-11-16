@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Mapping
 from typing import Any
 
 from jinja2 import Environment, FileSystemLoader, Template, TemplateError
 from mkdocs.config.defaults import MkDocsConfig
 from mkdocs.exceptions import PluginError
-from mkdocs.structure.pages import Page
 
+from mkdocs_exporter.adapter import PageLike
 from mkdocs_exporter.front_matter import CoversOptions
 
 
@@ -18,9 +19,21 @@ class CoverRenderer:
     to its variables, macros and filters, like Markdown pages do.
     """
 
-    def __init__(self, config: MkDocsConfig) -> None:
+    def __init__(
+        self, root: str, extra: Mapping[str, Any], config: Any, macros: Any = None
+    ) -> None:
+        """
+        Args:
+            root: The directory of the configuration file (paths are relative to it).
+            extra: The `extra` settings of the website.
+            config: The configuration of the website (`config` in templates).
+            macros: The macros plugin, when enabled.
+        """
+
+        self.root = root
+        self.extra = extra
         self.config = config
-        self.root = os.path.dirname(config.config_file_path or "")
+        self.macros = macros
         self.environment = Environment(  # noqa: S701 (templates and values are the project's)
             loader=FileSystemLoader(self.root or "."), keep_trailing_newline=True
         )
@@ -28,10 +41,21 @@ class CoverRenderer:
         """The templates compiled so far, by environment and path (compiling a template
         takes up to a few milliseconds, rendering it a few microseconds)."""
 
-    def render(self, path: str, page: Page) -> str:
+    @classmethod
+    def of(cls, config: MkDocsConfig) -> CoverRenderer:
+        """The cover renderer of a MkDocs website."""
+
+        return cls(
+            os.path.dirname(config.config_file_path or ""),
+            config.extra,
+            config,
+            config.plugins.get("macros"),
+        )
+
+    def render(self, path: str, page: PageLike) -> str:
         """Renders a cover template for a page."""
 
-        macros: Any = self.config.plugins.get("macros")
+        macros = self.macros
 
         try:
             if macros is not None and hasattr(macros, "env"):
@@ -39,7 +63,7 @@ class CoverRenderer:
                 variables = {**macros.variables, **page.meta}
             else:
                 environment = self.environment
-                variables = {"extra": self.config.extra, **page.meta}
+                variables = {"extra": self.extra, **page.meta}
 
             variables.update(page=page, config=self.config)
 

@@ -113,7 +113,7 @@ class Plugin(BasePlugin[Config]):
         self.decomposed = False
         self.page_options = {}
         self.deprecated = set()
-        self.covers = CoverRenderer(config)
+        self.covers = CoverRenderer.of(config)
         self.pdf = options.enabled and (self.command != "serve" or options.serve)
 
         if options.aggregator.enabled:
@@ -217,7 +217,7 @@ class Plugin(BasePlugin[Config]):
                 formats["pdf"]["url"],
                 covers,
                 self.config.formats.pdf,
-                config,
+                adapter.Website.of(config),
                 page_options,
             ),
         )
@@ -311,7 +311,7 @@ class Plugin(BasePlugin[Config]):
             site,
             self.theme,
             await self._browser(),
-            adapter.render_options(options, config),
+            adapter.render_options(options, adapter.Website.of(config)),
             cache,
         )
         report = await exporter.export([e.document for e in exports], books)
@@ -348,7 +348,7 @@ class Plugin(BasePlugin[Config]):
             if key in self.exports and adapter.includes(options, key)
         ]
 
-        return adapter.book(options, config, documents, self.nav)
+        return adapter.book(options, adapter.Website.of(config), documents, self.nav)
 
     def _books_of(self, page: Page, config: MkDocsConfig) -> list[dict[str, str]]:
         """The books including a page (see `mkdocs_exporter.page.Page`).
@@ -368,7 +368,7 @@ class Plugin(BasePlugin[Config]):
                     {
                         "path": os.path.join(config.site_dir, *url.split("/")),
                         "url": url,
-                        "title": adapter.title(options, config),
+                        "title": adapter.title(options, adapter.Website.of(config)),
                     }
                 )
 
