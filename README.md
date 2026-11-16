@@ -55,11 +55,9 @@ Requires Python `>= 3.11.5`.
 The package is hosted on [*PyPI*](https://pypi.org/project/mkdocs-exporter/) and can be installed via `pip` (or your favourite package manager), along with the browser it uses:
 
 ```bash
-pip install "mkdocs-exporter>=7.0.0rc1"
+pip install mkdocs-exporter
 playwright install --with-deps --only-shell chromium
 ```
-
-Version 7 is a release candidate: until 7.0.0 is released, `pip install mkdocs-exporter` (without a version) installs 6.2.0.
 
 Upgrading from v6? Read the [migration guide](https://adrienbrignon.github.io/mkdocs-exporter/how-to/migrating-to-v7/).
 

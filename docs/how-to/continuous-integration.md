@@ -23,7 +23,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v10.3.3
       - name: Install dependencies
-        run: uv venv && uv pip install properdocs mkdocs-material "mkdocs-exporter>=7.0.0rc1"
+        run: uv venv && uv pip install properdocs mkdocs-material mkdocs-exporter
       - name: Get Playwright's version
         id: playwright
         run: echo "version=$(.venv/bin/python -c 'import importlib.metadata as m; print(m.version("playwright"))')" >> "$GITHUB_OUTPUT"
@@ -73,7 +73,7 @@ The official Playwright image ships the browser and its dependencies: install th
 pages:
   image: mcr.microsoft.com/playwright/python:v1.65.2-noble
   script:
-    - pip install properdocs mkdocs-material "mkdocs-exporter>=7.0.0rc1" playwright==1.65.2
+    - pip install properdocs mkdocs-material mkdocs-exporter playwright==1.65.2
     - properdocs build -f mkdocs.yml --site-dir public
   artifacts:
     paths:
@@ -88,7 +88,7 @@ If your website is published under a sub-path (e.g. `https://group.gitlab.io/pro
 FROM mcr.microsoft.com/playwright/python:v1.65.2-noble
 
 WORKDIR /docs
-RUN pip install properdocs mkdocs-material "mkdocs-exporter>=7.0.0rc1" playwright==1.65.2
+RUN pip install properdocs mkdocs-material mkdocs-exporter playwright==1.65.2
 COPY . .
 RUN properdocs build -f mkdocs.yml
 ```
@@ -102,7 +102,7 @@ WORKDIR /docs
 RUN apt-get update \
  && apt-get install -y --no-install-recommends libatomic1 \
  && rm -rf /var/lib/apt/lists/*
-RUN pip install properdocs mkdocs-material "mkdocs-exporter>=7.0.0rc1" \
+RUN pip install properdocs mkdocs-material mkdocs-exporter \
  && playwright install --with-deps --only-shell chromium
 COPY . .
 RUN properdocs build -f mkdocs.yml

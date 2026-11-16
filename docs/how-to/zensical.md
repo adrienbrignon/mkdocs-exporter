@@ -10,7 +10,7 @@
 Install the command and the browser it prints documents with, next to Zensical:
 
 ```bash
-pip install "mkdocs-exporter>=7.0.0rc1"
+pip install mkdocs-exporter
 playwright install --with-deps --only-shell chromium
 ```
 

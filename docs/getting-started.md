@@ -44,12 +44,8 @@ Documents are printed by a headless Chromium browser driven by [Playwright](http
 Install the plugin with the package manager of your choice:
 
 ```bash
-pip install "mkdocs-exporter>=7.0.0rc1"
+pip install mkdocs-exporter
 ```
-
-!!! note "Release candidate"
-
-    Version 7 is a release candidate: until 7.0.0 is released, package managers only install it when asked for a pre-release, as above (`pip install mkdocs-exporter` installs 6.2.0).
 
 Then install the browser used to print documents:
 

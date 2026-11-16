@@ -3,8 +3,6 @@
 Version 7 modernizes *MkDocs Exporter*: pages are rendered by a new engine, documents get bookmarks, books (combined documents) can have a table of contents and working links, and many long-standing issues are fixed.
 This page lists what you might need to change when upgrading from v6.
 
-Version 7 is a release candidate for now: install it with `pip install "mkdocs-exporter>=7.0.0rc1"`.
-
 ## Requirements
 
 - Python `>= 3.11.5` (3.9 and 3.10 have reached their end of life).
