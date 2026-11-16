@@ -6,6 +6,7 @@ from pathlib import Path
 import click
 from mkdocs.exceptions import MkDocsException
 
+from mkdocs_exporter.core.browser import BrowserNotInstalledError
 from mkdocs_exporter.logging import LOGGER, Logger
 from mkdocs_exporter.standalone.export import export
 from mkdocs_exporter.standalone.project import ProjectError, load
@@ -66,7 +67,7 @@ def build(config_file: Path | None, strict: bool, verbose: bool) -> None:
             LOGGER.setLevel(project.options.logging.level.upper())
 
         failures = export(project)
-    except (ProjectError, MkDocsException) as error:
+    except (ProjectError, MkDocsException, BrowserNotInstalledError) as error:
         raise click.ClickException(str(error)) from error
     finally:
         LOGGER.removeHandler(output)

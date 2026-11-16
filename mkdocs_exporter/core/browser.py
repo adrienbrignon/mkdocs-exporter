@@ -155,6 +155,17 @@ ERRORS = "() => (window.__MKDOCS_EXPORTER_ERRORS__ || []).splice(0)"
 """Reads the errors the page recorded since they were last read (see `pdf.js`)."""
 
 
+class BrowserNotInstalledError(RuntimeError):
+    """The browser isn't installed (Playwright needs the browser of its version)."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            "Chromium isn't installed: run `playwright install --with-deps --only-shell "
+            "chromium` (or `python -m playwright install ...` with the Python running "
+            "the exporter)"
+        )
+
+
 class RenderError(Exception):
     """A page could not be printed."""
 
@@ -227,6 +238,13 @@ class Browser:
                 headless=self.headless, args=self.args, channel=self.channel
             )
             self._context = await self._browser.new_context()
+        except PlaywrightError as error:
+            await self.close()
+
+            if "Executable doesn't exist" in str(error):
+                raise BrowserNotInstalledError() from error
+
+            raise
         except BaseException:
             await self.close()
             raise

@@ -2,9 +2,15 @@ import asyncio
 from types import SimpleNamespace
 from typing import Any
 
+import pytest
 from playwright.async_api import Error as PlaywrightError
 
-from mkdocs_exporter.core.browser import Diagnostics, _Watch
+from mkdocs_exporter.core.browser import (
+    Browser,
+    BrowserNotInstalledError,
+    Diagnostics,
+    _Watch,
+)
 
 ORIGIN = "127.0.0.1:8000"
 
@@ -90,3 +96,12 @@ def test_errors_of_closed_pages_are_not_collected() -> None:
     asyncio.run(watch.collect(Closed()))
 
     assert watch.diagnostics == Diagnostics()
+
+
+def test_a_missing_browser_is_reported_with_the_command_installing_it(
+    tmp_path: Any, monkeypatch: Any
+) -> None:
+    monkeypatch.setenv("PLAYWRIGHT_BROWSERS_PATH", str(tmp_path))
+
+    with pytest.raises(BrowserNotInstalledError, match="playwright install"):
+        asyncio.run(Browser().launch())

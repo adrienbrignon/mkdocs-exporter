@@ -156,6 +156,20 @@ def test_timeouts_are_reported_with_diagnostics(
     assert "- index.md: Timed out after 2000 ms" in caplog.text
 
 
+def test_a_missing_browser_fails_the_build(
+    project: Project,
+    caplog: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setenv("PLAYWRIGHT_BROWSERS_PATH", str(tmp_path / "browsers"))
+
+    with pytest.raises(Abort):
+        project.build()
+
+    assert "Chromium isn't installed: run `playwright install" in caplog.text
+
+
 def test_rendering_failures_fail_the_build(
     project: Project, caplog: pytest.LogCaptureFixture
 ) -> None:

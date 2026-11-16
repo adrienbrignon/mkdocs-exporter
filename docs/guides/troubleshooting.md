@@ -3,10 +3,10 @@
 ## The browser isn't installed
 
 ```
-playwright._impl._errors.Error: BrowserType.launch: Executable doesn't exist at ...
+ERROR   -  [mkdocs-exporter.pdf] Chromium isn't installed: run `playwright install --with-deps --only-shell chromium` (or `python -m playwright install ...` with the Python running the exporter)
 ```
 
-Install Chromium with the same Python environment as the plugin: `playwright install --with-deps --only-shell chromium`, or `python -m playwright install --with-deps --only-shell chromium` when the `playwright` command isn't found.
+Install Chromium with the same Python environment as the plugin: `python -m playwright install --with-deps --only-shell chromium` makes sure of it.
 Playwright needs the browser of its own version: install it again after upgrading Playwright.
 
 ## A page fails to render
