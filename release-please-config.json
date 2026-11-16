@@ -5,9 +5,6 @@
       "release-type": "python",
       "package-name": "mkdocs-exporter",
       "include-component-in-tag": false,
-      "versioning": "prerelease",
-      "prerelease": true,
-      "prerelease-type": "rc",
       "draft": true,
       "force-tag-creation": true,
       "changelog-sections": [
