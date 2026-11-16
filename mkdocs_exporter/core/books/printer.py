@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import io
 import json
 import posixpath
 import re
@@ -8,7 +7,7 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any, cast
 
-from pypdf import PdfReader, PdfWriter
+from pypdf import PdfWriter
 from pypdf.generic import DictionaryObject, NameObject, TextStringObject
 
 from mkdocs_exporter.core import margins, toc
@@ -43,7 +42,14 @@ from mkdocs_exporter.core.browser import Printed, PrintResult, RenderError
 from mkdocs_exporter.core.css import top_margin
 from mkdocs_exporter.core.document import Document
 from mkdocs_exporter.core.html import HtmlDocument
-from mkdocs_exporter.core.pdf import RELATIVE_LINKS_BASE, fix_uri, info, link_actions
+from mkdocs_exporter.core.pdf import (
+    RELATIVE_LINKS_BASE,
+    clone,
+    fix_uri,
+    info,
+    link_actions,
+    serialize,
+)
 from mkdocs_exporter.core.preparation import Prepared
 from mkdocs_exporter.core.renderer import Context, Outcome, report
 from mkdocs_exporter.core.server import RESERVED
@@ -316,7 +322,7 @@ class BookPrinter:
             logger.warning("%s ('%s')", error, self.output)
             measure = Measure(pages=0)
 
-        writer = PdfWriter(clone_from=PdfReader(io.BytesIO(result.pdf)))
+        writer = clone(result.pdf)
         heights = [float(page.mediabox.height) for page in writer.pages]
         names = page_names(measure, assembly.pages)
         tops = [
@@ -359,10 +365,7 @@ class BookPrinter:
             {"/Producer": "MkDocs Exporter", **info(self.book.metadata)}
         )
 
-        output = io.BytesIO()
-        writer.write(output)
-
-        return output.getvalue()
+        return serialize(writer)
 
     def _rewrite_links(self, writer: PdfWriter) -> None:
         """Fixes links to the local server and makes links relative when needed."""

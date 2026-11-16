@@ -1,6 +1,17 @@
-import pytest
+import io
+import logging
 
-from mkdocs_exporter.core.pdf import relative_url
+import pytest
+from pypdf import PdfReader, PdfWriter
+from pypdf.generic import (
+    ArrayObject,
+    DictionaryObject,
+    NameObject,
+    NumberObject,
+    StreamObject,
+)
+
+from mkdocs_exporter.core.pdf import clone, relative_url, serialize
 
 
 @pytest.mark.parametrize(
@@ -40,3 +51,72 @@ def test_set_metadata_appends_an_update() -> None:
     assert metadata["/Author"] == "Ada"
     assert "/Subject" not in metadata
     assert set_metadata(pdf, {}) == pdf
+
+
+def shared_profile(images: int) -> bytes:
+    """A document whose images share a color profile (like Chromium prints them)."""
+
+    writer = PdfWriter()
+    profile = StreamObject()
+    profile.set_data(b"profile")
+    profile[NameObject("/N")] = NumberObject(3)
+    reference = writer._add_object(profile)
+
+    for index in range(images):
+        image = StreamObject()
+        image.set_data(b"\x00\x00\x00")
+        image.update(
+            {
+                NameObject("/Type"): NameObject("/XObject"),
+                NameObject("/Subtype"): NameObject("/Image"),
+                NameObject("/Width"): NumberObject(1),
+                NameObject("/Height"): NumberObject(1),
+                NameObject("/BitsPerComponent"): NumberObject(8),
+                NameObject("/ColorSpace"): ArrayObject(
+                    [NameObject("/ICCBased"), reference]
+                ),
+            }
+        )
+        page = writer.add_blank_page(100, 100)
+        page[NameObject("/Resources")] = DictionaryObject(
+            {
+                NameObject("/XObject"): DictionaryObject(
+                    {NameObject(f"/Im{index}"): writer._add_object(image)}
+                )
+            }
+        )
+
+    output = io.BytesIO()
+    writer.write(output)
+
+    return output.getvalue()
+
+
+def profiles(pdf: bytes) -> int:
+    reader = PdfReader(io.BytesIO(pdf))
+
+    return sum(
+        isinstance(obj := reader.get_object(number), StreamObject)
+        and obj.get("/N") == 3
+        for number in reader.xref[0]
+    )
+
+
+def test_copies_of_documents_merge_the_objects_pypdf_duplicates(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    pdf = shared_profile(5)
+    caplog.set_level(logging.WARNING, logger="pypdf")
+
+    PdfWriter(clone_from=PdfReader(io.BytesIO(pdf)))
+
+    assert "exceeds defined trailer size" in caplog.text
+
+    caplog.clear()
+    writer = clone(pdf)
+    copy = serialize(writer)
+
+    assert caplog.text == ""
+    assert len(writer._objects) > PdfReader(io.BytesIO(pdf)).trailer["/Size"]
+    assert profiles(pdf) == 1
+    assert profiles(copy) == 1
