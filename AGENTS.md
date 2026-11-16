@@ -227,7 +227,8 @@ the version or tag by hand.
 4. Release candidates: while `"versioning": "prerelease"` and `"prerelease": true` are set, versions are
    `x.y.z-rc.N` (`x.y.zrcN` on PyPI) and GitHub releases are marked as pre-releases. For the final
    version, remove both settings in a commit whose body has `Release-As: x.y.z`, and install instructions
-   (README, getting started, migration guide, CI and Zensical guides) no longer ask for a pre-release: search for
+   (README, getting started, migration guide, CI and Zensical guides, the banner of `overrides/main.html`) no
+   longer ask for a pre-release: search for
    `7.0.0rc1`.
 5. Release pull requests are opened with a GitHub App's token when the repository has the
    `RELEASE_APP_CLIENT_ID` variable and the `RELEASE_APP_PRIVATE_KEY` secret (an app with read and write

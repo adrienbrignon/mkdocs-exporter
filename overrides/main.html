@@ -4,3 +4,8 @@
   {{ super() }}
   <meta name="google-site-verification" content="UVm_VBk7kh8uFboPWm0tGKirOFtGQLbXWuMDn1A96M0" />
 {% endblock %}
+
+{% block announce %}
+  This is the documentation of version 7, a release candidate: <code>pip install "mkdocs-exporter>=7.0.0rc1"</code>.
+  Upgrading from v6? Read the <a href="{{ 'guides/migrating-to-v7/' | url }}">migration guide</a>.
+{% endblock %}
