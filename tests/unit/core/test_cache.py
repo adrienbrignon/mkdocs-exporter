@@ -1,4 +1,7 @@
+import importlib.resources
 from pathlib import Path
+
+import pytest
 
 from mkdocs_exporter.core.browser import Diagnostics, PrintResult
 from mkdocs_exporter.core.cache import Cache, digest, environment, fingerprint
@@ -25,6 +28,24 @@ def test_fingerprints() -> None:
     assert digest(None) is None
     assert digest(b"x") != digest(b"y")
     assert environment() == environment()
+
+
+def test_bytecode_is_not_part_of_the_environment(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Other processes write bytecode while the package's resources are read (e.g.
+    `__init__.cpython-314.pyc.<random>`, renamed once written)."""
+
+    (tmp_path / "base.css").write_text("body {}")
+    (tmp_path / "__pycache__").mkdir()
+    temporary = tmp_path / "__pycache__" / "__init__.cpython-314.pyc.124250667743552"
+    temporary.write_bytes(b"bytecode being written")
+    monkeypatch.setattr(importlib.resources, "files", lambda package: tmp_path)
+
+    fingerprint = environment.__wrapped__()
+    temporary.unlink()
+
+    assert environment.__wrapped__() == fingerprint
 
 
 def test_entries_are_read_back(tmp_path: Path) -> None:

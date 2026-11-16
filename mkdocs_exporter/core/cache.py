@@ -61,7 +61,8 @@ def environment() -> str:
     while pending:
         for entry in sorted(pending.pop().iterdir(), key=lambda e: e.name):
             if entry.is_dir():
-                pending.append(entry)
+                if entry.name != "__pycache__":
+                    pending.append(entry)
             elif not entry.name.endswith((".py", ".pyc")):
                 contents.append((entry.name, digest(entry.read_bytes())))
 
