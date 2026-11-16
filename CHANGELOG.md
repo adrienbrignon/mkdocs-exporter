@@ -3,7 +3,7 @@
 All notable changes to this project are documented in this file, and this project adheres to [Semantic Versioning](https://semver.org/).
 Entries are generated from commit messages ([Conventional Commits](https://www.conventionalcommits.org/)) by [release-please](https://github.com/googleapis/release-please), in release pull requests where they can be edited; earlier entries follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [7.0.0] - Unreleased
+## [7.0.0-rc.1](https://github.com/adrienbrignon/mkdocs-exporter/compare/v6.2.0...v7.0.0-rc.1) (2026-11-16)
 
 Read the [migration guide](https://adrienbrignon.github.io/mkdocs-exporter/migration/v7/) when upgrading from v6.
 
@@ -26,6 +26,7 @@ Read the [migration guide](https://adrienbrignon.github.io/mkdocs-exporter/migra
 - `page-break`, `page-break-before` and `avoid-page-break` classes (#63).
 - `MkDocsExporter.before` and `MkDocsExporter.after` hooks.
 - Support for ProperDocs and for themes without dedicated support (#68).
+- Distributions are published with their build provenance (PEP 740 attestations on PyPI).
 
 ### Changed
 
