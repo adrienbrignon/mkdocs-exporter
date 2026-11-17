@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mkdocs-exporter"
-version = "7.0.0-rc.2"
+version = "7.0.0"
 description = "Exports MkDocs and Zensical documentation to PDF: a document per page and combined books, printed by Chromium."
 readme = "README.md"
 license = "MIT"

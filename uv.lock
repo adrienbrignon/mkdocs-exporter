@@ -1213,7 +1213,7 @@ wheels = [
 
 [[package]]
 name = "mkdocs-exporter"
-version = "7.0.0rc2"
+version = "7.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "beautifulsoup4" },
