@@ -3,6 +3,24 @@
 All notable changes to this project are documented in this file, and this project adheres to [Semantic Versioning](https://semver.org/).
 Entries are generated from commit messages ([Conventional Commits](https://www.conventionalcommits.org/)) by [release-please](https://github.com/googleapis/release-please), in release pull requests where they can be edited; earlier entries follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [7.0.0](https://github.com/adrienbrignon/mkdocs-exporter/compare/v7.0.0-rc.2...v7.0.0) (2026-11-17)
+
+
+### Added
+
+* **pdf:** tag combined documents for accessibility ([7040365](https://github.com/adrienbrignon/mkdocs-exporter/commit/7040365d62465a91df63a1d1524b788468f90878))
+
+
+### Fixed
+
+* **pdf:** write lists of the metadata of books as comma-separated values ([abf3e4a](https://github.com/adrienbrignon/mkdocs-exporter/commit/abf3e4a07d22547ce84b114074b67912182c316f))
+* tell how to install the browser when it's missing ([e5ab1e4](https://github.com/adrienbrignon/mkdocs-exporter/commit/e5ab1e40dff56aacf79b69236707095f881970b8))
+
+
+### Chores
+
+* release 7.0.0 ([7c32227](https://github.com/adrienbrignon/mkdocs-exporter/commit/7c322278902ca259a049ca5be164f885a302cd6d))
+
 ## [7.0.0-rc.2](https://github.com/adrienbrignon/mkdocs-exporter/compare/v7.0.0-rc.1...v7.0.0-rc.2) (2026-11-16)
 
 ### Added
