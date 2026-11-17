@@ -15,7 +15,7 @@ IMAGES = ROOT.parent / "docs" / "assets" / "images" / "examples"
 
 PREVIEWS: dict[str, list[tuple[str, int, str]]] = {
     "field-guide": [
-        ("field-guide.pdf", 1, "The cover of the combined document"),
+        ("field-guide.pdf", 1, "The cover of the book"),
         ("field-guide.pdf", 2, "Its table of contents"),
         ("field-guide.pdf", 4, "One of its pages"),
         ("guide/writing/index.pdf", 3, "A page printed with the material theme"),

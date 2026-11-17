@@ -11,7 +11,7 @@ from pypdf.generic import (
     StreamObject,
 )
 
-from mkdocs_exporter.core.pdf import clone, relative_url, serialize
+from mkdocs_exporter.core.pdf import clone, info, relative_url, serialize
 
 
 @pytest.mark.parametrize(
@@ -120,3 +120,11 @@ def test_copies_of_documents_merge_the_objects_pypdf_duplicates(
     assert len(writer._objects) > PdfReader(io.BytesIO(pdf)).trailer["/Size"]
     assert profiles(pdf) == 1
     assert profiles(copy) == 1
+
+
+def test_document_information_lists_are_joined() -> None:
+    assert info({"title": "T", "keywords": ["a", "b"], "author": None, "/X": 1}) == {
+        "/Title": "T",
+        "/Keywords": "a, b",
+        "/X": "1",
+    }

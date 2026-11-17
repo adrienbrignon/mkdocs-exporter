@@ -9,7 +9,7 @@ exporter:
         target: _blank
 ---
 
-# Adding buttons to pages
+# Buttons
 
 You can define custom buttons at the top of your pages.
 
@@ -18,9 +18,11 @@ You can define custom buttons at the top of your pages.
     A custom button is featured on this page, check it out!  
     You can find its configuration [below](#adding-buttons-to-a-specific-page).
 
-## Usage
+With Material for MkDocs, buttons are icons next to the theme's own buttons (`icon` names a Material icon, `title` is its tooltip).
+With the `readthedocs` theme and other themes, buttons are links showing their `title`, without icon.
+A `class` attribute replaces the theme's classes.
 
-### Adding a download button
+## Adding a download button
 
 The following configuration excerpt will add a download button to pages that have a PDF document:
 
@@ -34,9 +36,9 @@ plugins:
           attributes: !!python/name:mkdocs_exporter.formats.pdf.buttons.download.attributes
 ```
 
-### Adding a button downloading a book
+## Adding a button downloading a book
 
-Pages that are part of a [book](combining-pages.md) can link to it.
+Pages that are part of a [book](books.md) can link to it.
 The following button downloads the first book including the page, named after the book's title (`metadata.title`, the site's name by default):
 
 ```yaml
@@ -51,7 +53,7 @@ plugins:
 
 The books including a page are listed by `page.formats["pdf"]["books"]` (each with its `url`, relative to the website's root, and its `title`), for buttons of your own (see below).
 
-### Defining a dynamic button
+## Defining a dynamic button
 
 Like the download button above, any property of a button can be computed by a Python function, called with the page.
 For instance, a button opening an issue about the page:
@@ -85,9 +87,9 @@ For instance, a button opening an issue about the page:
                 target: _blank
     ```
 
-The module has to be importable when MkDocs reads its configuration: install it, or build your website with `PYTHONPATH=.` (e.g. `PYTHONPATH=. mkdocs build`) when it sits next to `mkdocs.yml`.
+The module has to be importable when MkDocs reads its configuration: install it, or build your website with `PYTHONPATH=.` (e.g. `PYTHONPATH=. mkdocs build`, or `$env:PYTHONPATH = "."` first in PowerShell) when it sits next to `mkdocs.yml`.
 
-### Adding buttons to a specific page
+## Adding buttons to a specific page
 
 Pages can add buttons of their own with `exporter.buttons` in their [front matter](../reference/front-matter.md), besides those of the configuration.
 

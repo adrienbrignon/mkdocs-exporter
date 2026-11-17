@@ -76,3 +76,14 @@ a.autorefs-external:hover::after {
   height: 10rem;
   margin: 0 auto 0.8rem;
 }
+
+.md-banner {
+  text-align: center;
+}
+
+.md-banner a,
+.md-banner a:hover {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}

@@ -4,3 +4,8 @@
   {{ super() }}
   <meta name="google-site-verification" content="UVm_VBk7kh8uFboPWm0tGKirOFtGQLbXWuMDn1A96M0" />
 {% endblock %}
+
+{% block announce %}
+  <strong>Version 7</strong> is out: upgrading from v6? Read the
+  <a href="{{ 'how-to/migrating-to-v7/' | url }}">migration guide</a>.
+{% endblock %}

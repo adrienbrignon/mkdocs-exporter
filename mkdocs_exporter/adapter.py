@@ -201,6 +201,7 @@ def book(
         },
         nav=nav,
         outline=options.outline,
+        tagged=options.tagged,
         toc=toc(options.toc),
     )
 

@@ -10,7 +10,7 @@
 Install the command and the browser it prints documents with, next to Zensical:
 
 ```bash
-pip install "mkdocs-exporter>=7.0.0rc1"
+pip install mkdocs-exporter
 playwright install --with-deps --only-shell chromium
 ```
 
@@ -27,11 +27,7 @@ mkdocs-exporter build
 
 The documents are written into the built website, next to its pages (e.g. `site/guide/index.pdf`), and books where their `output` says.
 
-| Option | Effect |
-|---|---|
-| `-f`, `--config-file` | The configuration file of the website, when it isn't in the current directory |
-| `-s`, `--strict` | Fails when warnings are logged |
-| `-v`, `--verbose` | Logs details |
+See [Command line](../reference/command-line.md) for its options (e.g. `--strict`).
 
 ## Configuration
 

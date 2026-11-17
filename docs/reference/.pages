@@ -1,3 +1,6 @@
 nav:
   - configuration
   - front-matter.md
+  - css.md
+  - javascript.md
+  - command-line.md

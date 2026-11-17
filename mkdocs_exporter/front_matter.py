@@ -20,7 +20,7 @@ DEPRECATED = {
     "hide": "exporter.pdf.covers.enabled: false",
     "toc": "exporter.pdf.toc.enabled",
     "buttons": "exporter.buttons",
-    "pdf-icon": "the icon of a button in exporter.buttons",
+    "pdf-icon": "the icon of the download button in buttons",
 }
 """The front matter keys replaced by `exporter`, and what replaces them (`hide` only
 when it lists `covers`)."""

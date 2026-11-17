@@ -17,7 +17,7 @@ from mkdocs.structure.pages import Page
 from mkdocs_exporter import adapter, front_matter
 from mkdocs_exporter.config import Config
 from mkdocs_exporter.core.books import Book, NavNode
-from mkdocs_exporter.core.browser import Browser, relaunch
+from mkdocs_exporter.core.browser import Browser, BrowserNotInstalledError, relaunch
 from mkdocs_exporter.core.cache import Cache
 from mkdocs_exporter.core.document import Document, Site
 from mkdocs_exporter.core.exporter import Exporter
@@ -281,7 +281,12 @@ class Plugin(BasePlugin[Config]):
                 )
             return
 
-        failures = (self.loop.run if self.loop else run)(lambda: self._export(config))
+        try:
+            failures = (self.loop.run if self.loop else run)(
+                lambda: self._export(config)
+            )
+        except BrowserNotInstalledError as error:
+            raise PluginError(f"[mkdocs-exporter.pdf] {error}") from error
 
         if failures:
             details = "\n".join(

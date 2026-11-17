@@ -1,0 +1,59 @@
+# Troubleshooting
+
+## The browser isn't installed
+
+```
+ERROR   -  [mkdocs-exporter.pdf] Chromium isn't installed: run `playwright install --with-deps --only-shell chromium` (or `python -m playwright install ...` with the Python running the exporter)
+```
+
+Install Chromium with the same Python environment as the plugin: `python -m playwright install --with-deps --only-shell chromium` makes sure of it.
+Playwright needs the browser of its own version: install it again after upgrading Playwright.
+
+## A page fails to render
+
+When a page can't be rendered, the build fails once every other page has been rendered, with the reason for each failing page:
+
+```
+ERROR   -  [mkdocs-exporter.pdf] Failed to render pages:
+- guide/intro.md: Timed out after 60000 ms waiting for the page to be ready
+  JavaScript errors:
+    - ...
+  Failed requests:
+    - http://127.0.0.1:41234/docs/assets/missing.png (HTTP 404)
+```
+
+- **Rendering failed**: a script prevented the page from being prepared; the error tells which one.
+- **Timed out**: the page didn't finish rendering in time (`formats.pdf.browser.timeout`, 60 seconds by default), typically because a [hook](../guide/styles-and-scripts.md#scripts) never returns or a resource takes too long to load.
+
+## Warnings
+
+- **Gave up waiting for fonts, images or diagrams after 10 seconds**: something the page loads never finished loading, often a resource from another website. The document is printed anyway, but not cached.
+- **The layout of '…' could not be fully measured**: the browser is too old (Chromium 138 or later is required, also with `browser.channel`), or the theme lays the content out of the normal flow: the page numbers and bookmarks of the book may be wrong.
+- **Failed to teleport \<…\> element: destination '…' not found**: the selector of a [`data-mkdocs-exporter-teleport`](../guide/styles-and-scripts.md#moving-elements) attribute matches nothing.
+- **The '…' key of the front matter is deprecated**: see the [front matter reference](../reference/front-matter.md#deprecated-keys).
+
+## Something is missing from documents
+
+- **Images or styles**: failed requests to your website are logged as warnings. Paths starting with `/` are resolved from the root of the website, and then from `site_url`'s path.
+- **Content drawn by scripts** (diagrams, charts...): scripts may need more time, use a [hook](../guide/styles-and-scripts.md#scripts) or `formats.pdf.browser.delay`.
+- **Collapsed or hidden content**: `<details>` blocks are opened, but content hidden by your theme's print styles stays hidden; override them in a [stylesheet](../guide/styles-and-scripts.md#stylesheets).
+- **Content cut off on the right**: content wider than the page (large tables, long lines of code...) is cut off, instead of shrinking every page of the document; make it fit in a [stylesheet](../guide/styles-and-scripts.md#stylesheets), e.g. `pre code { white-space: pre-wrap; }`.
+
+## Getting more details
+
+Enable the debug logs of the plugin, and the browser's console:
+
+```yaml
+plugins:
+  - exporter:
+      logging:
+        level: debug
+      formats:
+        pdf:
+          browser:
+            debug: true
+```
+
+JavaScript errors raised by your website's own scripts are logged at the debug level: they usually happen on the website too and don't affect documents.
+
+See [Performance](performance.md) to generate documents faster.

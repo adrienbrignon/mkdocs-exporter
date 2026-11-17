@@ -6,6 +6,9 @@ These recipes build the website with [ProperDocs](https://github.com/ProperDocs/
 
 ## GitHub Actions
 
+Building the website and publishing it on GitHub Pages:
+
+{% raw %}
 ```yaml
 name: Documentation
 
@@ -20,19 +23,47 @@ jobs:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v10.3.3
       - name: Install dependencies
-        run: uv venv && uv pip install properdocs mkdocs-material "mkdocs-exporter>=7.0.0rc1"
+        run: uv venv && uv pip install properdocs mkdocs-material mkdocs-exporter
+      - name: Get Playwright's version
+        id: playwright
+        run: echo "version=$(.venv/bin/python -c 'import importlib.metadata as m; print(m.version("playwright"))')" >> "$GITHUB_OUTPUT"
+      - name: Cache the browser
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+      - name: Cache documents
+        uses: actions/cache@v6
+        with:
+          path: .cache/plugin/exporter
+          key: mkdocs-exporter-${{ github.run_id }}
+          restore-keys: mkdocs-exporter-
       - name: Install the browser
         run: .venv/bin/playwright install --with-deps --only-shell chromium
       - name: Build the documentation
-        run: .venv/bin/properdocs build
+        run: .venv/bin/properdocs build -f mkdocs.yml
       - uses: actions/upload-pages-artifact@v5
         with:
           path: site
-```
 
-!!! tip
-    Cache `~/.cache/ms-playwright` (keyed by Playwright's version) to avoid downloading the browser on every run, the system dependencies still need to be installed with `playwright install-deps chromium`.
-    Cache `.cache/plugin/exporter` too, to only render the pages that changed since the last run (see [Cache](../configuration/generating-pdf-documents.md#cache)).
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5
+```
+{% endraw %}
+
+- The browser is cached for each version of Playwright (in `~/Library/Caches/ms-playwright` on macOS, `~\AppData\Local\ms-playwright` on Windows); `--with-deps` still installs its system libraries on every run.
+- Documents are cached too: only the pages that changed since the last run are rendered (see [Cache](performance.md#cache)).
+- GitHub Pages has to be published by GitHub Actions (*Settings* › *Pages* › *Source*).
 
 ## GitLab CI
 
@@ -42,8 +73,8 @@ The official Playwright image ships the browser and its dependencies: install th
 pages:
   image: mcr.microsoft.com/playwright/python:v1.65.2-noble
   script:
-    - pip install properdocs mkdocs-material "mkdocs-exporter>=7.0.0rc1" playwright==1.65.2
-    - properdocs build --site-dir public
+    - pip install properdocs mkdocs-material mkdocs-exporter playwright==1.65.2
+    - properdocs build -f mkdocs.yml --site-dir public
   artifacts:
     paths:
       - public
@@ -57,9 +88,9 @@ If your website is published under a sub-path (e.g. `https://group.gitlab.io/pro
 FROM mcr.microsoft.com/playwright/python:v1.65.2-noble
 
 WORKDIR /docs
-RUN pip install properdocs mkdocs-material "mkdocs-exporter>=7.0.0rc1" playwright==1.65.2
+RUN pip install properdocs mkdocs-material mkdocs-exporter playwright==1.65.2
 COPY . .
-RUN properdocs build
+RUN properdocs build -f mkdocs.yml
 ```
 
 Or, starting from a smaller image (Playwright's driver needs `libatomic1` to install the browser):
@@ -71,10 +102,10 @@ WORKDIR /docs
 RUN apt-get update \
  && apt-get install -y --no-install-recommends libatomic1 \
  && rm -rf /var/lib/apt/lists/*
-RUN pip install properdocs mkdocs-material "mkdocs-exporter>=7.0.0rc1" \
+RUN pip install properdocs mkdocs-material mkdocs-exporter \
  && playwright install --with-deps --only-shell chromium
 COPY . .
-RUN properdocs build
+RUN properdocs build -f mkdocs.yml
 ```
 
 This project's own [Dockerfile](https://github.com/adrienbrignon/mkdocs-exporter/blob/master/Dockerfile) builds this documentation with [uv](https://docs.astral.sh/uv/).

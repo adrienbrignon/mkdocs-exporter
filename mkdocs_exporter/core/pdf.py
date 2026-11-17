@@ -140,7 +140,11 @@ def info(values: Mapping[str, object]) -> dict[str, str]:
             continue
 
         name = key if key.startswith("/") else "/" + key[:1].upper() + key[1:]
-        result[name] = str(value)
+        result[name] = (
+            ", ".join(str(item) for item in value)
+            if isinstance(value, list | tuple)
+            else str(value)
+        )
 
     return result
 

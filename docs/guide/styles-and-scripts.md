@@ -1,4 +1,4 @@
-# Customizing documents
+# Styles and scripts
 
 ## Stylesheets
 
@@ -27,16 +27,14 @@ Documents are styled like your website, with print media rules. Custom styleshee
       }
     }
 
-    .front-cover {
-      page-break-after: always;
-
-      .title {
-        font-size: 26pt;
+    .md-typeset {
+      table {
+        font-size: 9pt;
       }
     }
     ```
 
-Stylesheets are plain CSS: nesting is supported, Sass isn't (see the [migration guide](../migration/v7.md#sass)).
+Stylesheets are plain CSS: nesting is supported, Sass isn't (see the [migration guide](../how-to/migrating-to-v7.md#sass)).
 
 Documents are laid out by Chromium, which supports page sizes (they can differ from a page to another), margins, [margin boxes](https://www.w3.org/TR/css-page-3/#margin-boxes) with page counters, named pages (`page: ...`), `@page :first` and page breaks. Running headers are available through [headers and footers](headers-and-footers.md); for other features of the [CSS Generated Content for Paged Media](https://www.w3.org/TR/css-gcpm-3/) module, see [Using Paged.js](#using-paged-js).
 
@@ -80,18 +78,6 @@ Pages are printed on the background of your website (in print media) unless a `@
 }
 ```
 
-## Page titles
-
-Some themes don't print the page's title when its content has no first-level heading. The `title` option inserts it in documents:
-
-```yaml
-plugins:
-  - exporter:
-      formats:
-        pdf:
-          title: true
-```
-
 ## Utility classes
 
 These classes are available in PDF documents:
@@ -120,6 +106,20 @@ This paragraph is only printed.
 
     [Print styles](../examples/print-styles.md): numbered headings, the address of links, a watermark, and content for the website or for documents only.
 
+## Moving elements
+
+The `data-mkdocs-exporter-teleport` attribute moves an element into the element its value selects (a CSS selector), in documents and in the website's pages, e.g. the styles of a cover template to the head of the document:
+
+```html
+<style data-mkdocs-exporter-teleport="head">
+  @page :first {
+    margin: 0;
+  }
+</style>
+```
+
+When the selector matches nothing, the element stays where it is, with a warning.
+
 ## Scripts
 
 Custom scripts are executed in PDF documents only:
@@ -138,7 +138,8 @@ Scripts can define hooks, awaited by the exporter:
 ```javascript
 window.MkDocsExporter = {
   /**
-   * Once the page and the website's scripts are loaded.
+   * Once the page is loaded, with its fonts, images, MathJax formulas and
+   * Material for MkDocs' diagrams.
    */
   before: async () => {},
 
@@ -152,13 +153,15 @@ window.MkDocsExporter = {
   },
 
   /**
-   * Last, right before printing.
+   * Last, right before printing (after `browser.delay`).
    */
   after: async () => {},
 };
 ```
 
-Fonts, images, MathJax and Material for MkDocs' diagrams are awaited automatically. When other scripts need more time, either use a hook or give them a delay (in milliseconds):
+See [JavaScript hooks](../reference/javascript.md) for when hooks run and how their errors are handled.
+
+When other scripts need more time, either use a hook or give them a delay (in milliseconds):
 
 ```yaml
 plugins:
@@ -169,7 +172,7 @@ plugins:
             delay: 500
 ```
 
-## Using Paged.js
+## Using Paged.js { #using-paged-js }
 
 [Paged.js](https://pagedjs.org/) implements features of [CSS Generated Content for Paged Media](https://www.w3.org/TR/css-gcpm-3/) that browsers lack, such as running headers (`string-set`), page references (`target-counter`) or footnotes.
 To use it, download [`paged.polyfill.min.js`](https://unpkg.com/pagedjs@0.4.3/dist/paged.polyfill.min.js) to your project and load it after a script running it before documents are printed:
@@ -195,21 +198,5 @@ To use it, download [`paged.polyfill.min.js`](https://unpkg.com/pagedjs@0.4.3/di
     };
     ```
 
-Paged.js lays out pages in JavaScript: expect documents to take longer to generate, especially combined ones.
+Paged.js lays out pages in JavaScript: expect documents to take longer to generate, especially books.
 Paged.js 0.4 also fails on some `:nth-child(An+B)` selectors, such as those of the `readthedocs` theme.
-
-## Browser
-
-The browser can be configured too:
-
-```yaml
-plugins:
-  - exporter:
-      formats:
-        pdf:
-          browser:
-            timeout: 60000 # Time given to each document to render (ms)
-            channel: chrome # Use an installed browser instead of Chromium (138 or later)
-            debug: true # Log the browser's console
-            args: [] # Extra command-line arguments
-```

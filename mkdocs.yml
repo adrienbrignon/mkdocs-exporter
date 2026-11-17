@@ -7,8 +7,8 @@ site_dir: site
 
 validation:
   absolute_links: ignore
-  unrecognized_links: ignore
-  anchors: ignore
+  unrecognized_links: warn
+  anchors: warn
 
 theme:
   name: material
@@ -56,9 +56,11 @@ plugins:
             - https://installer.readthedocs.io/en/stable/objects.inv
           options:
             show_bases: false
-            show_source: true
+            show_source: false
             show_labels: false
             show_root_heading: true
+            show_root_full_path: false
+            members_order: source
   - search:
       lang: en
   - awesome-pages
@@ -71,6 +73,15 @@ plugins:
   - redirects:
       redirect_maps:
         'index.md': 'getting-started.md'
+        'migration/v7.md': 'how-to/migrating-to-v7.md'
+        'configuration/generating-pdf-documents.md': 'guide/documents.md'
+        'configuration/customizing-documents.md': 'guide/styles-and-scripts.md'
+        'configuration/headers-and-footers.md': 'guide/headers-and-footers.md'
+        'configuration/combining-pages.md': 'guide/books.md'
+        'configuration/adding-buttons-to-pages.md': 'guide/buttons.md'
+        'guides/continuous-integration.md': 'how-to/continuous-integration.md'
+        'guides/zensical.md': 'how-to/zensical.md'
+        'guides/troubleshooting.md': 'how-to/troubleshooting.md'
         'samples/diagrams.md': 'examples/content/diagrams.md'
         'samples/mathematics.md': 'examples/content/mathematics.md'
         'samples/multimedia.md': 'examples/content/multimedia.md'
@@ -123,6 +134,8 @@ plugins:
           attributes: !!python/name:mkdocs_exporter.formats.pdf.buttons.book.attributes
 
 markdown_extensions:
+  - toc:
+      permalink: true
   - admonition
   - attr_list
   - md_in_html
@@ -142,11 +155,6 @@ markdown_extensions:
       emoji_generator: !!python/name:material.extensions.emoji.to_svg
   - pymdownx.arithmatex:
       generic: true
-  - pymdownx.superfences:
-      custom_fences:
-        - name: mermaid
-          class: mermaid
-          format: !!python/name:pymdownx.superfences.fence_code_format
 
 extra_css:
   - assets/stylesheets/custom.css
@@ -155,7 +163,6 @@ extra_css:
 extra_javascript:
   - assets/scripts/katex.js
   - assets/scripts/mathjax.js
-  - assets/scripts/mkdocs-exporter.js
   - https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.19.1/katex.min.js
   - https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.19.1/contrib/auto-render.min.js
   - https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-mml-chtml.min.js
